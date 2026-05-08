@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.local
+*.log
+.DS_Store
+dist/
+coverage/
+
+# Local DB files
+*.db
+*.db-shm
+*.db-wal
+
+# Prisma
+prisma/*.db
+prisma/migrations/dev.db*
