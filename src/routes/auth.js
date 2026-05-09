@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { z } = require('zod');
 const authService = require('../services/auth');
+const { requireAuth } = require('../middleware/auth');
 
 const router = Router();
 
@@ -44,6 +45,11 @@ router.post('/login', async (req, res, next) => {
     }
     next(err);
   }
+});
+
+// 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
+router.get('/me', requireAuth, (req, res) => {
+  res.json({ user: req.user });
 });
 
 module.exports = router;
