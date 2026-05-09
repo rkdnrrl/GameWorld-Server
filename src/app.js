@@ -15,7 +15,11 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use(helmet());
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+const corsOriginOption =
+  config.corsOrigin.length === 1 && config.corsOrigin[0] === '*'
+    ? (_origin, cb) => cb(null, true)
+    : config.corsOrigin;
+app.use(cors({ origin: corsOriginOption, credentials: true }));
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
