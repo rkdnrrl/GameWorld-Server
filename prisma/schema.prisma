@@ -12,6 +12,7 @@ model User {
   email        String   @unique
   nickname     String   @unique
   passwordHash String
+  coins        Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

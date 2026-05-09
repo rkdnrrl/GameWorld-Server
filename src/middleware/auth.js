@@ -18,7 +18,7 @@ async function requireAuth(req, res, next) {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.sub },
-      select: { id: true, email: true, nickname: true, createdAt: true },
+      select: { id: true, email: true, nickname: true, coins: true, createdAt: true },
     });
     if (!user) {
       return res.status(401).json({ error: { message: '존재하지 않는 사용자입니다.' } });
