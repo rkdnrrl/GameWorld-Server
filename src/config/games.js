@@ -51,7 +51,7 @@ const GAMES = [
     id: 'interior-3d',
     title: '3D 인테리어 방',
     description: '가구를 사서 방을 3D로 꾸며 보세요.',
-    url: process.env.INTERIOR_3D_URL || 'http://13.125.187.132/singleplay-game4',
+    url: process.env.INTERIOR_3D_URL || 'http://13.125.187.132/interior1',
     emoji: '🏠',
     tags: ['싱글플레이', '꾸미기'],
     category: 'decorate',
