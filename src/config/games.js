@@ -1,4 +1,20 @@
+/**
+ * 게임 종류 (플랫폼 목록에서 섹션으로 묶음)
+ * - earn: 코인/재화를 모으는 싱글 등
+ * - multiplay: 실시간 멀티플레이
+ * - decorate: 인테리어·꾸미기 등
+ */
 const GAMES = [
+  {
+    id: 'rock-clicker',
+    title: '돌깨기 클리커',
+    description: '바위를 연타해서 부수고 게임머니를 모으세요!',
+    url: process.env.ROCK_CLICKER_URL || 'http://13.125.187.132/rock-clicker',
+    // 싱글플레이 — statusUrl 없음
+    emoji: '🪨',
+    tags: ['싱글플레이', '클리커'],
+    category: 'earn',
+  },
   {
     id: 'cube-multiplay',
     title: '큐브 멀티플레이',
@@ -8,6 +24,7 @@ const GAMES = [
     emoji: '🎲',
     maxPlayers: 100,
     tags: ['멀티플레이', '실시간'],
+    category: 'multiplay',
   },
   {
     id: 'topdown-multiplay',
@@ -18,15 +35,16 @@ const GAMES = [
     emoji: '🎮',
     maxPlayers: 100,
     tags: ['멀티플레이', '실시간'],
+    category: 'multiplay',
   },
   {
-    id: 'rock-clicker',
-    title: '돌깨기 클리커',
-    description: '바위를 연타해서 부수고 게임머니를 모으세요!',
-    url: process.env.ROCK_CLICKER_URL || 'http://13.125.187.132/rock-clicker',
-    // 싱글플레이 — statusUrl 없음
-    emoji: '🪨',
-    tags: ['싱글플레이', '클리커'],
+    id: 'interior-3d',
+    title: '3D 인테리어 방',
+    description: '가구를 사서 방을 3D로 꾸며 보세요.',
+    url: process.env.INTERIOR_3D_URL || 'http://13.125.187.132/singleplay-game4',
+    emoji: '🏠',
+    tags: ['싱글플레이', '꾸미기'],
+    category: 'decorate',
   },
 ];
 
