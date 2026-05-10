@@ -9,6 +9,10 @@ router.get('/', async (req, res, next) => {
     const gamesWithStatus = await Promise.all(
       GAMES.map(async (game) => {
         const { statusUrl, ...gameInfo } = game;
+        // 싱글플레이 등 statusUrl 없는 게임은 접속자 수 없음
+        if (!statusUrl) {
+          return { ...gameInfo, players: null, rooms: null };
+        }
         try {
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 3000);
