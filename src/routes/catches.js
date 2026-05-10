@@ -9,6 +9,57 @@ const {
 
 const router = Router();
 
+function isPixelArtColumnError(err) {
+  const msg = err && err.message ? String(err.message) : '';
+  return (
+    /pixelArt/i.test(msg) &&
+    (/does not exist/i.test(msg) ||
+      /Unknown column/i.test(msg) ||
+      err.code === 'P2022')
+  );
+}
+
+/** 미판매 보관함 페이지 (웹 /inventory · 게임 /in-game/:gameId 공통) */
+async function getUnsoldInventoryPayload(userId, page, limit) {
+  const skip = (page - 1) * limit;
+  const [catches, total] = await prisma.$transaction([
+    prisma.catch.findMany({
+      where: { userId, sold: false },
+      orderBy: { caughtAt: 'desc' },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        itemName: true,
+        itemEmoji: true,
+        itemType: true,
+        rarity: true,
+        size: true,
+        coinValue: true,
+        caughtAt: true,
+        pixelArt: true,
+      },
+    }),
+    prisma.catch.count({ where: { userId, sold: false } }),
+  ]);
+
+  const resolved = catches.map((row) => {
+    try {
+      return resolveCatchRowPixelArt(row);
+    } catch (e) {
+      console.error('resolveCatchRowPixelArt', row?.id, e);
+      return { ...row, pixelArt: null };
+    }
+  });
+
+  return {
+    catches: resolved,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
 const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
 const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris'];
 const MAX_COIN_VALUE = 1000;
@@ -72,50 +123,30 @@ router.get('/inventory', requireAuth, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 50);
-    const skip = (page - 1) * limit;
-
-    const [catches, total] = await prisma.$transaction([
-      prisma.catch.findMany({
-        where: { userId: req.user.id, sold: false },
-        orderBy: { caughtAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          itemName: true,
-          itemEmoji: true,
-          itemType: true,
-          rarity: true,
-          size: true,
-          coinValue: true,
-          caughtAt: true,
-          pixelArt: true,
-        },
-      }),
-      prisma.catch.count({ where: { userId: req.user.id, sold: false } }),
-    ]);
-
-    res.json({
-      catches: catches.map((row) => {
-        try {
-          return resolveCatchRowPixelArt(row);
-        } catch (e) {
-          console.error('resolveCatchRowPixelArt', row?.id, e);
-          return { ...row, pixelArt: null };
-        }
-      }),
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-    });
+    const payload = await getUnsoldInventoryPayload(req.user.id, page, limit);
+    res.json(payload);
   } catch (err) {
-    const msg = err && err.message ? String(err.message) : '';
-    if (
-      /pixelArt/i.test(msg) &&
-      (/does not exist/i.test(msg) ||
-        /Unknown column/i.test(msg) ||
-        err.code === 'P2022')
-    ) {
+    if (isPixelArtColumnError(err)) {
+      return res.status(503).json({
+        error: {
+          message:
+            'DB에 pixelArt 컬럼이 없습니다. 서버에서 prisma migrate deploy 또는 scripts/add-catch-pixel-art.sql 을 적용하세요.',
+        },
+      });
+    }
+    next(err);
+  }
+});
+
+// 게임 클라이언트 호환: 우주 낚시 등에서 쓰는 경로 (gameId는 예약용, 현재는 전체 미판매와 동일)
+router.get('/in-game/:gameId', requireAuth, async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 50);
+    const payload = await getUnsoldInventoryPayload(req.user.id, page, limit);
+    res.json(payload);
+  } catch (err) {
+    if (isPixelArtColumnError(err)) {
       return res.status(503).json({
         error: {
           message:
@@ -211,12 +242,27 @@ router.get('/', requireAuth, async (req, res, next) => {
     ]);
 
     res.json({
-      catches: catches.map(resolveCatchRowPixelArt),
+      catches: catches.map((row) => {
+        try {
+          return resolveCatchRowPixelArt(row);
+        } catch (e) {
+          console.error('resolveCatchRowPixelArt', row?.id, e);
+          return { ...row, pixelArt: null };
+        }
+      }),
       total,
       page,
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
+    if (isPixelArtColumnError(err)) {
+      return res.status(503).json({
+        error: {
+          message:
+            'DB에 pixelArt 컬럼이 없습니다. 서버에서 prisma migrate deploy 또는 scripts/add-catch-pixel-art.sql 을 적용하세요.',
+        },
+      });
+    }
     next(err);
   }
 });
