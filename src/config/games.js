@@ -9,6 +9,15 @@ const GAMES = [
     tags: ['멀티플레이', '실시간'],
   },
   {
+    id: 'topdown-multiplay',
+    title: '탑다운 멀티플레이',
+    description: '친구들과 함께 즐기는 탑다운 시점 멀티플레이 게임',
+    url: process.env.TOPDOWN_GAME_URL || 'http://13.125.187.132/multiplay-game2',
+    statusUrl: process.env.TOPDOWN_GAME_STATUS_URL || 'http://13.125.187.132/multiplay-game2/status',
+    emoji: '🎮',
+    tags: ['멀티플레이', '실시간'],
+  },
+  {
     id: 'rock-clicker',
     title: '돌깨기 클리커',
     description: '바위를 연타해서 부수고 게임머니를 모으세요!',
