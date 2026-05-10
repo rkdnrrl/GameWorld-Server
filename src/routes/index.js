@@ -11,5 +11,6 @@ router.use('/games', require('./games'));
 router.use('/coins', require('./coins'));
 router.use('/catches', require('./catches'));
 router.use('/furniture', require('./furniture'));
+router.use('/ai', require('./ai'));
 
 module.exports = router;
