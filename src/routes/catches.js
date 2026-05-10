@@ -7,11 +7,37 @@ const router = Router();
 const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
 const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris'];
 const MAX_COIN_VALUE = 1000;
+const PIXEL_MAX_W = 32;
+const PIXEL_MAX_H = 32;
+const PIXEL_MAX_PALETTE = 24;
+
+function validatePixelArt(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const w = Number(raw.w);
+  const h = Number(raw.h);
+  const palette = raw.palette;
+  const cells = raw.cells;
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1 || w > PIXEL_MAX_W || h > PIXEL_MAX_H) {
+    return null;
+  }
+  if (!Array.isArray(palette) || palette.length < 1 || palette.length > PIXEL_MAX_PALETTE) return null;
+  for (const c of palette) {
+    if (typeof c !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(c)) return null;
+  }
+  if (!Array.isArray(cells) || cells.length !== w * h) return null;
+  const maxIdx = palette.length - 1;
+  for (const idx of cells) {
+    const n = Number(idx);
+    if (!Number.isInteger(n) || n < 0 || n > maxIdx) return null;
+  }
+  return { w, h, palette, cells };
+}
 
 // 포획 저장 (코인 지급 없음 — 판매 시 지급)
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { itemName, itemEmoji, itemType, rarity, size, coinValue } = req.body;
+    const { itemName, itemEmoji, itemType, rarity, size, coinValue, pixelArt } = req.body;
 
     if (!itemName || typeof itemName !== 'string' || itemName.length > 50) {
       return res.status(400).json({ error: { message: '잘못된 아이템 이름입니다.' } });
@@ -28,6 +54,10 @@ router.post('/', requireAuth, async (req, res, next) => {
     }
 
     const emoji = typeof itemEmoji === 'string' ? itemEmoji.slice(0, 10) : '❓';
+    const pixelArtClean = validatePixelArt(pixelArt);
+    if (pixelArt != null && pixelArtClean == null) {
+      return res.status(400).json({ error: { message: '잘못된 픽셀 아트 데이터입니다.' } });
+    }
 
     const catchRecord = await prisma.catch.create({
       data: {
@@ -39,6 +69,7 @@ router.post('/', requireAuth, async (req, res, next) => {
         size: size ? Number(size) : null,
         coinValue: coins,
         sold: false,
+        ...(pixelArtClean ? { pixelArt: pixelArtClean } : {}),
       },
     });
 
@@ -70,6 +101,7 @@ router.get('/inventory', requireAuth, async (req, res, next) => {
           size: true,
           coinValue: true,
           caughtAt: true,
+          pixelArt: true,
         },
       }),
       prisma.catch.count({ where: { userId: req.user.id, sold: false } }),
@@ -158,6 +190,7 @@ router.get('/', requireAuth, async (req, res, next) => {
           sold: true,
           soldAt: true,
           caughtAt: true,
+          pixelArt: true,
         },
       }),
       prisma.catch.count({ where }),

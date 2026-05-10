@@ -30,6 +30,8 @@ model Catch {
   rarity    String    // common, rare, epic, legendary
   size      Float?
   coinValue Int
+  /// 픽셀 스프라이트 { w, h, palette: string[], cells: number[] } — 클라이언트가 표시용으로 저장
+  pixelArt  Json?
   sold      Boolean   @default(false)
   soldAt    DateTime?
   caughtAt  DateTime  @default(now())
