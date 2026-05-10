@@ -61,7 +61,7 @@ async function getUnsoldInventoryPayload(userId, page, limit) {
 }
 
 const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
-const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris'];
+const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris', 'cosmic'];
 const MAX_COIN_VALUE = 1000;
 
 // 포획 저장 (코인 지급 없음 — 판매 시 지급)
