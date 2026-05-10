@@ -5,6 +5,7 @@ const { prisma } = require('../db');
 const router = Router();
 
 const CATALOG_PRICES = {
+  floor_tile: 50,
   sofa: 120, plant: 45, lamp: 60, table: 90,
   tv: 200, rug: 75, clock: 55, art: 85,
 };
