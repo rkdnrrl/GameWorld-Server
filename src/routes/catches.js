@@ -96,12 +96,33 @@ router.get('/inventory', requireAuth, async (req, res, next) => {
     ]);
 
     res.json({
-      catches: catches.map(resolveCatchRowPixelArt),
+      catches: catches.map((row) => {
+        try {
+          return resolveCatchRowPixelArt(row);
+        } catch (e) {
+          console.error('resolveCatchRowPixelArt', row?.id, e);
+          return { ...row, pixelArt: null };
+        }
+      }),
       total,
       page,
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
+    const msg = err && err.message ? String(err.message) : '';
+    if (
+      /pixelArt/i.test(msg) &&
+      (/does not exist/i.test(msg) ||
+        /Unknown column/i.test(msg) ||
+        err.code === 'P2022')
+    ) {
+      return res.status(503).json({
+        error: {
+          message:
+            'DB에 pixelArt 컬럼이 없습니다. 서버에서 prisma migrate deploy 또는 scripts/add-catch-pixel-art.sql 을 적용하세요.',
+        },
+      });
+    }
     next(err);
   }
 });
