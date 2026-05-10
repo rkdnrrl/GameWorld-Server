@@ -8,16 +8,34 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  nickname     String   @unique
-  passwordHash String
-  coins        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  catches      Catch[]
+  id             String          @id @default(cuid())
+  email          String          @unique
+  nickname       String          @unique
+  passwordHash   String
+  coins          Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  catches        Catch[]
+  furnitureItems FurnitureItem[]
 
   @@map("users")
+}
+
+model FurnitureItem {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catId       String    // sofa, plant, lamp, table, tv, rug, clock, art
+  placed      Boolean   @default(false)
+  posX        Float?
+  posZ        Float?
+  rotY        Float?
+  purchasedAt DateTime  @default(now())
+  placedAt    DateTime?
+
+  @@index([userId])
+  @@index([userId, placed])
+  @@map("furniture_items")
 }
 
 model Catch {

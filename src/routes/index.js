@@ -10,5 +10,6 @@ router.use('/auth', require('./auth'));
 router.use('/games', require('./games'));
 router.use('/coins', require('./coins'));
 router.use('/catches', require('./catches'));
+router.use('/furniture', require('./furniture'));
 
 module.exports = router;
