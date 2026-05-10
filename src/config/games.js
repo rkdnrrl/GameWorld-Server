@@ -16,6 +16,16 @@ const GAMES = [
     category: 'earn',
   },
   {
+    id: 'space-fishing',
+    title: '우주 낚시',
+    description: '우주 공간에서 희귀한 생명체와 유물을 낚아보세요!',
+    url: process.env.SPACE_FISHING_URL || 'http://13.125.187.132/space-fishing',
+    // 싱글플레이 — statusUrl 없음
+    emoji: '🎣',
+    tags: ['싱글플레이', '낚시'],
+    category: 'earn',
+  },
+  {
     id: 'cube-multiplay',
     title: '큐브 멀티플레이',
     description: '친구들과 함께 즐기는 실시간 멀티플레이 큐브 게임',
