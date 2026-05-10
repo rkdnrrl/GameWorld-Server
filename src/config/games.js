@@ -6,6 +6,7 @@ const GAMES = [
     url: process.env.CUBE_GAME_URL || 'http://13.125.187.132/multiplay-game1',
     statusUrl: process.env.CUBE_GAME_STATUS_URL || 'http://13.125.187.132/status',
     emoji: '🎲',
+    maxPlayers: 100,
     tags: ['멀티플레이', '실시간'],
   },
   {
@@ -15,6 +16,7 @@ const GAMES = [
     url: process.env.TOPDOWN_GAME_URL || 'http://13.125.187.132/multiplay-game2',
     statusUrl: process.env.TOPDOWN_GAME_STATUS_URL || 'http://13.125.187.132/multiplay-game2/status',
     emoji: '🎮',
+    maxPlayers: 100,
     tags: ['멀티플레이', '실시간'],
   },
   {
