@@ -8,10 +8,10 @@ const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
 const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris'];
 const MAX_COIN_VALUE = 1000;
 
-// 포획 저장
+// 포획 저장 (코인 지급 없음 — 판매 시 지급)
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { itemName, itemType, rarity, size, coinValue } = req.body;
+    const { itemName, itemEmoji, itemType, rarity, size, coinValue } = req.body;
 
     if (!itemName || typeof itemName !== 'string' || itemName.length > 50) {
       return res.status(400).json({ error: { message: '잘못된 아이템 이름입니다.' } });
@@ -27,46 +27,44 @@ router.post('/', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '잘못된 코인 값입니다.' } });
     }
 
-    // 포획 저장 + 코인 지급 동시 처리
-    const [catchRecord] = await prisma.$transaction([
-      prisma.catch.create({
-        data: {
-          userId: req.user.id,
-          itemName: itemName.trim(),
-          itemType,
-          rarity,
-          size: size ? Number(size) : null,
-          coinValue: coins,
-        },
-      }),
-      prisma.user.update({
-        where: { id: req.user.id },
-        data: { coins: { increment: coins } },
-      }),
-    ]);
+    const emoji = typeof itemEmoji === 'string' ? itemEmoji.slice(0, 10) : '❓';
 
-    res.json({ catch: catchRecord, coinsEarned: coins });
+    const catchRecord = await prisma.catch.create({
+      data: {
+        userId: req.user.id,
+        itemName: itemName.trim(),
+        itemEmoji: emoji,
+        itemType,
+        rarity,
+        size: size ? Number(size) : null,
+        coinValue: coins,
+        sold: false,
+      },
+    });
+
+    res.json({ catch: catchRecord });
   } catch (err) {
     next(err);
   }
 });
 
-// 내 포획 목록 조회 (페이지네이션)
-router.get('/', requireAuth, async (req, res, next) => {
+// 보관함 조회 (미판매 아이템)
+router.get('/inventory', requireAuth, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const limit = Math.min(50, parseInt(req.query.limit) || 50);
     const skip = (page - 1) * limit;
 
     const [catches, total] = await prisma.$transaction([
       prisma.catch.findMany({
-        where: { userId: req.user.id },
+        where: { userId: req.user.id, sold: false },
         orderBy: { caughtAt: 'desc' },
         skip,
         take: limit,
         select: {
           id: true,
           itemName: true,
+          itemEmoji: true,
           itemType: true,
           rarity: true,
           size: true,
@@ -74,15 +72,98 @@ router.get('/', requireAuth, async (req, res, next) => {
           caughtAt: true,
         },
       }),
-      prisma.catch.count({ where: { userId: req.user.id } }),
+      prisma.catch.count({ where: { userId: req.user.id, sold: false } }),
     ]);
 
-    res.json({
-      catches,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
+    res.json({ catches, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 아이템 판매 (코인 지급)
+router.post('/sell', requireAuth, async (req, res, next) => {
+  try {
+    const { ids, all } = req.body;
+
+    let where;
+    if (all === true) {
+      where = { userId: req.user.id, sold: false };
+    } else if (Array.isArray(ids) && ids.length > 0) {
+      where = { userId: req.user.id, sold: false, id: { in: ids } };
+    } else {
+      return res.status(400).json({ error: { message: '판매할 아이템을 선택해 주세요.' } });
+    }
+
+    const toSell = await prisma.catch.findMany({
+      where,
+      select: { id: true, coinValue: true },
     });
+
+    if (toSell.length === 0) {
+      return res.status(400).json({ error: { message: '판매할 아이템이 없습니다.' } });
+    }
+
+    const coinsEarned = toSell.reduce((sum, c) => sum + c.coinValue, 0);
+    const sellIds = toSell.map(c => c.id);
+
+    const [, user] = await prisma.$transaction([
+      prisma.catch.updateMany({
+        where: { id: { in: sellIds } },
+        data: { sold: true, soldAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: req.user.id },
+        data: { coins: { increment: coinsEarned } },
+        select: { coins: true },
+      }),
+    ]);
+
+    res.json({ sold: sellIds.length, coinsEarned, totalCoins: user.coins });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 내 포획 목록 조회 (페이지네이션, sold 필터 가능)
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const soldFilter =
+      req.query.sold === 'true' ? true :
+      req.query.sold === 'false' ? false : undefined;
+
+    const where = {
+      userId: req.user.id,
+      ...(soldFilter !== undefined ? { sold: soldFilter } : {}),
+    };
+
+    const [catches, total] = await prisma.$transaction([
+      prisma.catch.findMany({
+        where,
+        orderBy: { caughtAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          itemName: true,
+          itemEmoji: true,
+          itemType: true,
+          rarity: true,
+          size: true,
+          coinValue: true,
+          sold: true,
+          soldAt: true,
+          caughtAt: true,
+        },
+      }),
+      prisma.catch.count({ where }),
+    ]);
+
+    res.json({ catches, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     next(err);
   }
@@ -91,15 +172,17 @@ router.get('/', requireAuth, async (req, res, next) => {
 // 포획 통계
 router.get('/stats', requireAuth, async (req, res, next) => {
   try {
-    const stats = await prisma.catch.groupBy({
-      by: ['rarity'],
-      where: { userId: req.user.id },
-      _count: { id: true },
-    });
+    const [byRarity, total, unsold] = await Promise.all([
+      prisma.catch.groupBy({
+        by: ['rarity'],
+        where: { userId: req.user.id },
+        _count: { id: true },
+      }),
+      prisma.catch.count({ where: { userId: req.user.id } }),
+      prisma.catch.count({ where: { userId: req.user.id, sold: false } }),
+    ]);
 
-    const total = await prisma.catch.count({ where: { userId: req.user.id } });
-
-    res.json({ total, byRarity: stats });
+    res.json({ total, unsold, byRarity });
   } catch (err) {
     next(err);
   }

@@ -21,17 +21,21 @@ model User {
 }
 
 model Catch {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   itemName  String
-  itemType  String   // fish, artifact, crystal, creature
-  rarity    String   // common, rare, epic, legendary
+  itemEmoji String    @default("❓")
+  itemType  String    // fish, artifact, crystal, creature, debris
+  rarity    String    // common, rare, epic, legendary
   size      Float?
   coinValue Int
-  caughtAt  DateTime @default(now())
+  sold      Boolean   @default(false)
+  soldAt    DateTime?
+  caughtAt  DateTime  @default(now())
 
   @@index([userId])
   @@index([userId, caughtAt])
+  @@index([userId, sold])
   @@map("catches")
 }
