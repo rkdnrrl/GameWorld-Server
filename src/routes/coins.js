@@ -1,33 +1,37 @@
 const { Router } = require('express');
+const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 
 const router = Router();
 
-const GAME_API_KEY = process.env.GAME_API_KEY || 'game-secret-key';
 const MAX_COINS_PER_REQUEST = 10000;
 
-// 게임 서버 전용 인증 미들웨어
-function requireGameAuth(req, res, next) {
-  const key = req.headers['x-game-api-key'];
-  if (!key || key !== GAME_API_KEY) {
-    return res.status(401).json({ error: { message: '게임 서버 인증 실패' } });
-  }
-  next();
-}
-
-// POST /api/coins/add — 게임 서버가 유저에게 코인 지급
-router.post('/add', requireGameAuth, async (req, res, next) => {
+// 코인 적립
+router.post('/add', requireAuth, async (req, res, next) => {
   try {
-    const { userId, amount } = req.body;
-    if (!userId || typeof amount !== 'number' || amount <= 0 || amount > MAX_COINS_PER_REQUEST) {
-      return res.status(400).json({ error: { message: '잘못된 요청입니다.' } });
+    const amount = Math.floor(Number(req.body.amount));
+    if (!amount || amount <= 0 || amount > MAX_COINS_PER_REQUEST) {
+      return res.status(400).json({ error: { message: '올바르지 않은 코인 수량입니다.' } });
     }
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { coins: { increment: Math.floor(amount) } },
-      select: { id: true, coins: true },
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { coins: { increment: amount } },
+      select: { coins: true },
     });
-    res.json({ user: updated });
+    res.json({ coins: user.coins });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 현재 코인 조회
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { coins: true },
+    });
+    res.json({ coins: user.coins });
   } catch (err) {
     next(err);
   }
