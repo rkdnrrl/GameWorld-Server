@@ -15,6 +15,23 @@ model User {
   coins        Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  catches      Catch[]
 
   @@map("users")
+}
+
+model Catch {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemName  String
+  itemType  String   // fish, artifact, crystal, creature
+  rarity    String   // common, rare, epic, legendary
+  size      Float?
+  coinValue Int
+  caughtAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, caughtAt])
+  @@map("catches")
 }
