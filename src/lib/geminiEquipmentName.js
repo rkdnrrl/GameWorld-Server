@@ -58,6 +58,10 @@ const FORGE_BUNDLE_RESPONSE_SCHEMA = {
     speedBonus: { type: 'NUMBER', description: 'Speed multiplier 0.02–0.20 (e.g. 0.08)' },
     durabilityMax: { type: 'INTEGER', description: 'Max durability points' },
     durability: { type: 'INTEGER', description: 'Current durability; new craft equals max' },
+    nameClass: {
+      type: 'STRING',
+      description: 'Name quality class: signature | ordinary',
+    },
   },
   required: ['name', 'attackBonus', 'defenseBonus', 'speedBonus', 'durabilityMax', 'durability'],
 };
@@ -115,7 +119,7 @@ async function generateForgeEquipmentNameFromMaterials(opts) {
 /**
  * 이름 + 능력치 + 내구도를 한 번에 (이름에 어울리게 설계).
  * @param {{ resolved: object[], tier: string, signal?: AbortSignal }} opts
- * @returns {Promise<{ name: string|null, stats: object|null, reason?: string }>}
+ * @returns {Promise<{ name: string|null, stats: object|null, nameClass?: 'signature'|'ordinary', reason?: string }>}
  */
 async function generateForgeEquipmentBundleFromMaterials(opts) {
   const key = getGeminiApiKey();
@@ -145,6 +149,9 @@ ${lines.join('\n')}
 - **2~8자** 짧은 **신조어·합성어** 한 개만. 장비·무기·모듈 느낌 (예: 유리버드, 녹은발톱, 양자실버, 포화칼날, 코일하트).
 - 재료 풀네임을 붙이거나 **「○○와 △△의 무기」「○○·△△·…의 무기」** 같은 인벤토리 나열 문장 **절대 금지**.
 - "와/과/및/+" 로 재료를 잇지 말 것. 띄어쓰기·괄호·따옴표·콜론 없이 한 덩어리 단어에 가깝게.
+- nameClass:
+  - 정말 멋있거나 예쁜, 인상적인 고유 이름이면 "signature"
+  - 무난하고 평범하면 "ordinary"
 
 능력치:
 2) 능력치는 **이름과 세계관에 맞게** 정할 것 (예: 방패·갑옷 느낌이면 방어가 높게, 가벼운 무기면 공격·스피드 등).
@@ -168,7 +175,7 @@ ${lines.join('\n')}
   };
 
   const bodyPlainJson = {
-    contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
+    contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"","nameClass":"ordinary","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
     generationConfig: {
       temperature: 0.82,
       maxOutputTokens: 256,
@@ -253,7 +260,9 @@ ${lines.join('\n')}
   }
 
   const stats = normalizeGeminiForgeStats(parsed, tier, opts.sizeExtra);
-  return { name: nameRaw, stats, reason: undefined };
+  const ncRaw = String(parsed.nameClass || '').trim().toLowerCase();
+  const nameClass = ncRaw === 'signature' ? 'signature' : 'ordinary';
+  return { name: nameRaw, stats, nameClass, reason: undefined };
 }
 
 module.exports = {

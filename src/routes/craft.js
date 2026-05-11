@@ -17,6 +17,7 @@ const MIN_SMELT_MATERIALS_FOR_FORGE = 5;
 const GEMINI_NAME_TIMEOUT_MS = 12_000;
 /** PixelLab 장비 스프라이트 — 긴 호출이므로 트랜잭션 밖에서만 */
 const PIXELLAB_FORGE_MS = 110_000;
+const SHARED_FORGE_EQUIP_PREFIX = 'shared:forge-equip:';
 
 function normalizeSourceMaterialsJson(raw) {
   if (!Array.isArray(raw)) return [];
@@ -60,6 +61,14 @@ function sanitizeText(s, max) {
     .trim()
     .replace(/\s+/g, ' ')
     .slice(0, max);
+}
+
+function sharedForgeEquipCacheKey(name, tier) {
+  const t = String(tier || 'common').trim().toLowerCase().slice(0, 20) || 'common';
+  const n = String(name || '').trim();
+  const base = `${SHARED_FORGE_EQUIP_PREFIX}${t}:`;
+  const maxLen = Math.max(1, 100 - base.length);
+  return `${base}${n.slice(0, maxLen)}`;
 }
 
 /**
@@ -201,7 +210,13 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           signal: ac.signal,
           sizeExtra,
         });
-        if (ai.name && ai.stats) precomputedAiBundle = { name: ai.name, stats: ai.stats };
+        if (ai.name && ai.stats) {
+          precomputedAiBundle = {
+            name: ai.name,
+            stats: ai.stats,
+            nameClass: ai.nameClass === 'signature' ? 'signature' : 'ordinary',
+          };
+        }
       } catch {
         /* Gemini 실패 시 트랜잭션에서 롤·클라이언트 name */
       } finally {
@@ -389,6 +404,42 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     }
 
     const createdRow = outcome.equipment;
+    const artCachePolicy =
+      outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass === 'signature'
+        ? 'private'
+        : 'shared';
+    const cacheKey = sharedForgeEquipCacheKey(createdRow.name, createdRow.tier);
+
+    if (artCachePolicy === 'shared') {
+      try {
+        const cached = await prisma.sharedPixelArt.findUnique({
+          where: { name: cacheKey },
+          select: { imageData: true },
+        });
+        if (cached && cached.imageData) {
+          await prisma.craftedEquipment.update({
+            where: { id: createdRow.id, userId: req.user.id },
+            data: {
+              pixelArt: {
+                source: 'shared_cache',
+                cacheKey,
+                imageDataUrl: cached.imageData,
+              },
+            },
+          });
+          const freshCached = await prisma.craftedEquipment.findUnique({
+            where: { id: createdRow.id },
+          });
+          const payloadCached = { equipment: toPublicEquipment(freshCached || createdRow) };
+          if (outcome.nameSource != null) payloadCached.nameSource = outcome.nameSource;
+          payloadCached.artCachePolicy = artCachePolicy;
+          return res.status(201).json(payloadCached);
+        }
+      } catch (e) {
+        console.warn('[craft/equipment] shared cache lookup skipped:', e && e.message ? e.message : e);
+      }
+    }
+
     const pixelAc = new AbortController();
     const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_FORGE_MS);
     try {
@@ -403,6 +454,26 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
             },
           },
         });
+        if (artCachePolicy === 'shared') {
+          try {
+            await prisma.sharedPixelArt.upsert({
+              where: { name: cacheKey },
+              create: {
+                name: cacheKey,
+                imageData: png,
+                rarity: String(createdRow.tier || 'common').slice(0, 20),
+                type: 'forge_equipment',
+              },
+              update: {
+                imageData: png,
+                rarity: String(createdRow.tier || 'common').slice(0, 20),
+                type: 'forge_equipment',
+              },
+            });
+          } catch (e) {
+            console.warn('[craft/equipment] shared cache save skipped:', e && e.message ? e.message : e);
+          }
+        }
       }
     } catch (e) {
       console.warn('[craft/equipment] PixelLab sprite skipped:', e && e.message ? e.message : e);
@@ -415,6 +486,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     });
     const payload = { equipment: toPublicEquipment(fresh || createdRow) };
     if (outcome.nameSource != null) payload.nameSource = outcome.nameSource;
+    payload.artCachePolicy = artCachePolicy;
     res.status(201).json(payload);
   } catch (err) {
     next(err);
