@@ -52,9 +52,8 @@ async function generatePixelLabImage(name, rarity, type) {
       body: JSON.stringify({
         description: imgPrompt,
         image_size: { width: 64, height: 64 },
-        negative_description: 'background, space background, stars, nebula, galaxy, gradient, sky, ground, floor, text, words, letters, watermark, blurry, human face, realistic',
+        negative_description: 'background, space background, stars, nebula, galaxy, gradient, sky, ground, floor, shadow, text, words, letters, watermark, blurry, human face, realistic, landscape',
         text_guidance_scale: 8.0,
-        no_background: true,
       }),
       signal: AbortSignal.timeout(120000),
     });
