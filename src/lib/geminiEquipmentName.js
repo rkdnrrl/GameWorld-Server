@@ -5,12 +5,14 @@ const { heuristicEquipmentNameFromResolved, hangulOnly } = require('./forgeHeuri
 /** Google AI Studio / Gemini API — Flash-Lite 계열 */
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
-/** 재료 풀네임 나열·「○○와 △△의 무기」류 금지 */
+/** 재료 풀네임 나열·인벤토리 문장 금지 (「○○의 ◇◇검」 같은 서사 이름은 허용) */
 function nameViolatesForgeStyle(name, resolved) {
   const s = String(name || '').trim();
   if (!s) return true;
   if (/의\s*무기\s*$/.test(s)) return true;
-  if (/(?:^|\s)(?:와|과)\s+\S/.test(s)) return true;
+  // 나열형: "○○ 와 △△ 와 …" 처럼 공백으로 이어 붙인 재료 나열
+  if (/\s와\s.+\s와\s/.test(s)) return true;
+  if (/\s과\s.+\s과\s/.test(s)) return true;
   if (/·.+·.+/.test(s) && /무기|재료/.test(s)) return true;
   if (/외\s*\d+\s*가지/.test(s)) return true;
   if (/를\s*섞어|을\s*섞어/.test(s)) return true;
@@ -23,7 +25,6 @@ function nameViolatesForgeStyle(name, resolved) {
     if (h.length >= 5 && s.includes(h)) longHits += 1;
   }
   if (longHits >= 2) return true;
-  if (s.length > 22 && (s.includes('와 ') || s.includes('과 '))) return true;
   return false;
 }
 
@@ -51,7 +52,7 @@ const FORGE_BUNDLE_RESPONSE_SCHEMA = {
     name: {
       type: 'STRING',
       description:
-        'Short coined Korean gear name 2-8 chars, fantasy blend, NOT inventory list, no 와/과 material names',
+        'Korean weapon/gear name 10-24 chars preferred; epic poetic titles ok (e.g. 달빛의 선율검, 지옥의 명멸검); no raw material inventory listing',
     },
     attackBonus: { type: 'INTEGER', description: 'Attack bonus integer' },
     defenseBonus: { type: 'INTEGER', description: 'Defense bonus integer' },
@@ -142,13 +143,14 @@ async function generateForgeEquipmentBundleFromMaterials(opts) {
   const prompt = `당신은 한국어 SF·우주 낚시 톤 RPG의 장비 설계자입니다. 아래 재료로 새 장비 하나를 설계하세요.
 
 목표 등급(능력치 상한의 기준): ${String(tier || 'common')}
-재료 (참고용 — 이름에 그대로 쓰지 말 것):
+재료 (참고용 — 이름에 그대로 베껴 쓰지 말 것. 분위기·재질·전설 느낌만 차용):
 ${lines.join('\n')}
 
 이름(name) 규칙 — 매우 중요:
-- **2~8자** 짧은 **신조어·합성어** 한 개만. 장비·무기·모듈 느낌 (예: 유리버드, 녹은발톱, 양자실버, 포화칼날, 코일하트).
-- 재료 풀네임을 붙이거나 **「○○와 △△의 무기」「○○·△△·…의 무기」** 같은 인벤토리 나열 문장 **절대 금지**.
-- "와/과/및/+" 로 재료를 잇지 말 것. 띄어쓰기·괄호·따옴표·콜론 없이 한 덩어리 단어에 가깝게.
+- **길이 10~24자(한글 기준 권장)**. 짧은 2~4자 낱말·난해한 합성 한 덩어리(예: 두꺼납함)는 피하고, **읽었을 때 바로 이미지가 떠오르는 무기/장비 풀네임**을 지을 것.
+- **서사·시적 표현 적극 허용**: 「○○의 △△검」「□□의 심연□□」「별을 가른 …」처럼 **관형어 + 본명** 구조를 써도 좋다. 좋은 예: 달빛의 선율검, 지옥의 명멸검, 심연을 읽는 자의 파멸창, 균열 너머의 요람.
+- **금지**: 낚시·용광로 재료 **이름을 두 개 이상 그대로 풀어 넣기**, **「○○와 △△의 무기」「○○·△△·□□의 무기」** 같은 인벤토리 나열 문장, **"○○ 와 △△ 와 …"** 식으로 재료만 잇기, 숫자·단위·버전표기 남발.
+- 띄어쓰기는 자연스럽게(필요하면 한 칸). 괄호·따옴표·콜론은 쓰지 말 것.
 - nameClass:
   - 정말 멋있거나 예쁜, 인상적인 고유 이름이면 "signature"
   - 무난하고 평범하면 "ordinary"
@@ -175,7 +177,7 @@ ${lines.join('\n')}
   };
 
   const bodyPlainJson = {
-    contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"","nameClass":"ordinary","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
+    contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"달빛의 잔향검","nameClass":"signature","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
     generationConfig: {
       temperature: 0.82,
       maxOutputTokens: 256,
