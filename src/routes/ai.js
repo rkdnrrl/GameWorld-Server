@@ -47,6 +47,7 @@ const TYPE_STYLE = {
 
 /** 한국어 이름 토큰 → PixelLab용 영어 형태 힌트 (긴 키워드 우선) */
 const KOREAN_NAME_PIXEL_HINTS = [
+  // ── 주방 ──
   ['후라이팬', 'round metal frying pan with long side handle, flat circular pan bottom, skillet cookware shape, handle must be visible, not a cube'],
   ['프라이팬', 'round metal frying pan with long side handle, flat circular pan bottom, skillet cookware shape, not a cube'],
   ['샌드위치프레스', 'hinged sandwich press with two flat plates and handle grip, grill appliance silhouette'],
@@ -57,6 +58,36 @@ const KOREAN_NAME_PIXEL_HINTS = [
   ['가마솥', 'large iron cauldron with three short legs'],
   ['철솥', 'cast iron dutch oven pot with domed lid'],
   ['밀폐용기', 'rectangular metal food container with snap lid'],
+  // ── 욕실·세면 ──
+  ['비누', 'oval bar of soap with rounded soft edges, small foam bubbles on top, smooth pastel colored soap bar, not a cube not a box'],
+  ['샴푸', 'tall plastic shampoo bottle with flip-top cap, label on front, rounded bottle body'],
+  ['린스', 'tall plastic conditioner bottle with flip-top cap, slightly different color from shampoo'],
+  ['바디워시', 'squeeze bottle of body wash with pump dispenser, oval bottle shape'],
+  ['칫솔', 'toothbrush with long handle and small bristle head, angled neck'],
+  ['치약', 'toothpaste tube with screw cap, soft squeezable tube shape with rounded end'],
+  ['샤워기', 'handheld shower head with hose, round spray head with holes'],
+  ['세면대', 'white ceramic sink basin with faucet tap, bowl shape'],
+  // ── 생활·청소 ──
+  ['빗자루', 'broom with long wooden handle and wide bristle brush head'],
+  ['청소기', 'upright vacuum cleaner with cylindrical body and hose nozzle'],
+  ['걸레', 'wet mop with long handle and flat mop head, cleaning cloth'],
+  ['쓰레기통', 'round trash can with lid, cylindrical bin shape'],
+  ['양동이', 'round bucket with curved handle, open top container'],
+  // ── 의류·패션 ──
+  ['가방', 'handbag or backpack with straps and buckle clasp'],
+  ['지갑', 'bifold leather wallet, folded rectangle with card slots visible'],
+  ['벨트', 'leather belt with metal buckle, long strap shape'],
+  ['장갑', 'pair of gloves, five-fingered hand covering'],
+  // ── 스포츠·운동 ──
+  ['덤벨', 'dumbbell with two round weight plates and short center grip bar'],
+  ['케틀벨', 'iron kettlebell with round ball body and thick loop handle on top'],
+  ['줄넘기', 'jump rope with two wooden handles and thin rope loop'],
+  // ── 전자 ──
+  ['키보드', 'flat rectangular keyboard with rows of keys, computer peripheral'],
+  ['마우스', 'computer mouse with two buttons and scroll wheel, ergonomic shape'],
+  ['이어폰', 'in-ear earphones with two small earbuds and thin wire cable'],
+  ['헤드폰', 'over-ear headphones with cushioned ear cups and arching headband'],
+  ['충전기', 'small power adapter plug with USB port and prong connectors'],
 ];
 
 function englishHintFromKoreanItemName(displayName) {
@@ -85,20 +116,32 @@ const RARITY_STYLE = {
   legendary: 'golden divine radiance, awe-inspiring, ornate details',
 };
 
+/** 힌트가 금속/공구류인지 판단 — 금속 묘사를 적용할지 결정 */
+const METAL_HINT_KEYWORDS = ['metal', 'iron', 'steel', 'cast', 'alloy', 'gear', 'bolt', 'wrench', 'scrap', 'wire', 'blade'];
+function hintIsMetal(hint) {
+  const h = (hint || '').toLowerCase();
+  return METAL_HINT_KEYWORDS.some((k) => h.includes(k));
+}
+
 /** PixelLab은 영어 구도·재질 위주가 안정적 — 한국어 이름은 짧은 무드 힌트로만 */
 function buildPixelLabPrompt(displayName, rarity, type, visualEn) {
   const clean = String(displayName || '').trim().slice(0, 48);
   const nameShapeHint = englishHintFromKoreanItemName(clean);
+  const hasMetal = !nameShapeHint || hintIsMetal(nameShapeHint);
 
   let typeStyle = TYPE_STYLE[type] || TYPE_STYLE.scrap;
   if (nameShapeHint && type === 'scrap') {
-    typeStyle =
-      'weathered metal kitchen or factory utensil scrap, bent but recognizable real tool shape, ' +
-      'not abstract geometry';
+    // 힌트가 있으면 힌트가 형태를 설명 — metal 힌트만 공구 묘사 추가
+    typeStyle = hasMetal
+      ? 'bent but recognizable real tool shape, not abstract geometry'
+      : 'recognizable everyday object shape, not a metal chunk, not a cube';
   }
 
+  // 금속 묘사(녹, 강철)는 금속성 힌트일 때만 적용
   const rarityMetal =
-    type === 'scrap' ? (SCRAP_RARITY_STYLE[rarity] || SCRAP_RARITY_STYLE.common) : (RARITY_STYLE[rarity] || RARITY_STYLE.common);
+    type === 'scrap' && hasMetal
+      ? (SCRAP_RARITY_STYLE[rarity] || SCRAP_RARITY_STYLE.common)
+      : (RARITY_STYLE[rarity] || RARITY_STYLE.common);
 
   const enHint = typeof visualEn === 'string' ? visualEn.trim().slice(0, 220) : '';
 
