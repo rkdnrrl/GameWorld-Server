@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  nickname        String           @unique
-  passwordHash    String
-  coins           Int              @default(0)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  catches         Catch[]
-  furnitureItems  FurnitureItem[]
-  voxelObjects    VoxelObject[]
-  voxelPlacements VoxelPlacement[]
+  id               String             @id @default(cuid())
+  email            String             @unique
+  nickname         String             @unique
+  passwordHash     String
+  coins            Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  catches          Catch[]
+  craftedEquipment CraftedEquipment[]
+  furnitureItems   FurnitureItem[]
+  voxelObjects     VoxelObject[]
+  voxelPlacements  VoxelPlacement[]
 
   @@map("users")
 }
@@ -101,4 +102,25 @@ model Catch {
   @@index([userId, caughtAt])
   @@index([userId, sold])
   @@map("catches")
+}
+
+/// 대장간(Singleplay-Game5) 제작 장비 — 재료 Catch 삭제 후 생성
+model CraftedEquipment {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId       String   @db.VarChar(64)
+  name           String   @db.VarChar(120)
+  itemEmoji      String   @default("⚔️") @db.VarChar(16)
+  tier           String   @default("common") @db.VarChar(20)
+  desc           String?  @db.VarChar(400)
+  /// { attackBonus, defenseBonus, speedBonus }
+  stats          Json
+  /// 제작에 소모된 catch id 배열
+  sourceCatchIds Json
+  pixelArt       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@map("crafted_equipment")
 }

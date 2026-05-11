@@ -10,6 +10,7 @@ router.use('/auth', require('./auth'));
 router.use('/games', require('./games'));
 router.use('/coins', require('./coins'));
 router.use('/catches', require('./catches'));
+router.use('/craft', require('./craft'));
 router.use('/furniture', require('./furniture'));
 router.use('/voxels', require('./voxels'));
 router.use('/ai', require('./ai'));
