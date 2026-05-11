@@ -4,11 +4,15 @@ const { prisma } = require('../db');
 const { RECIPES } = require('../lib/forgeRecipes');
 const { matchingSubsetForRecipe } = require('../lib/forgeValidate');
 const { rollEquipmentStats, tierFromMaterials } = require('../lib/forgeRollStats');
+const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
+const { heuristicEquipmentNameFromResolved } = require('../lib/forgeHeuristicName');
+const { generateForgeEquipmentNameFromMaterials } = require('../lib/geminiEquipmentName');
 
 const router = Router();
 
 const DYNAMIC_RECIPE_ID = 'dynamic';
 const MAX_DYNAMIC_MATERIALS = 12;
+const GEMINI_NAME_TIMEOUT_MS = 12_000;
 
 function normalizeSourceMaterialsJson(raw) {
   if (!Array.isArray(raw)) return [];
@@ -102,8 +106,9 @@ router.get('/equipment', requireAuth, async (req, res, next) => {
 
 /**
  * POST /api/craft/equipment
- * A) 레시피 제련: { recipeId, catchIds } 또는 { recipeId, materials }
- * B) 동적 제련: { catchIds, name, description? } 또는 { materials, name, description? } — 재료 2개 이상
+ * A) 레시피 제련: { recipeId, materials | catchIds }
+ * B) 동적 제련: materials(2+) + (name | generateNameWithAi)
+ *    — generateNameWithAi: true 이면 Gemini 2.5 Flash-Lite 로 이름 생성, 실패 시 name 또는 서버 휴리스틱
  */
 router.post('/equipment', requireAuth, async (req, res, next) => {
   try {
@@ -111,6 +116,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const recipeIdRaw = body.recipeId;
     const nameIn = body.name;
     const descIn = body.description;
+    const wantAiName = Boolean(body.generateNameWithAi || body.aiEquipmentName);
 
     const materials = materialsFromBody(body);
     const fingerprint = materials.map((m) => `${m.kind}:${m.id}`);
@@ -119,18 +125,20 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '중복된 재료가 있습니다.' } });
     }
 
+    const nameTrim = nameIn != null ? String(nameIn).trim() : '';
+    const hasClientName = nameTrim.length > 0;
+
     const hasRecipe =
       recipeIdRaw != null &&
       String(recipeIdRaw).trim() !== '' &&
       String(recipeIdRaw).trim() !== DYNAMIC_RECIPE_ID;
-    const hasDynamic =
-      materials.length >= 2 && nameIn != null && String(nameIn).trim().length > 0;
+    const hasDynamic = materials.length >= 2 && (hasClientName || wantAiName);
 
     if (!hasRecipe && !hasDynamic) {
       return res.status(400).json({
         error: {
           message:
-            'recipeId+재료(레시피 제련) 또는 재료 2개 이상+name(동적 제련)이 필요합니다. 재료는 materials 또는 catchIds 로 보낼 수 있습니다.',
+            'recipeId+재료(레시피 제련) 또는 재료 2개 이상 + (name 또는 generateNameWithAi) 가 필요합니다.',
         },
       });
     }
@@ -141,69 +149,44 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
 
+    /** 동적 제련 + AI: 트랜잭션 전에 재료 조회·Gemini 호출 (DB 락 최소화) */
+    let precomputedAiName = null;
+    if (hasDynamic && wantAiName) {
+      const preview = await resolveCraftMaterials(prisma, req.user.id, materials);
+      if (preview.err === 'NOT_FOUND_OR_SOLD') {
+        return res.status(400).json({
+          error: { message: '낚시 재료를 찾을 수 없거나 이미 판매된 항목입니다.' },
+        });
+      }
+      if (preview.err === 'NOT_FOUND_EQUIPMENT') {
+        return res.status(400).json({
+          error: { message: '재료로 쓸 장비를 찾을 수 없습니다.' },
+        });
+      }
+      const tierPv = tierFromMaterials(preview.resolved);
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), GEMINI_NAME_TIMEOUT_MS);
+      try {
+        const ai = await generateForgeEquipmentNameFromMaterials({
+          resolved: preview.resolved,
+          tier: tierPv,
+          signal: ac.signal,
+        });
+        if (ai.name) precomputedAiName = ai.name;
+      } catch {
+        /* Gemini 실패 시 트랜잭션 안에서 클라이언트 name / 휴리스틱 */
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     const outcome = await prisma.$transaction(async (tx) => {
+      const load = await resolveCraftMaterials(tx, req.user.id, materials);
+      if (load.err) return { err: load.err };
+      const { resolved } = load;
+
       const catchIdsNeeded = [...new Set(materials.filter((m) => m.kind === 'catch').map((m) => m.id))];
       const equipIdsNeeded = [...new Set(materials.filter((m) => m.kind === 'equipment').map((m) => m.id))];
-
-      const catchRows =
-        catchIdsNeeded.length > 0
-          ? await tx.catch.findMany({
-              where: {
-                id: { in: catchIdsNeeded },
-                userId: req.user.id,
-                sold: false,
-              },
-            })
-          : [];
-      const equipRows =
-        equipIdsNeeded.length > 0
-          ? await tx.craftedEquipment.findMany({
-              where: {
-                id: { in: equipIdsNeeded },
-                userId: req.user.id,
-              },
-            })
-          : [];
-
-      if (catchRows.length !== catchIdsNeeded.length) {
-        return { err: 'NOT_FOUND_OR_SOLD' };
-      }
-      if (equipRows.length !== equipIdsNeeded.length) {
-        return { err: 'NOT_FOUND_EQUIPMENT' };
-      }
-
-      const catchMap = new Map(catchRows.map((r) => [r.id, r]));
-      const equipMap = new Map(equipRows.map((r) => [r.id, r]));
-
-      const resolved = [];
-      for (const m of materials) {
-        if (m.kind === 'catch') {
-          const r = catchMap.get(m.id);
-          if (!r) return { err: 'NOT_FOUND_OR_SOLD' };
-          resolved.push({
-            kind: 'catch',
-            id: r.id,
-            itemName: r.itemName,
-            itemEmoji: r.itemEmoji,
-            rarity: r.rarity,
-            size: r.size,
-            pixelArt: r.pixelArt,
-          });
-        } else {
-          const r = equipMap.get(m.id);
-          if (!r) return { err: 'NOT_FOUND_EQUIPMENT' };
-          resolved.push({
-            kind: 'equipment',
-            id: r.id,
-            name: r.name,
-            itemEmoji: r.itemEmoji,
-            tier: r.tier,
-            rarity: r.tier,
-            pixelArt: r.pixelArt,
-            stats: r.stats,
-          });
-        }
-      }
 
       let rec = null;
       let finalName;
@@ -211,6 +194,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       let itemEmoji;
       let tier;
       let recipeIdStored;
+      let nameSource;
 
       if (hasRecipe) {
         const recipeId = String(recipeIdRaw).trim();
@@ -244,9 +228,19 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         finalDesc = rec.out.desc ? String(rec.out.desc).slice(0, 400) : null;
         itemEmoji = (rec.out.emoji && String(rec.out.emoji).slice(0, 16)) || '⚔️';
         tier = String(rec.out.tier || 'common').slice(0, 20);
+        nameSource = 'recipe';
       } else {
         recipeIdStored = DYNAMIC_RECIPE_ID;
-        finalName = sanitizeText(nameIn, 120);
+        if (wantAiName && precomputedAiName) {
+          finalName = sanitizeText(precomputedAiName, 120);
+          nameSource = 'ai';
+        } else if (hasClientName) {
+          finalName = sanitizeText(nameTrim, 120);
+          nameSource = wantAiName ? 'client_fallback' : 'client';
+        } else {
+          finalName = sanitizeText(heuristicEquipmentNameFromResolved(resolved), 120);
+          nameSource = 'heuristic';
+        }
         if (!finalName) {
           return { err: 'BAD_NAME' };
         }
@@ -301,7 +295,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           pixelArt: firstArt,
         },
       });
-      return { equipment: created };
+      return { equipment: created, nameSource };
     });
 
     if (outcome.err === 'NOT_FOUND_OR_SOLD') {
@@ -330,7 +324,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     }
 
     const equipment = outcome.equipment;
-    res.status(201).json({ equipment: toPublicEquipment(equipment) });
+    const payload = { equipment: toPublicEquipment(equipment) };
+    if (outcome.nameSource != null) payload.nameSource = outcome.nameSource;
+    res.status(201).json(payload);
   } catch (err) {
     next(err);
   }
