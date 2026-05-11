@@ -165,7 +165,12 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         tier = tierFromCatches(rows);
       }
 
-      const stats = rollEquipmentStats(tier, catchIds);
+      const idToRow = new Map(rows.map((r) => [r.id, r]));
+      const sizesOrdered = catchIds.map((id) => {
+        const r = idToRow.get(id);
+        return r && r.size != null && Number.isFinite(Number(r.size)) ? Number(r.size) : null;
+      });
+      const stats = rollEquipmentStats(tier, catchIds, sizesOrdered);
       const firstArt =
         rows.find((u) => u.pixelArt != null)?.pixelArt ?? null;
 
