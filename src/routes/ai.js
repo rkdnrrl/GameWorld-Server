@@ -11,7 +11,7 @@ const RARITY_KO = {
   legendary: '전설',
 };
 
-const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris'];
+const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris', 'cosmic'];
 
 const PIXELLAB_BASE_URL = 'https://api.pixellab.ai/v1';
 
