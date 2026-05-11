@@ -433,6 +433,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           const payloadCached = { equipment: toPublicEquipment(freshCached || createdRow) };
           if (outcome.nameSource != null) payloadCached.nameSource = outcome.nameSource;
           payloadCached.artCachePolicy = artCachePolicy;
+          if (outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass) {
+            payloadCached.nameClass = precomputedAiBundle.nameClass;
+          }
           return res.status(201).json(payloadCached);
         }
       } catch (e) {
@@ -487,6 +490,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const payload = { equipment: toPublicEquipment(fresh || createdRow) };
     if (outcome.nameSource != null) payload.nameSource = outcome.nameSource;
     payload.artCachePolicy = artCachePolicy;
+    if (outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass) {
+      payload.nameClass = precomputedAiBundle.nameClass;
+    }
     res.status(201).json(payload);
   } catch (err) {
     next(err);
