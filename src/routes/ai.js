@@ -56,8 +56,14 @@ async function generatePixelLabImage(name, rarity) {
     }
 
     const plData = await plRes.json();
+    console.log('[PixelLab] response keys:', Object.keys(plData || {}),
+      'image keys:', Object.keys(plData?.image || {}));
+
     const b64 = plData?.image?.base64;
-    if (!b64) return null;
+    if (!b64) {
+      console.warn('[PixelLab] no base64 in response:', JSON.stringify(plData).slice(0, 300));
+      return null;
+    }
 
     const cost = plData?.usage?.usd;
     if (cost) console.log(`[PixelLab] "${name}" (${rarity}) — $${cost.toFixed(5)}`);
