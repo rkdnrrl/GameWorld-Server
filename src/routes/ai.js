@@ -30,7 +30,7 @@ async function generatePixelLabImage(name, rarity) {
   const imgPrompt =
     `${name}, ${rarityStyle}, ` +
     `retro 16-bit pixel art game sprite, centered, simple clean design, ` +
-    `dark space background, game icon style, no text`;
+    `transparent background, game icon style, no text`;
 
   try {
     const plRes = await fetch(`${PIXELLAB_BASE_URL}/generate-image-pixflux`, {
@@ -42,11 +42,11 @@ async function generatePixelLabImage(name, rarity) {
       body: JSON.stringify({
         description: imgPrompt,
         image_size: { width: 64, height: 64 },
-        negative_description: 'text, words, letters, watermark, blurry, human face, realistic',
+        negative_description: 'background, space background, stars, nebula, galaxy, gradient, sky, ground, floor, text, words, letters, watermark, blurry, human face, realistic',
         text_guidance_scale: 8.0,
-        no_background: false,
+        no_background: true,
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!plRes.ok) {
