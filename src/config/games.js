@@ -16,6 +16,15 @@ const GAMES = [
     category: 'earn',
   },
   {
+    id: 'blacksmith-forge',
+    title: '우주 대장장이',
+    description: '낚시로 모은 재료를 조합해 장비를 제작하세요!',
+    url: process.env.BLACKSMITH_URL || 'http://13.125.187.132/blacksmith',
+    emoji: '⚒️',
+    tags: ['싱글플레이', '조합', '제작'],
+    category: 'earn',
+  },
+  {
     id: 'cube-multiplay',
     title: '큐브 멀티플레이',
     description: '친구들과 함께 즐기는 실시간 멀티플레이 큐브 게임',

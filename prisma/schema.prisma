@@ -8,17 +8,49 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  nickname       String          @unique
-  passwordHash   String
-  coins          Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  catches        Catch[]
-  furnitureItems FurnitureItem[]
+  id              String           @id @default(cuid())
+  email           String           @unique
+  nickname        String           @unique
+  passwordHash    String
+  coins           Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  catches         Catch[]
+  furnitureItems  FurnitureItem[]
+  voxelObjects    VoxelObject[]
+  voxelPlacements VoxelPlacement[]
 
   @@map("users")
+}
+
+model VoxelObject {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String           @db.VarChar(50)
+  price      Int
+  voxels     Json             // [{x,y,z,color}, ...]
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  placements VoxelPlacement[]
+
+  @@index([userId])
+  @@map("voxel_objects")
+}
+
+model VoxelPlacement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voxelObjectId String
+  voxelObject   VoxelObject @relation(fields: [voxelObjectId], references: [id], onDelete: Cascade)
+  posX          Float       @default(0)
+  posZ          Float       @default(0)
+  rotY          Float       @default(0)
+  placedAt      DateTime    @default(now())
+
+  @@index([userId])
+  @@map("voxel_placements")
 }
 
 model FurnitureItem {
