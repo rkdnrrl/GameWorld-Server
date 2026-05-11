@@ -13,6 +13,7 @@ const router = Router();
 
 const DYNAMIC_RECIPE_ID = 'dynamic';
 const MAX_DYNAMIC_MATERIALS = 12;
+const MIN_SMELT_MATERIALS_FOR_FORGE = 5;
 const GEMINI_NAME_TIMEOUT_MS = 12_000;
 /** PixelLab 장비 스프라이트 — 긴 호출이므로 트랜잭션 밖에서만 */
 const PIXELLAB_FORGE_MS = 110_000;
@@ -125,6 +126,14 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const wantAiName = Boolean(body.generateNameWithAi || body.aiEquipmentName);
 
     const materials = materialsFromBody(body);
+    const smeltCount = materials.filter((m) => m.kind === 'smelt').length;
+    if (smeltCount > 0 && smeltCount < MIN_SMELT_MATERIALS_FOR_FORGE) {
+      return res.status(400).json({
+        error: {
+          message: `산출물을 제련 재료로 쓰려면 최소 ${MIN_SMELT_MATERIALS_FOR_FORGE}개가 필요합니다.`,
+        },
+      });
+    }
     const fingerprint = materials.filter((m) => m.kind !== 'smelt').map((m) => `${m.kind}:${m.id}`);
     const fpSet = new Set(fingerprint);
     if (fpSet.size !== fingerprint.length) {
