@@ -15,20 +15,30 @@ const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris', 'cosmi
 
 const PIXELLAB_BASE_URL = 'https://api.pixellab.ai/v1';
 
+const TYPE_STYLE = {
+  fish:     'space fish, alien aquatic creature, fins and tail, marine life',
+  creature: 'alien creature, space monster, living organism, organic body',
+  artifact: 'mechanical device, space machine, sci-fi gadget, metallic object, gear or engine or tool',
+  crystal:  'glowing crystal, gemstone, mineral shard, geometric facets',
+  debris:   'space junk, wreckage, broken machine part, scrap metal, fragment',
+  cosmic:   'cosmic entity, energy being, abstract space phenomenon',
+};
+
 const RARITY_STYLE = {
-  common:    'colorful space creature or debris, simple cosmic design',
-  rare:      'rare space creature, blue and purple cosmic tones, glowing aura',
-  epic:      'epic space entity, red and gold fiery tones, intense cosmic glow',
-  legendary: 'supreme legendary cosmic being, golden divine radiance, awe-inspiring',
+  common:    'simple design, muted colors',
+  rare:      'blue and purple tones, glowing aura',
+  epic:      'red and gold fiery tones, intense glow',
+  legendary: 'golden divine radiance, awe-inspiring, ornate details',
 };
 
 /* ── PixelLab 이미지 생성 헬퍼 ──────────────────────────── */
-async function generatePixelLabImage(name, rarity) {
+async function generatePixelLabImage(name, rarity, type) {
   if (!process.env.PIXELLAB_SECRET) return null;
 
-  const rarityStyle = RARITY_STYLE[rarity] || 'colorful space creature';
+  const typeStyle   = TYPE_STYLE[type]   || TYPE_STYLE.creature;
+  const rarityStyle = RARITY_STYLE[rarity] || RARITY_STYLE.common;
   const imgPrompt =
-    `${name}, ${rarityStyle}, ` +
+    `${name}, ${typeStyle}, ${rarityStyle}, ` +
     `retro 16-bit pixel art game sprite, centered, simple clean design, ` +
     `transparent background, game icon style, no text`;
 
@@ -135,7 +145,7 @@ router.post('/catch', requireAuth, async (req, res) => {
   }
 
   // ── 2. PixelLab 이미지 생성 (에픽·전설은 캐시 없이 항상 새로 생성) ──
-  const imageUrl = await generatePixelLabImage(name, rarity);
+  const imageUrl = await generatePixelLabImage(name, rarity, type);
 
   res.json({ name, type, emoji, imageUrl });
 });
@@ -177,7 +187,7 @@ router.post('/image', requireAuth, async (req, res) => {
   }
 
   // ── 2. PixelLab으로 이미지 생성 (캐시 실패 여부와 무관하게 항상 시도) ──
-  const imageUrl = await generatePixelLabImage(cleanName, rarity);
+  const imageUrl = await generatePixelLabImage(cleanName, rarity, cleanType);
   if (!imageUrl) {
     console.warn(`[AI /image] PixelLab returned null for "${cleanName}" (${rarity})`);
     return res.json({ imageUrl: null, cached: false });
