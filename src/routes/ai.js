@@ -45,6 +45,31 @@ const TYPE_STYLE = {
     'no fish no ocean no creature face no human',
 };
 
+/** 한국어 이름 토큰 → PixelLab용 영어 형태 힌트 (긴 키워드 우선) */
+const KOREAN_NAME_PIXEL_HINTS = [
+  ['후라이팬', 'round metal frying pan with long side handle, flat circular pan bottom, skillet cookware shape, handle must be visible, not a cube'],
+  ['프라이팬', 'round metal frying pan with long side handle, flat circular pan bottom, skillet cookware shape, not a cube'],
+  ['샌드위치프레스', 'hinged sandwich press with two flat plates and handle grip, grill appliance silhouette'],
+  ['냄비', 'metal cooking pot with side handles, cylindrical or bulging pot body, lid optional'],
+  ['웍', 'round curved wok bowl, one long handle, open top'],
+  ['주전자', 'metal kettle with spout and top handle'],
+  ['밥솥', 'thick rice cooker pot with domed lid and knob'],
+  ['가마솥', 'large iron cauldron with three short legs'],
+  ['철솥', 'cast iron dutch oven pot with domed lid'],
+  ['밀폐용기', 'rectangular metal food container with snap lid'],
+];
+
+function englishHintFromKoreanItemName(displayName) {
+  const n = String(displayName || '');
+  for (let i = 0; i < KOREAN_NAME_PIXEL_HINTS.length; i += 1) {
+    const row = KOREAN_NAME_PIXEL_HINTS[i];
+    const kw = row[0];
+    const hint = row[1];
+    if (kw && hint && n.includes(kw)) return hint;
+  }
+  return '';
+}
+
 /** 고철 야드(Singleplay-Game3) — 희귀도별 금속·조명 묘사 (픽셀 아이콘용) */
 const SCRAP_RARITY_STYLE = {
   common:    'worn rust patina, dull gray brown steel, flat lighting, humble scrap',
@@ -63,13 +88,22 @@ const RARITY_STYLE = {
 /** PixelLab은 영어 구도·재질 위주가 안정적 — 한국어 이름은 짧은 무드 힌트로만 */
 function buildPixelLabPrompt(displayName, rarity, type, visualEn) {
   const clean = String(displayName || '').trim().slice(0, 48);
-  const typeStyle = TYPE_STYLE[type] || TYPE_STYLE.scrap;
+  const nameShapeHint = englishHintFromKoreanItemName(clean);
+
+  let typeStyle = TYPE_STYLE[type] || TYPE_STYLE.scrap;
+  if (nameShapeHint && type === 'scrap') {
+    typeStyle =
+      'weathered metal kitchen or factory utensil scrap, bent but recognizable real tool shape, ' +
+      'not abstract geometry';
+  }
+
   const rarityMetal =
     type === 'scrap' ? (SCRAP_RARITY_STYLE[rarity] || SCRAP_RARITY_STYLE.common) : (RARITY_STYLE[rarity] || RARITY_STYLE.common);
 
   const enHint = typeof visualEn === 'string' ? visualEn.trim().slice(0, 220) : '';
 
   const parts = [
+    nameShapeHint ? nameShapeHint : null,
     enHint ? enHint : null,
     'SNES era 16-bit pixel art inventory icon',
     'single object centered, large on canvas, thick chunky pixels',
@@ -82,7 +116,7 @@ function buildPixelLabPrompt(displayName, rarity, type, visualEn) {
   const coreEn = parts.join(', ');
 
   if (clean) {
-    return `${coreEn}, scrapyard item mood inspired by label: "${clean}"`;
+    return `${coreEn}, item name flavor (do not render as text): "${clean}"`;
   }
   return coreEn;
 }
@@ -94,11 +128,23 @@ const PIXEL_NEGATIVE =
   'text, caption, watermark, logo, signature, QR, HUD, UI frame, speech bubble, ' +
   'motion blur, depth of field bokeh, jpeg artifacts, empty blank canvas, collage, split screen';
 
+function pixelNegativeForPrompt(imgPrompt) {
+  const cookware =
+    /frying pan|skillet|wok|kettle|cooking pot|cauldron|sandwich press|rice cooker|dutch oven/i.test(
+      imgPrompt,
+    );
+  if (cookware) {
+    return `${PIXEL_NEGATIVE}, shapeless cube, featureless box, minecraft block, ore block, isometric cube only, no handle`;
+  }
+  return PIXEL_NEGATIVE;
+}
+
 /* ── PixelLab 이미지 생성 헬퍼 ──────────────────────────── */
 async function generatePixelLabImage(name, rarity, type, visualEn) {
   if (!process.env.PIXELLAB_SECRET) return null;
 
   const imgPrompt = buildPixelLabPrompt(name, rarity, type, visualEn);
+  const negative = pixelNegativeForPrompt(imgPrompt);
 
   try {
     const plRes = await fetch(`${PIXELLAB_BASE_URL}/generate-image-pixflux`, {
@@ -110,7 +156,7 @@ async function generatePixelLabImage(name, rarity, type, visualEn) {
       body: JSON.stringify({
         description: imgPrompt,
         image_size: { width: 64, height: 64 },
-        negative_description: PIXEL_NEGATIVE,
+        negative_description: negative,
         text_guidance_scale: 7.25,
         no_background: true,
       }),
@@ -181,6 +227,7 @@ router.post('/catch', requireAuth, async (req, res) => {
 규칙:
 - type은 반드시 문자열 "scrap" 만 (다른 값 금지).
 - visualEn: PixelLab용 — 녹·용접·톱니·코일·I빔 등 **보이는 형태**만 영어로. 인물·문장·한국어 금지.
+- 이름에 후라이팬·프라이팬·냄비·웍·주전자·밥솥 등 **조리 도구**가 들어가면, visualEn은 반드시 그 도구의 **실제 실루엣**(예: 후라이팬=원형 팬+긴 손잡이, 정육면체 금지)을 영어로 구체적으로 쓸 것.
 - 우량·특급: 이름이 무겁고 값나는 재료·설비 잔해 느낌.
 - 잡철·선별: 현실적인 야드 스크랩 이름.
 - 절대 반복되지 않도록 창의적으로`;
