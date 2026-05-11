@@ -36,6 +36,16 @@ function getGeminiModel() {
   return String(process.env.GEMINI_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
 }
 
+/** 주 모델이 404/스키마 오류 등으로 실패할 때 한 번 더 시도 (미설정 시 gemini-2.0-flash) */
+const DEFAULT_FALLBACK_MODEL = 'gemini-2.0-flash';
+
+function getGeminiFallbackModelId(primary) {
+  const p = String(primary || '').trim();
+  const fb = String(process.env.GEMINI_MODEL_FALLBACK || DEFAULT_FALLBACK_MODEL).trim();
+  if (!fb || fb === p) return '';
+  return fb;
+}
+
 function parseGenerateContentText(json) {
   const parts = json?.candidates?.[0]?.content?.parts;
   if (!Array.isArray(parts)) return '';
@@ -163,44 +173,51 @@ ${lines.join('\n')}
 
 반드시 스키마에 맞는 JSON만 출력하세요.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const geminiUrl = (modelId) =>
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent?key=${encodeURIComponent(key)}`;
+
+  const genCfgTokens = {
+    temperature: 0.82,
+    maxOutputTokens: 384,
+    topP: 0.94,
+    responseMimeType: 'application/json',
+  };
 
   const bodyStructured = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.82,
-      maxOutputTokens: 256,
-      topP: 0.94,
-      responseMimeType: 'application/json',
+      ...genCfgTokens,
       responseSchema: FORGE_BUNDLE_RESPONSE_SCHEMA,
     },
   };
 
   const bodyPlainJson = {
     contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"달빛의 잔향검","nameClass":"signature","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
-    generationConfig: {
-      temperature: 0.82,
-      maxOutputTokens: 256,
-      topP: 0.94,
-      responseMimeType: 'application/json',
-    },
+    generationConfig: { ...genCfgTokens },
   };
+
+  const fallbackId = getGeminiFallbackModelId(model);
+
+  const post = async (modelId, body) =>
+    fetch(geminiUrl(modelId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: opts.signal,
+    });
 
   let res;
   try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyStructured),
-      signal: opts.signal,
-    });
-    if (!res.ok && (res.status === 400 || res.status === 404)) {
-      res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyPlainJson),
-        signal: opts.signal,
-      });
+    res = await post(model, bodyStructured);
+    if (!res.ok) {
+      res = await post(model, bodyPlainJson);
+    }
+    if (!res.ok && fallbackId) {
+      const resFb = await post(fallbackId, bodyPlainJson);
+      if (resFb.ok) {
+        console.warn('[geminiEquipmentName] primary model failed; used fallback:', fallbackId);
+        res = resFb;
+      }
     }
   } catch (e) {
     const msg = e && e.name === 'AbortError' ? 'timeout' : 'network';
@@ -214,6 +231,11 @@ ${lines.join('\n')}
     } catch {
       /* ignore */
     }
+    console.warn(
+      '[geminiEquipmentName] generateContent failed:',
+      res.status,
+      body.slice(0, 280),
+    );
     return { name: null, stats: null, reason: `http_${res.status}`, detail: body.slice(0, 400) };
   }
 
@@ -273,5 +295,7 @@ module.exports = {
   normalizeGeminiForgeStats,
   getGeminiApiKey,
   getGeminiModel,
+  getGeminiFallbackModelId,
   DEFAULT_MODEL,
+  DEFAULT_FALLBACK_MODEL,
 };
