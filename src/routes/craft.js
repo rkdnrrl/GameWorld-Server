@@ -7,12 +7,15 @@ const { rollEquipmentStats, tierFromMaterials, materialSizeSummary } = require('
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { heuristicEquipmentNameFromResolved } = require('../lib/forgeHeuristicName');
 const { generateForgeEquipmentBundleFromMaterials } = require('../lib/geminiEquipmentName');
+const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentArt');
 
 const router = Router();
 
 const DYNAMIC_RECIPE_ID = 'dynamic';
 const MAX_DYNAMIC_MATERIALS = 12;
 const GEMINI_NAME_TIMEOUT_MS = 12_000;
+/** PixelLab 장비 스프라이트 — 긴 호출이므로 트랜잭션 밖에서만 */
+const PIXELLAB_FORGE_MS = 110_000;
 
 function normalizeSourceMaterialsJson(raw) {
   if (!Array.isArray(raw)) return [];
@@ -335,8 +338,32 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '장비 이름이 비어 있습니다.' } });
     }
 
-    const equipment = outcome.equipment;
-    const payload = { equipment: toPublicEquipment(equipment) };
+    const createdRow = outcome.equipment;
+    const pixelAc = new AbortController();
+    const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_FORGE_MS);
+    try {
+      const png = await generateCraftedEquipmentPixelArt(createdRow.name, createdRow.tier, pixelAc.signal);
+      if (png) {
+        await prisma.craftedEquipment.update({
+          where: { id: createdRow.id, userId: req.user.id },
+          data: {
+            pixelArt: {
+              source: 'pixellab',
+              imageDataUrl: png,
+            },
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('[craft/equipment] PixelLab sprite skipped:', e && e.message ? e.message : e);
+    } finally {
+      clearTimeout(pixelTimer);
+    }
+
+    const fresh = await prisma.craftedEquipment.findUnique({
+      where: { id: createdRow.id },
+    });
+    const payload = { equipment: toPublicEquipment(fresh || createdRow) };
     if (outcome.nameSource != null) payload.nameSource = outcome.nameSource;
     res.status(201).json(payload);
   } catch (err) {
