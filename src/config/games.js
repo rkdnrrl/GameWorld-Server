@@ -23,7 +23,7 @@ const GAMES = [
     url:
       process.env.SINGLEPLAY_GAME5_URL ||
       process.env.BLACKSMITH_URL ||
-      'http://13.125.187.132/singleplay-game5',
+      'http://13.125.187.132/blacksmith',
     emoji: '⚒️',
     tags: ['싱글플레이', '조합', '제작', '중세'],
     category: 'earn',
