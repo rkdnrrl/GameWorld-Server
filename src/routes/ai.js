@@ -81,6 +81,7 @@ const KOREAN_NAME_PIXEL_HINTS = [
   // ── 스포츠·운동 ──
   ['덤벨', 'dumbbell with two round weight plates and short center grip bar'],
   ['케틀벨', 'iron kettlebell with round ball body and thick loop handle on top'],
+  ['점핑로프', 'jump rope with two handles and looping rope, skipping rope shape, rope arc between handles'],
   ['줄넘기', 'jump rope with two wooden handles and thin rope loop'],
   // ── 전자 ──
   ['키보드', 'flat rectangular keyboard with rows of keys, computer peripheral'],
