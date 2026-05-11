@@ -40,8 +40,17 @@ const TYPE_STYLE = {
   debris:   'space junk, wreckage, broken machine part, scrap metal, fragment',
   cosmic:   'cosmic entity, energy being, abstract space phenomenon',
   scrap:
-    'industrial metal scrap, steel or iron junkyard chunk, machine shop leftover, ' +
-    'recycled ferrous piece, ingot coil plate wire shard, no fish no ocean no creature face',
+    'one chunky industrial metal scrap prop, steel iron alloy, junkyard machine fragment, ' +
+    'nuts bolts gears rebar coil plate shard, heavy readable silhouette, fills most of frame, ' +
+    'no fish no ocean no creature face no human',
+};
+
+/** 고철 야드(Singleplay-Game3) — 희귀도별 금속·조명 묘사 (픽셀 아이콘용) */
+const SCRAP_RARITY_STYLE = {
+  common:    'worn rust patina, dull gray brown steel, flat lighting, humble scrap',
+  rare:      'cleaner machined steel, cool blue grey highlights, subtle edge gleam',
+  epic:      'orange heat glow on edges, welding sparks, stronger metal contrast',
+  legendary: 'dark steel with gold trim, ornate bolts, relic-like scrap centerpiece',
 };
 
 const RARITY_STYLE = {
@@ -51,16 +60,45 @@ const RARITY_STYLE = {
   legendary: 'golden divine radiance, awe-inspiring, ornate details',
 };
 
+/** PixelLab은 영어 구도·재질 위주가 안정적 — 한국어 이름은 짧은 무드 힌트로만 */
+function buildPixelLabPrompt(displayName, rarity, type, visualEn) {
+  const clean = String(displayName || '').trim().slice(0, 48);
+  const typeStyle = TYPE_STYLE[type] || TYPE_STYLE.scrap;
+  const rarityMetal =
+    type === 'scrap' ? (SCRAP_RARITY_STYLE[rarity] || SCRAP_RARITY_STYLE.common) : (RARITY_STYLE[rarity] || RARITY_STYLE.common);
+
+  const enHint = typeof visualEn === 'string' ? visualEn.trim().slice(0, 220) : '';
+
+  const parts = [
+    enHint ? enHint : null,
+    'SNES era 16-bit pixel art inventory icon',
+    'single object centered, large on canvas, thick chunky pixels',
+    'high contrast silhouette, readable at tiny size',
+    'game item loot sprite, crisp pixel edges, no anti-aliased smear',
+    typeStyle,
+    rarityMetal,
+    'isolated subject, empty void around object, alpha friendly',
+  ].filter(Boolean);
+  const coreEn = parts.join(', ');
+
+  if (clean) {
+    return `${coreEn}, scrapyard item mood inspired by label: "${clean}"`;
+  }
+  return coreEn;
+}
+
+const PIXEL_NEGATIVE =
+  'photograph, photo realistic, 3d render, octane, smooth shading, subsurface scatter, ' +
+  'wide establishing shot, tiny subject, panorama, landscape, sky, stars, nebula, galaxy, ' +
+  'underwater, ocean, fish, tentacles, anime character, human face, hands, body, ' +
+  'text, caption, watermark, logo, signature, QR, HUD, UI frame, speech bubble, ' +
+  'motion blur, depth of field bokeh, jpeg artifacts, empty blank canvas, collage, split screen';
+
 /* ── PixelLab 이미지 생성 헬퍼 ──────────────────────────── */
-async function generatePixelLabImage(name, rarity, type) {
+async function generatePixelLabImage(name, rarity, type, visualEn) {
   if (!process.env.PIXELLAB_SECRET) return null;
 
-  const typeStyle   = TYPE_STYLE[type]   || TYPE_STYLE.creature;
-  const rarityStyle = RARITY_STYLE[rarity] || RARITY_STYLE.common;
-  const imgPrompt =
-    `${name}, ${typeStyle}, ${rarityStyle}, ` +
-    `retro 16-bit pixel art game sprite, centered, simple clean design, ` +
-    `transparent background, game icon style, no text`;
+  const imgPrompt = buildPixelLabPrompt(name, rarity, type, visualEn);
 
   try {
     const plRes = await fetch(`${PIXELLAB_BASE_URL}/generate-image-pixflux`, {
@@ -72,8 +110,8 @@ async function generatePixelLabImage(name, rarity, type) {
       body: JSON.stringify({
         description: imgPrompt,
         image_size: { width: 64, height: 64 },
-        negative_description: 'background, space background, stars, nebula, galaxy, gradient, sky, ground, floor, shadow, text, words, letters, watermark, blurry, human face, realistic, landscape',
-        text_guidance_scale: 8.0,
+        negative_description: PIXEL_NEGATIVE,
+        text_guidance_scale: 7.25,
         no_background: true,
       }),
       signal: AbortSignal.timeout(120000),
@@ -136,20 +174,22 @@ router.post('/catch', requireAuth, async (req, res) => {
 {
   "name": "이름 (한국어, 20자 이내, 야드·설비·금속 가공 용어를 섞어 독특하게)",
   "type": "scrap",
-  "emoji": "이 스크랩·금속 덩어리를 표현하는 이모지 1개 (🔩⚙️🪨 등, 생물·물고기 이모지 금지)"
+  "emoji": "이 스크랩·금속 덩어리를 표현하는 이모지 1개 (🔩⚙️🪨 등, 생물·물고기 이모지 금지)",
+  "visualEn": "English only, max 22 words: concrete metal prop for pixel sprite (materials shapes only), no people no fish"
 }
 
 규칙:
 - type은 반드시 문자열 "scrap" 만 (다른 값 금지).
+- visualEn: PixelLab용 — 녹·용접·톱니·코일·I빔 등 **보이는 형태**만 영어로. 인물·문장·한국어 금지.
 - 우량·특급: 이름이 무겁고 값나는 재료·설비 잔해 느낌.
 - 잡철·선별: 현실적인 야드 스크랩 이름.
 - 절대 반복되지 않도록 창의적으로`;
 
-  let name, type, emoji;
+  let name, type, emoji, visualEn = '';
   try {
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 150,
+      max_tokens: 220,
       messages: [{ role: 'user', content: namePrompt }],
     });
 
@@ -160,6 +200,10 @@ router.post('/catch', requireAuth, async (req, res) => {
     name  = typeof parsed.name  === 'string' ? parsed.name.slice(0, 30)  : null;
     type  = VALID_TYPES.includes(parsed.type) ? parsed.type : 'scrap';
     emoji = typeof parsed.emoji === 'string' ? parsed.emoji.slice(0, 8) : '🔩';
+    visualEn =
+      typeof parsed.visualEn === 'string' && parsed.visualEn.trim()
+        ? parsed.visualEn.trim().slice(0, 220)
+        : '';
 
     if (!name) return res.status(500).json({ error: 'AI returned empty name' });
   } catch (err) {
@@ -168,15 +212,15 @@ router.post('/catch', requireAuth, async (req, res) => {
   }
 
   // ── 2. PixelLab 이미지 생성 (에픽·전설은 캐시 없이 항상 새로 생성) ──
-  const imageUrl = await generatePixelLabImage(name, rarity, type);
+  const imageUrl = await generatePixelLabImage(name, rarity, type, visualEn);
 
   res.json({ name, type, emoji, imageUrl });
 });
 
 /* ── POST /api/ai/image ──────────────────────────────────────
-   일반·희귀: PixelLab 완료 후 shared_pixel_arts 에 저장 (name = `shared:scrapyard:` + 표시용 이름)
-   동일 표시 이름이면 캐시 hit → imageUrl 만 반환 (에픽+ 는 이 API 사용 불가)
-   body: { name: string, type: string, rarity: 'common' | 'rare' }
+   일반(common)만: PixelLab 완료 후 shared_pixel_arts 저장 (name = `shared:scrapyard:` + 표시용 이름)
+   희귀(rare) 티어는 게임에서 제거됨 — 이 API는 rarity=common 만 허용
+   body: { name: string, type: string, rarity: 'common' }
    response: { imageUrl, cached, bonusCoins, coins }
 ──────────────────────────────────────────────────────────── */
 const SCAN_BONUS_COINS = 100;
@@ -204,8 +248,8 @@ router.post('/image', requireAuth, async (req, res) => {
   if (!VALID_TYPES.includes(type)) {
     return res.status(400).json({ error: `잘못된 타입: ${type}` });
   }
-  if (rarity !== 'common' && rarity !== 'rare') {
-    return res.status(400).json({ error: '이 엔드포인트는 일반·희귀용입니다.' });
+  if (rarity !== 'common') {
+    return res.status(400).json({ error: '이 엔드포인트는 일반(common) 전용입니다.' });
   }
 
   const cleanName = name.trim();

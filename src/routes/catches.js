@@ -60,7 +60,8 @@ async function getUnsoldInventoryPayload(userId, page, limit) {
   };
 }
 
-const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
+/** 신규 포획: 잡철=일반(common)만 · 희귀(rare) 티어 폐지. 에픽·전설 유지. (DB에 남은 옛 rare 행은 그대로 조회됨) */
+const VALID_RARITIES = ['common', 'epic', 'legendary'];
 const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris', 'cosmic', 'scrap'];
 const MAX_COIN_VALUE = 1000;
 

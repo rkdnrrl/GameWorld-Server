@@ -88,7 +88,7 @@ model Catch {
   itemName  String
   itemEmoji String    @default("❓")
   itemType  String    // fish, artifact, crystal, creature, debris, cosmic, scrap
-  rarity    String    // common, rare, epic, legendary
+  rarity    String    // common, epic, legendary (신규는 rare 없음 — 레거시 행만 rare 가능)
   size      Float?
   coinValue Int
   /// 픽셀 스프라이트 { w, h, palette: string[], cells: number[] } — 클라이언트가 표시용으로 저장
