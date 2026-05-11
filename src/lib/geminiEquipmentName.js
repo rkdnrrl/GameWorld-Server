@@ -129,6 +129,9 @@ async function generateForgeEquipmentBundleFromMaterials(opts) {
     if (r.kind === 'catch') {
       return `${i + 1}. [낚시 재료] 이름:${JSON.stringify(String(r.itemName || ''))}, 희귀도:${String(r.rarity || 'common')}, 크기:${r.size != null ? r.size : '?'}`;
     }
+    if (r.kind === 'smelt') {
+      return `${i + 1}. [용광로 산출물] 이름:${JSON.stringify(String(r.name || ''))}, 등급:${String(r.rarity || 'common')}`;
+    }
     return `${i + 1}. [장비 재료] 이름:${JSON.stringify(String(r.name || ''))}, 등급:${String(r.tier || 'common')}`;
   });
 

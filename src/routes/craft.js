@@ -28,8 +28,9 @@ function normalizeSourceMaterialsJson(raw) {
     const id = x.id != null ? String(x.id).trim() : '';
     if (!id) continue;
     const k = String(x.kind || '').toLowerCase();
-    if (k === 'equipment' || k === 'equip' || k === 'e') out.push({ kind: 'equipment', id });
-    else if (k === 'catch' || k === 'fish' || k === 'c') out.push({ kind: 'catch', id });
+      if (k === 'equipment' || k === 'equip' || k === 'e') out.push({ kind: 'equipment', id });
+      else if (k === 'catch' || k === 'fish' || k === 'c') out.push({ kind: 'catch', id });
+      else if (k === 'smelt' || k === 'stock' || k === 's') out.push({ kind: 'smelt', id });
   }
   return out;
 }
@@ -63,7 +64,7 @@ function sanitizeText(s, max) {
 /**
  * 요청 본문에서 { kind, id }[] 정규화. 레거시 catchIds 만 있으면 전부 catch.
  * @param {object} body
- * @returns {{ kind: 'catch'|'equipment', id: string }[]}
+ * @returns {{ kind: 'catch'|'equipment'|'smelt', id: string }[]}
  */
 function materialsFromBody(body) {
   const b = body || {};
@@ -77,6 +78,8 @@ function materialsFromBody(body) {
       if (k === 'catch' || k === 'fish' || k === 'c') out.push({ kind: 'catch', id });
       else if (k === 'equipment' || k === 'equip' || k === 'crafted' || k === 'e') {
         out.push({ kind: 'equipment', id });
+      } else if (k === 'smelt' || k === 'stock' || k === 's') {
+        out.push({ kind: 'smelt', id });
       }
     }
     return out;
@@ -122,9 +125,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const wantAiName = Boolean(body.generateNameWithAi || body.aiEquipmentName);
 
     const materials = materialsFromBody(body);
-    const fingerprint = materials.map((m) => `${m.kind}:${m.id}`);
+    const fingerprint = materials.filter((m) => m.kind !== 'smelt').map((m) => `${m.kind}:${m.id}`);
     const fpSet = new Set(fingerprint);
-    if (fpSet.size !== materials.length) {
+    if (fpSet.size !== fingerprint.length) {
       return res.status(400).json({ error: { message: '중복된 재료가 있습니다.' } });
     }
 
@@ -166,11 +169,18 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           error: { message: '재료로 쓸 장비를 찾을 수 없습니다.' },
         });
       }
+      if (preview.err === 'NOT_ENOUGH_SMELT') {
+        return res.status(400).json({
+          error: { message: '산출물 재고가 부족합니다.' },
+        });
+      }
       const tierPv = tierFromMaterials(preview.resolved);
       const rollSlotsPreview = preview.resolved.map((r) =>
         r.kind === 'catch'
           ? { kind: 'catch', id: r.id, size: r.size, tier: r.rarity }
-          : { kind: 'equipment', id: r.id, tier: r.tier },
+          : r.kind === 'equipment'
+            ? { kind: 'equipment', id: r.id, tier: r.tier }
+            : { kind: 'smelt', id: r.id, size: r.size, tier: r.rarity },
       );
       const sizeExtra = materialSizeSummary(rollSlotsPreview);
       const ac = new AbortController();
@@ -197,6 +207,13 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
 
       const catchIdsNeeded = [...new Set(materials.filter((m) => m.kind === 'catch').map((m) => m.id))];
       const equipIdsNeeded = [...new Set(materials.filter((m) => m.kind === 'equipment').map((m) => m.id))];
+      const smeltNeedById = {};
+      for (const m of materials) {
+        if (m.kind !== 'smelt') continue;
+        const sid = String(m.id || '').trim();
+        if (!sid) continue;
+        smeltNeedById[sid] = (smeltNeedById[sid] || 0) + 1;
+      }
 
       let rec = null;
       let finalName;
@@ -268,7 +285,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       const rollSlots = resolved.map((r) =>
         r.kind === 'catch'
           ? { kind: 'catch', id: r.id, size: r.size, tier: r.rarity }
-          : { kind: 'equipment', id: r.id, tier: r.tier },
+          : r.kind === 'equipment'
+            ? { kind: 'equipment', id: r.id, tier: r.tier }
+            : { kind: 'smelt', id: r.id, size: r.size, tier: r.rarity },
       );
       let stats;
       if (wantAiName && precomputedAiBundle && precomputedAiBundle.stats) {
@@ -294,6 +313,23 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           },
         });
       }
+      for (const [productId, usedCountRaw] of Object.entries(smeltNeedById)) {
+        const usedCount = Math.max(1, Math.floor(Number(usedCountRaw) || 0));
+        const updated = await tx.smeltStock.updateMany({
+          where: {
+            userId: req.user.id,
+            productId,
+            count: { gte: usedCount },
+          },
+          data: {
+            count: { decrement: usedCount },
+          },
+        });
+        if (updated.count !== 1) return { err: 'NOT_ENOUGH_SMELT' };
+      }
+      await tx.smeltStock.deleteMany({
+        where: { userId: req.user.id, count: { lte: 0 } },
+      });
 
       const sourceStored = materials.map((m) => ({ kind: m.kind, id: m.id }));
 
@@ -321,6 +357,11 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     if (outcome.err === 'NOT_FOUND_EQUIPMENT') {
       return res.status(400).json({
         error: { message: '재료로 쓸 장비를 찾을 수 없습니다.' },
+      });
+    }
+    if (outcome.err === 'NOT_ENOUGH_SMELT') {
+      return res.status(400).json({
+        error: { message: '산출물 재고가 부족합니다.' },
       });
     }
     if (outcome.err === 'UNKNOWN_RECIPE') {
