@@ -145,49 +145,50 @@ router.post('/image', requireAuth, async (req, res) => {
     return res.status(400).json({ error: '잘못된 이름입니다.' });
   }
   if (!VALID_TYPES.includes(type)) {
-    return res.status(400).json({ error: '잘못된 타입입니다.' });
+    return res.status(400).json({ error: `잘못된 타입: ${type}` });
   }
   if (rarity !== 'common' && rarity !== 'rare') {
     return res.status(400).json({ error: '이 엔드포인트는 일반·희귀용입니다.' });
   }
 
+  const cleanName = name.trim();
+  const cleanType = VALID_TYPES.includes(type) ? type : 'creature';
+
+  // ── 1. 공유 캐시 조회 (Prisma 미설정 시 건너뜀) ──
   try {
-    // 공유 캐시 조회
     const cached = await prisma.sharedPixelArt.findUnique({
-      where: { name: name.trim() },
+      where: { name: cleanName },
       select: { imageData: true },
     });
-
-    if (cached) {
-      console.log(`[SharedPixelArt] cache hit: "${name}"`);
+    if (cached?.imageData) {
+      console.log(`[SharedPixelArt] cache hit: "${cleanName}"`);
       return res.json({ imageUrl: cached.imageData, cached: true });
     }
-
-    // 캐시 미스 → PixelLab 생성
-    const imageUrl = await generatePixelLabImage(name.trim(), rarity);
-    if (!imageUrl) {
-      return res.json({ imageUrl: null, cached: false });
-    }
-
-    // 공유 캐시에 저장 (동시 요청 race condition 대응: upsert)
-    const cleanName = name.trim();
-    const cleanType = VALID_TYPES.includes(type) ? type : 'creature';
-    try {
-      await prisma.sharedPixelArt.upsert({
-        where:  { name: cleanName },
-        create: { name: cleanName, imageData: imageUrl, rarity, type: cleanType },
-        update: { imageData: imageUrl, rarity, type: cleanType },
-      });
-      console.log(`[SharedPixelArt] saved: "${cleanName}" (${rarity})`);
-    } catch (dbErr) {
-      console.error('[SharedPixelArt] save error (non-fatal):', dbErr.message || dbErr);
-    }
-
-    res.json({ imageUrl, cached: false });
-  } catch (err) {
-    console.error('[AI /image] error:', err.message || err);
-    res.json({ imageUrl: null, cached: false });
+  } catch (dbErr) {
+    // 테이블 미생성 or prisma generate 미실행 — PixelLab으로 계속
+    console.warn('[SharedPixelArt] cache lookup skipped:', dbErr.message);
   }
+
+  // ── 2. PixelLab으로 이미지 생성 (캐시 실패 여부와 무관하게 항상 시도) ──
+  const imageUrl = await generatePixelLabImage(cleanName, rarity);
+  if (!imageUrl) {
+    console.warn(`[AI /image] PixelLab returned null for "${cleanName}" (${rarity})`);
+    return res.json({ imageUrl: null, cached: false });
+  }
+
+  // ── 3. 공유 캐시에 저장 (실패해도 이미지는 정상 반환) ──
+  try {
+    await prisma.sharedPixelArt.upsert({
+      where:  { name: cleanName },
+      create: { name: cleanName, imageData: imageUrl, rarity, type: cleanType },
+      update: { imageData: imageUrl, rarity, type: cleanType },
+    });
+    console.log(`[SharedPixelArt] saved: "${cleanName}" (${rarity})`);
+  } catch (dbErr) {
+    console.warn('[SharedPixelArt] save skipped (non-fatal):', dbErr.message);
+  }
+
+  res.json({ imageUrl, cached: false });
 });
 
 module.exports = router;
