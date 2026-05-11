@@ -11,7 +11,15 @@ const RARITY_KO = {
   legendary: '전설',
 };
 
-const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris', 'cosmic'];
+/** Singleplay-Game3 고철 야드 UI 등급명 — AI 프롬프트용 */
+const RARITY_SCRAP_YARD_KO = {
+  common:    '잡철(흔한 스크랩)',
+  rare:      '선별(괜찮은 편)',
+  epic:      '우량(좋은 편)',
+  legendary: '특급(극히 희귀)',
+};
+
+const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris', 'cosmic', 'scrap'];
 
 const PIXELLAB_BASE_URL = 'https://api.pixellab.ai/v1';
 
@@ -22,6 +30,9 @@ const TYPE_STYLE = {
   crystal:  'glowing crystal, gemstone, mineral shard, geometric facets',
   debris:   'space junk, wreckage, broken machine part, scrap metal, fragment',
   cosmic:   'cosmic entity, energy being, abstract space phenomenon',
+  scrap:
+    'industrial metal scrap, steel or iron junkyard chunk, machine shop leftover, ' +
+    'recycled ferrous piece, ingot coil plate wire shard, no fish no ocean no creature face',
 };
 
 const RARITY_STYLE = {
@@ -93,7 +104,7 @@ async function generatePixelLabImage(name, rarity, type) {
 ──────────────────────────────────────────────────────────── */
 router.post('/catch', requireAuth, async (req, res) => {
   const { rarity = 'epic' } = req.body;
-  const rarityLabel = RARITY_KO[rarity] || '에픽';
+  const rarityLabel = RARITY_SCRAP_YARD_KO[rarity] || RARITY_KO[rarity] || '우량(에픽)';
 
   // ── 1. Claude로 이름/타입/이모지 생성 ──
   let Anthropic;
@@ -108,18 +119,21 @@ router.post('/catch', requireAuth, async (req, res) => {
 
   const anthropic = new Anthropic();
 
-  const namePrompt = `우주 낚시 게임에서 희귀도 "${rarityLabel}"인 생명체/유물을 방금 잡았습니다.
+  const namePrompt = `고철·비철 스크랩 야드 게임에서 등급 "${rarityLabel}"인 덩어리를 방금 집었습니다.
+(압연·전기로·형강·와이어·베어링·슬래그·비철 등 산업·재활용 느낌의 이름)
+
 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
 
 {
-  "name": "이름 (한국어, 20자 이내, 우주적이고 독특하게)",
-  "type": "fish 또는 creature 또는 artifact 또는 crystal 또는 debris 중 하나",
-  "emoji": "이 생명체/유물을 표현하는 이모지 1개"
+  "name": "이름 (한국어, 20자 이내, 야드·설비·금속 가공 용어를 섞어 독특하게)",
+  "type": "scrap",
+  "emoji": "이 스크랩·금속 덩어리를 표현하는 이모지 1개 (🔩⚙️🪨 등, 생물·물고기 이모지 금지)"
 }
 
 규칙:
-- 에픽: 강렬하고 신비로운 존재
-- 전설: 전설적이고 압도적인 존재, 이름부터 웅장해야 함
+- type은 반드시 문자열 "scrap" 만 (다른 값 금지).
+- 우량·특급: 이름이 무겁고 값나는 재료·설비 잔해 느낌.
+- 잡철·선별: 현실적인 야드 스크랩 이름.
 - 절대 반복되지 않도록 창의적으로`;
 
   let name, type, emoji;
@@ -135,8 +149,8 @@ router.post('/catch', requireAuth, async (req, res) => {
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
 
     name  = typeof parsed.name  === 'string' ? parsed.name.slice(0, 30)  : null;
-    type  = VALID_TYPES.includes(parsed.type) ? parsed.type : 'creature';
-    emoji = typeof parsed.emoji === 'string' ? parsed.emoji.slice(0, 8) : '❓';
+    type  = VALID_TYPES.includes(parsed.type) ? parsed.type : 'scrap';
+    emoji = typeof parsed.emoji === 'string' ? parsed.emoji.slice(0, 8) : '🔩';
 
     if (!name) return res.status(500).json({ error: 'AI returned empty name' });
   } catch (err) {
@@ -185,7 +199,7 @@ router.post('/image', requireAuth, async (req, res) => {
   }
 
   const cleanName = name.trim();
-  const cleanType = VALID_TYPES.includes(type) ? type : 'creature';
+  const cleanType = VALID_TYPES.includes(type) ? type : 'scrap';
 
   // ── 1. 공유 캐시 조회 (Prisma 미설정 시 건너뜀) ──
   try {

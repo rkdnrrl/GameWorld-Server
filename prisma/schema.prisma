@@ -87,7 +87,7 @@ model Catch {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   itemName  String
   itemEmoji String    @default("❓")
-  itemType  String    // fish, artifact, crystal, creature, debris
+  itemType  String    // fish, artifact, crystal, creature, debris, cosmic, scrap
   rarity    String    // common, rare, epic, legendary
   size      Float?
   coinValue Int
