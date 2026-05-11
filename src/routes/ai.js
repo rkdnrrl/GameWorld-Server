@@ -153,8 +153,24 @@ router.post('/catch', requireAuth, async (req, res) => {
 /* ── POST /api/ai/image ──────────────────────────────────────
    일반·희귀용: 이름 기반으로 공유 캐시 확인 → 없으면 PixelLab 생성 후 저장
    body: { name: string, type: string, rarity: 'common' | 'rare' }
-   response: { imageUrl: string | null, cached: boolean }
+   response: { imageUrl: string | null, cached: boolean, bonusCoins: number, coins: number | null }
 ──────────────────────────────────────────────────────────── */
+const SCAN_BONUS_COINS = 100;
+
+async function grantScanBonus(userId) {
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { coins: { increment: SCAN_BONUS_COINS } },
+      select: { coins: true },
+    });
+    return { bonusCoins: SCAN_BONUS_COINS, coins: updated.coins };
+  } catch (err) {
+    console.warn('[AI /image] scan bonus failed (non-fatal):', err.message);
+    return { bonusCoins: 0, coins: null };
+  }
+}
+
 router.post('/image', requireAuth, async (req, res) => {
   const { name, type, rarity } = req.body;
 
@@ -179,7 +195,8 @@ router.post('/image', requireAuth, async (req, res) => {
     });
     if (cached?.imageData) {
       console.log(`[SharedPixelArt] cache hit: "${cleanName}"`);
-      return res.json({ imageUrl: cached.imageData, cached: true });
+      const bonus = await grantScanBonus(req.user.id);
+      return res.json({ imageUrl: cached.imageData, cached: true, ...bonus });
     }
   } catch (dbErr) {
     // 테이블 미생성 or prisma generate 미실행 — PixelLab으로 계속
@@ -190,7 +207,7 @@ router.post('/image', requireAuth, async (req, res) => {
   const imageUrl = await generatePixelLabImage(cleanName, rarity, cleanType);
   if (!imageUrl) {
     console.warn(`[AI /image] PixelLab returned null for "${cleanName}" (${rarity})`);
-    return res.json({ imageUrl: null, cached: false });
+    return res.json({ imageUrl: null, cached: false, bonusCoins: 0, coins: null });
   }
 
   // ── 3. 공유 캐시에 저장 (실패해도 이미지는 정상 반환) ──
@@ -205,7 +222,9 @@ router.post('/image', requireAuth, async (req, res) => {
     console.warn('[SharedPixelArt] save skipped (non-fatal):', dbErr.message);
   }
 
-  res.json({ imageUrl, cached: false });
+  // ── 4. 스캔 성공 보너스 코인 지급 ──
+  const bonus = await grantScanBonus(req.user.id);
+  res.json({ imageUrl, cached: false, ...bonus });
 });
 
 /* ── GET /api/ai/floaters ────────────────────────────────────
