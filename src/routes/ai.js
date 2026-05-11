@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
+const { generateFishingScrapNameBundle } = require('../lib/geminiFishingScrap');
 
 const router = Router();
 
@@ -806,6 +807,101 @@ async function grantScanBonus(userId) {
     return { bonusCoins: 0, coins: null };
   }
 }
+
+const GEMINI_FISHING_TIMEOUT_MS = 14_000;
+
+/**
+ * POST /api/ai/fishing-common
+ * Singleplay-Game3 일반 스크랩: Gemini로 이름·이모지·visualEn 생성 후,
+ * shared_pixel_arts(이름 키)에 이미지가 있으면 DB에서만 반환(PixelLab 생략), 없으면 생성·저장.
+ * response: { name, type, emoji, imageUrl?, cached, bonusCoins?, coins?, nameSource? }
+ */
+router.post('/fishing-common', requireAuth, async (req, res) => {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), GEMINI_FISHING_TIMEOUT_MS);
+  try {
+    const bundle = await generateFishingScrapNameBundle({ signal: ac.signal });
+    if (!bundle || !bundle.name) {
+      return res.status(503).json({ error: { message: '이름 생성 AI(Gemini)를 사용할 수 없습니다.' } });
+    }
+    const cleanName = String(bundle.name)
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 100);
+    if (!cleanName) {
+      return res.status(503).json({ error: { message: '이름 생성에 실패했습니다.' } });
+    }
+    const rarity = 'common';
+    const type = 'scrap';
+    const emoji = typeof bundle.emoji === 'string' && bundle.emoji.trim() ? bundle.emoji.trim().slice(0, 8) : '🔩';
+    const cacheKey = sharedScrapyardCacheKey(cleanName);
+
+    try {
+      const cached = await prisma.sharedPixelArt.findUnique({
+        where: { name: cacheKey },
+        select: { imageData: true },
+      });
+      if (cached?.imageData) {
+        console.log(`[AI /fishing-common] cache hit: "${cacheKey}"`);
+        const bonus = await grantScanBonus(req.user.id);
+        return res.json({
+          name: cleanName,
+          type,
+          emoji,
+          imageUrl: cached.imageData,
+          cached: true,
+          nameSource: 'gemini',
+          ...bonus,
+        });
+      }
+    } catch (dbErr) {
+      console.warn('[AI /fishing-common] cache lookup skipped:', dbErr.message);
+    }
+
+    const imageUrl = await generatePixelLabImage(cleanName, rarity, type, bundle.visualEn);
+    if (!imageUrl) {
+      console.warn(`[AI /fishing-common] PixelLab null for "${cleanName}"`);
+      const bonus = await grantScanBonus(req.user.id);
+      return res.json({
+        name: cleanName,
+        type,
+        emoji,
+        imageUrl: null,
+        cached: false,
+        pixelLabFailed: true,
+        nameSource: 'gemini',
+        ...bonus,
+      });
+    }
+
+    try {
+      await prisma.sharedPixelArt.upsert({
+        where: { name: cacheKey },
+        create: { name: cacheKey, imageData: imageUrl, rarity, type },
+        update: { imageData: imageUrl, rarity, type },
+      });
+      console.log(`[AI /fishing-common] saved: "${cacheKey}"`);
+    } catch (dbErr) {
+      console.warn('[AI /fishing-common] cache save skipped:', dbErr.message);
+    }
+
+    const bonus = await grantScanBonus(req.user.id);
+    return res.json({
+      name: cleanName,
+      type,
+      emoji,
+      imageUrl,
+      cached: false,
+      nameSource: 'gemini',
+      ...bonus,
+    });
+  } catch (err) {
+    console.error('[AI /fishing-common]', err.message || err);
+    return res.status(500).json({ error: { message: '요청 처리 중 오류가 발생했습니다.' } });
+  } finally {
+    clearTimeout(timer);
+  }
+});
 
 router.post('/image', requireAuth, async (req, res) => {
   const { name, type, rarity } = req.body;
