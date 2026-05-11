@@ -1,6 +1,6 @@
 'use strict';
 
-const { inferSmeltProductFromMaterialName, ALLOWED_IDS } = require('./smeltProduct');
+const { inferSmeltProductFromMaterialName, ALLOWED_IDS, SMELT_CATALOG } = require('./smeltProduct');
 const { getGeminiApiKey, getGeminiModel } = require('./geminiEquipmentName');
 
 function fallbackProducts(names) {
@@ -38,9 +38,14 @@ async function inferSmeltProductsFromEquipmentNames(names, opts = {}) {
   const model = getGeminiModel();
   const lines = src.map((n, i) => `${i + 1}. ${JSON.stringify(n)}`).join('\n');
   const allowed = [...ALLOWED_IDS].join(', ');
+  const catalogGuide = SMELT_CATALOG
+    .map((x) => `- ${x.id} (${x.name}) keywords: ${x.keywords.join(', ')}`)
+    .join('\n');
   const prompt = `당신은 게임 대장간의 용광로 분해 감정사입니다.
 아래 장비 이름 각각을 분해했을 때 가장 그럴듯한 산출물 1개를 고르세요.
 허용 productId: ${allowed}
+산출물 가이드:
+${catalogGuide}
 
 규칙:
 - 입력 항목 개수와 동일한 길이의 productIds 배열만 반환
