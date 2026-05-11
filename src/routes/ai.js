@@ -46,7 +46,7 @@ async function generatePixelLabImage(name, rarity) {
         text_guidance_scale: 8.0,
         no_background: false,
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     });
 
     if (!plRes.ok) {
