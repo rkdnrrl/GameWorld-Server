@@ -866,22 +866,36 @@ router.post('/image', requireAuth, async (req, res) => {
 
 /* ── GET /api/ai/floaters ────────────────────────────────────
    배경 플로터용: shared_pixel_arts 에서 랜덤 목록 반환
+   쿼리: limit(1–40), includeScrapyard=1 이면 shared:scrapyard: 행도 포함(이름은 접두 제거)
    인증 불필요 (캐시 읽기 전용)
 ──────────────────────────────────────────────────────────── */
 router.get('/floaters', async (req, res) => {
-  const limit = Math.min(40, Math.max(1, parseInt(req.query.limit) || 20));
+  const limit = Math.min(40, Math.max(1, parseInt(String(req.query.limit || '20'), 10) || 20));
+  const includeScrapyard =
+    req.query.includeScrapyard === '1' || req.query.includeScrapyard === 'true';
   try {
     const arts = await prisma.sharedPixelArt.findMany({
       take: limit * 6,
       select: { name: true, imageData: true },
       orderBy: { createdAt: 'desc' },
     });
-    const filtered = arts.filter((a) => !String(a.name || '').startsWith(SHARED_SCRAPYARD_CACHE_PREFIX));
-    for (let i = filtered.length - 1; i > 0; i--) {
+    const pool = includeScrapyard
+      ? arts.slice()
+      : arts.filter((a) => !String(a.name || '').startsWith(SHARED_SCRAPYARD_CACHE_PREFIX));
+      const s = String(name || '');
+      return s.startsWith(SHARED_SCRAPYARD_CACHE_PREFIX)
+        ? s.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length)
+        : s;
+    };
+    const mapped = pool.map((a) => ({
+      name: stripPrefix(a.name),
+      imageData: a.imageData,
+    }));
+    for (let i = mapped.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+      [mapped[i], mapped[j]] = [mapped[j], mapped[i]];
     }
-    res.json({ arts: filtered.slice(0, limit) });
+    res.json({ arts: mapped.slice(0, limit) });
   } catch (err) {
     console.warn('[AI /floaters]', err.message);
     res.json({ arts: [] });
