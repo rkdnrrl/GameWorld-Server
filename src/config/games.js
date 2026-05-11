@@ -15,13 +15,17 @@ const GAMES = [
     tags: ['싱글플레이', '낚시'],
     category: 'earn',
   },
+  /** 레포: `Singleplay-Game5` — 중세 대장간 톤 · nginx 예: `location /singleplay-game5/` */
   {
-    id: 'blacksmith-forge',
-    title: '우주 대장장이',
-    description: '낚시로 모은 재료를 조합해 장비를 제작하세요!',
-    url: process.env.BLACKSMITH_URL || 'http://13.125.187.132/blacksmith',
+    id: 'blacksmith',
+    title: '대장간',
+    description: '모루와 불길 앞에서 재료를 맞물려, 장비를 제련하세요.',
+    url:
+      process.env.SINGLEPLAY_GAME5_URL ||
+      process.env.BLACKSMITH_URL ||
+      'http://13.125.187.132/singleplay-game5',
     emoji: '⚒️',
-    tags: ['싱글플레이', '조합', '제작'],
+    tags: ['싱글플레이', '조합', '제작', '중세'],
     category: 'earn',
   },
   {
