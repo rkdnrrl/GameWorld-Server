@@ -116,7 +116,7 @@ model CraftedEquipment {
   desc           String?  @db.VarChar(400)
   /// { attackBonus, defenseBonus, speedBonus }
   stats          Json
-  /// 제작에 소모된 catch id 배열
+  /// 제작에 소모된 재료 [{ kind: "catch"|"equipment", id }] (레거시: catch id 문자열 배열)
   sourceCatchIds Json
   pixelArt       Json?
   createdAt      DateTime @default(now())

@@ -1,12 +1,21 @@
 'use strict';
 
+/** 장비 재료는 낚시 size 대역에 맞춘 가상 크기(티어 기반) */
+function pseudoSizeFromEquipmentTier(tier) {
+  const t = String(tier || 'common').toLowerCase();
+  if (t === 'legendary') return 34;
+  if (t === 'epic') return 26;
+  if (t === 'rare') return 18;
+  return 12;
+}
+
 /**
- * 재료 catch id + 등급 + (선택) 재료 size 로 결정론적 능력치.
- * @param {string} tier
- * @param {string[]} catchIds
- * @param {(number|null|undefined)[]} [materialSizes] — catchIds 와 같은 순서·길이 권장
+ * 재료 슬롯(catch·장비) + 결과 티어로 결정론적 능력치.
+ * @param {string} tier — 결과 장비 롤에 쓰는 배율 티어
+ * @param {{ kind: 'catch'|'equipment', id: string, size?: number|null, tier?: string }[]} materialSlots
  */
-function rollEquipmentStats(tier, catchIds, materialSizes) {
+function rollEquipmentStats(tier, materialSlots) {
+  const slots = Array.isArray(materialSlots) ? materialSlots : [];
   const t = String(tier || 'common').toLowerCase();
   const tierMul =
     t === 'legendary' ? 2.2 :
@@ -14,15 +23,24 @@ function rollEquipmentStats(tier, catchIds, materialSizes) {
     t === 'rare' ? 1.35 :
     1;
 
+  const seedTokens = slots.map((m) => `${m.kind === 'equipment' ? 'e' : 'c'}:${String(m.id)}`);
+
   let seed = 0;
-  for (const id of [...catchIds].sort()) {
-    const s = String(id);
+  for (const tok of [...seedTokens].sort()) {
+    const s = String(tok);
     for (let i = 0; i < s.length; i += 1) {
       seed = (Math.imul(seed, 33) + s.charCodeAt(i)) >>> 0;
     }
   }
 
-  const sizesIn = Array.isArray(materialSizes) ? materialSizes : [];
+  const sizesIn = slots.map((m) => {
+    if (m.kind === 'equipment') {
+      return pseudoSizeFromEquipmentTier(m.tier);
+    }
+    const z = m.size;
+    return z != null && Number.isFinite(Number(z)) && Number(z) > 0 ? Number(z) : null;
+  });
+
   for (let si = 0; si < sizesIn.length; si += 1) {
     const v = sizesIn[si];
     if (v != null && Number.isFinite(Number(v)) && Number(v) > 0) {
@@ -31,10 +49,7 @@ function rollEquipmentStats(tier, catchIds, materialSizes) {
     }
   }
 
-  const validSizes = catchIds.map((_, i) => {
-    const v = sizesIn[i];
-    return v != null && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null;
-  }).filter((x) => x != null);
+  const validSizes = sizesIn.filter((v) => v != null && Number.isFinite(Number(v)) && Number(v) > 0);
 
   let avgSourceSize = null;
   let maxSourceSize = null;
@@ -72,16 +87,36 @@ function rollEquipmentStats(tier, catchIds, materialSizes) {
   };
 }
 
-/** 재료 Catch 행들의 rarity 중 가장 높은 등급을 장비 롤 티어로 사용 */
-function tierFromCatches(rows) {
+/** catch·제작 장비 재료에서 가장 높은 등급을 결과 롤 티어로 사용 */
+function tierFromMaterials(slots) {
   const order = { common: 0, rare: 1, epic: 2, legendary: 3 };
   let best = 0;
-  for (const r of rows) {
-    const t = String(r.rarity || 'common').toLowerCase();
+  for (const r of slots || []) {
+    const raw =
+      r.kind === 'equipment'
+        ? (r.tier || r.rarity || 'common')
+        : (r.rarity || r.tier || 'common');
+    const t = String(raw || 'common').toLowerCase();
     const v = Object.prototype.hasOwnProperty.call(order, t) ? order[t] : 0;
     if (v > best) best = v;
   }
   return ['common', 'rare', 'epic', 'legendary'][best];
 }
 
-module.exports = { rollEquipmentStats, tierFromCatches };
+/** @deprecated 레거시 — catch 행만 넘길 때 */
+function tierFromCatches(rows) {
+  return tierFromMaterials(
+    (rows || []).map((r) => ({
+      kind: 'catch',
+      id: r.id,
+      rarity: r.rarity,
+    })),
+  );
+}
+
+module.exports = {
+  rollEquipmentStats,
+  tierFromCatches,
+  tierFromMaterials,
+  pseudoSizeFromEquipmentTier,
+};
