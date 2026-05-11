@@ -70,6 +70,17 @@ model FurnitureItem {
   @@map("furniture_items")
 }
 
+/// 일반·희귀 아이템의 AI 픽셀아트 공유 캐시 (이름이 키)
+model SharedPixelArt {
+  name      String   @id @db.VarChar(100)
+  imageData String   @db.Text         // data:image/png;base64,...
+  rarity    String   @db.VarChar(20)
+  type      String   @db.VarChar(20)
+  createdAt DateTime @default(now())
+
+  @@map("shared_pixel_arts")
+}
+
 model Catch {
   id        String    @id @default(cuid())
   userId    String
