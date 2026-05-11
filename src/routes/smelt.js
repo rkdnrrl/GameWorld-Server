@@ -8,10 +8,12 @@ const {
   metaForProductId,
   ALLOWED_IDS,
 } = require('../lib/smeltProduct');
+const { inferSmeltProductsFromEquipmentNames } = require('../lib/geminiSmeltInference');
 
 const router = Router();
 const MAX_MELT_PER_REQUEST = 40;
 const MAX_STOCK_PER_PRODUCT = 999_999;
+const GEMINI_SMELT_TIMEOUT_MS = 7000;
 
 function rowsToStockPayload(rows) {
   const stock = {};
@@ -42,47 +44,96 @@ router.get('/stock', requireAuth, async (req, res, next) => {
   }
 });
 
+function normalizeIdArray(raw) {
+  return Array.isArray(raw) ? [...new Set(raw.map((x) => String(x).trim()).filter(Boolean))] : [];
+}
+
 /**
- * POST /api/smelt/melt — catch id 들을 녹여 산출물 카운트 증가 (catch 삭제)
- * body: { catchIds: string[] }
+ * POST /api/smelt/melt — 낚시 재료/장비를 녹여 산출물 카운트 증가
+ * body: { catchIds?: string[], equipmentIds?: string[] }
  */
 router.post('/melt', requireAuth, async (req, res, next) => {
   try {
-    const raw = req.body && req.body.catchIds;
-    const catchIds = Array.isArray(raw)
-      ? [...new Set(raw.map((x) => String(x).trim()).filter(Boolean))]
-      : [];
-    if (catchIds.length === 0) {
-      return res.status(400).json({ error: { message: 'catchIds 배열이 필요합니다.' } });
+    const catchIds = normalizeIdArray(req.body && req.body.catchIds);
+    const equipmentIds = normalizeIdArray(req.body && req.body.equipmentIds);
+    const total = catchIds.length + equipmentIds.length;
+    if (total === 0) {
+      return res.status(400).json({ error: { message: 'catchIds 또는 equipmentIds 배열이 필요합니다.' } });
     }
-    if (catchIds.length > MAX_MELT_PER_REQUEST) {
+    if (total > MAX_MELT_PER_REQUEST) {
       return res.status(400).json({ error: { message: `한 번에 최대 ${MAX_MELT_PER_REQUEST}개까지 녹일 수 있습니다.` } });
     }
 
+    let equipProductIds = [];
+    if (equipmentIds.length > 0) {
+      const equipRowsPreview = await prisma.craftedEquipment.findMany({
+        where: { id: { in: equipmentIds }, userId: req.user.id },
+        select: { id: true, name: true },
+      });
+      if (equipRowsPreview.length !== equipmentIds.length) {
+        return res.status(400).json({
+          error: { message: '일부 장비를 찾을 수 없거나 이미 처리되었습니다.' },
+        });
+      }
+      const namesById = new Map(equipRowsPreview.map((r) => [String(r.id), String(r.name || '')]));
+      const orderedNames = equipmentIds.map((id) => namesById.get(id) || '');
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), GEMINI_SMELT_TIMEOUT_MS);
+      try {
+        equipProductIds = await inferSmeltProductsFromEquipmentNames(orderedNames, { signal: ac.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     const out = await prisma.$transaction(async (tx) => {
-      const rows = await tx.catch.findMany({
-        where: {
-          id: { in: catchIds },
-          userId: req.user.id,
-          sold: false,
-        },
-      });
-      if (rows.length !== catchIds.length) {
-        return { err: 'NOT_FOUND' };
-      }
-
       const delta = {};
-      for (const row of rows) {
-        const p = inferSmeltProductFromMaterialName(row.itemName);
-        delta[p.id] = (delta[p.id] || 0) + 1;
+
+      if (catchIds.length > 0) {
+        const catchRows = await tx.catch.findMany({
+          where: {
+            id: { in: catchIds },
+            userId: req.user.id,
+            sold: false,
+          },
+        });
+        if (catchRows.length !== catchIds.length) {
+          return { err: 'NOT_FOUND' };
+        }
+        for (const row of catchRows) {
+          const p = inferSmeltProductFromMaterialName(row.itemName);
+          delta[p.id] = (delta[p.id] || 0) + 1;
+        }
+        await tx.catch.deleteMany({
+          where: {
+            id: { in: catchRows.map((r) => r.id) },
+            userId: req.user.id,
+          },
+        });
       }
 
-      await tx.catch.deleteMany({
-        where: {
-          id: { in: rows.map((r) => r.id) },
-          userId: req.user.id,
-        },
-      });
+      if (equipmentIds.length > 0) {
+        const equipRows = await tx.craftedEquipment.findMany({
+          where: {
+            id: { in: equipmentIds },
+            userId: req.user.id,
+          },
+          select: { id: true },
+        });
+        if (equipRows.length !== equipmentIds.length) {
+          return { err: 'NOT_FOUND_EQUIPMENT' };
+        }
+        for (const pid of equipProductIds) {
+          if (!ALLOWED_IDS.has(pid)) continue;
+          delta[pid] = (delta[pid] || 0) + 1;
+        }
+        await tx.craftedEquipment.deleteMany({
+          where: {
+            id: { in: equipRows.map((r) => r.id) },
+            userId: req.user.id,
+          },
+        });
+      }
 
       for (const [productId, add] of Object.entries(delta)) {
         const inc = Math.min(MAX_STOCK_PER_PRODUCT, Math.max(0, Math.floor(Number(add)) || 0));
@@ -113,7 +164,7 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       return { stock: rowsToStockPayload(allRows) };
     });
 
-    if (out.err === 'NOT_FOUND') {
+    if (out.err === 'NOT_FOUND' || out.err === 'NOT_FOUND_EQUIPMENT') {
       return res.status(400).json({
         error: { message: '일부 재료를 찾을 수 없거나 이미 처리되었습니다.' },
       });
