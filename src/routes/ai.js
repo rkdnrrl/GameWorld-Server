@@ -62,7 +62,8 @@ async function generatePixelLabImage(name, rarity) {
     const cost = plData?.usage?.usd;
     if (cost) console.log(`[PixelLab] "${name}" (${rarity}) — $${cost.toFixed(5)}`);
 
-    return b64; // 이미 "data:image/png;base64,..." 형식
+    // PixelLab은 raw base64만 반환하므로 data URL 접두사 추가
+    return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
   } catch (err) {
     console.error('[PixelLab] fetch error:', err.message || err);
     return null;
