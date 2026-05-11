@@ -1,7 +1,31 @@
 'use strict';
 
+const { heuristicEquipmentNameFromResolved, hangulOnly } = require('./forgeHeuristicName');
+
 /** Google AI Studio / Gemini API — Flash-Lite 계열 */
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+
+/** 재료 풀네임 나열·「○○와 △△의 무기」류 금지 */
+function nameViolatesForgeStyle(name, resolved) {
+  const s = String(name || '').trim();
+  if (!s) return true;
+  if (/의\s*무기\s*$/.test(s)) return true;
+  if (/(?:^|\s)(?:와|과)\s+\S/.test(s)) return true;
+  if (/·.+·.+/.test(s) && /무기|재료/.test(s)) return true;
+  if (/외\s*\d+\s*가지/.test(s)) return true;
+  if (/를\s*섞어|을\s*섞어/.test(s)) return true;
+  const mats = (resolved || []).map((r) =>
+    String(r.kind === 'catch' ? r.itemName : r.name || '').trim(),
+  ).filter(Boolean);
+  let longHits = 0;
+  for (const m of mats) {
+    const h = hangulOnly(m);
+    if (h.length >= 5 && s.includes(h)) longHits += 1;
+  }
+  if (longHits >= 2) return true;
+  if (s.length > 22 && (s.includes('와 ') || s.includes('과 '))) return true;
+  return false;
+}
 
 function getGeminiApiKey() {
   return String(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '').trim();
@@ -26,7 +50,8 @@ const FORGE_BUNDLE_RESPONSE_SCHEMA = {
   properties: {
     name: {
       type: 'STRING',
-      description: 'Korean equipment name, max 30 characters, no quotes',
+      description:
+        'Short coined Korean gear name 2-8 chars, fantasy blend, NOT inventory list, no 와/과 material names',
     },
     attackBonus: { type: 'INTEGER', description: 'Attack bonus integer' },
     defenseBonus: { type: 'INTEGER', description: 'Defense bonus integer' },
@@ -110,11 +135,15 @@ async function generateForgeEquipmentBundleFromMaterials(opts) {
   const prompt = `당신은 한국어 SF·우주 낚시 톤 RPG의 장비 설계자입니다. 아래 재료로 새 장비 하나를 설계하세요.
 
 목표 등급(능력치 상한의 기준): ${String(tier || 'common')}
-재료:
+재료 (참고용 — 이름에 그대로 쓰지 말 것):
 ${lines.join('\n')}
 
-요구사항:
-1) 장비 이름(name): 한국어, 최대 30자, 자연스럽고 장비답게. 재료 느낌을 살릴 것.
+이름(name) 규칙 — 매우 중요:
+- **2~8자** 짧은 **신조어·합성어** 한 개만. 장비·무기·모듈 느낌 (예: 유리버드, 녹은발톱, 양자실버, 포화칼날, 코일하트).
+- 재료 풀네임을 붙이거나 **「○○와 △△의 무기」「○○·△△·…의 무기」** 같은 인벤토리 나열 문장 **절대 금지**.
+- "와/과/및/+" 로 재료를 잇지 말 것. 띄어쓰기·괄호·따옴표·콜론 없이 한 덩어리 단어에 가깝게.
+
+능력치:
 2) 능력치는 **이름과 세계관에 맞게** 정할 것 (예: 방패·갑옷 느낌이면 방어가 높게, 가벼운 무기면 공격·스피드 등).
 3) speedBonus: 장비에 붙는 이동/공속 보너스 비율로, 소수 **0.02~0.18** 정도 (예: 0.07 = 7%).
 4) 내구도 durabilityMax: 40~220 사이 정수. durability는 신규 제작이므로 **durabilityMax와 같은 값**.
@@ -211,9 +240,13 @@ ${lines.join('\n')}
     return { name: null, stats: null, reason: 'parse_failed' };
   }
 
-  const nameRaw = String(parsed.name || '').trim().replace(/^["']|["']$/g, '').slice(0, 120);
+  let nameRaw = String(parsed.name || '').trim().replace(/^["']|["']$/g, '').slice(0, 120);
   if (!nameRaw) {
     return { name: null, stats: null, reason: 'empty_name' };
+  }
+
+  if (nameViolatesForgeStyle(nameRaw, resolved)) {
+    nameRaw = heuristicEquipmentNameFromResolved(resolved);
   }
 
   const stats = normalizeGeminiForgeStats(parsed, tier, opts.sizeExtra);
