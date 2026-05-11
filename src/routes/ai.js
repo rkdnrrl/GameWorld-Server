@@ -4,13 +4,15 @@ const { requireAuth } = require('../middleware/auth');
 const router = Router();
 
 const RARITY_KO = {
-  common: '일반',
-  rare: '희귀',
-  epic: '에픽',
+  common:    '일반',
+  rare:      '희귀',
+  epic:      '에픽',
   legendary: '전설',
 };
 
 const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris'];
+
+const PIXELLAB_BASE_URL = 'https://api.pixellab.ai/v1';
 
 /* ── POST /api/ai/catch ─────────────────────────────────────
    body: { rarity: 'common' | 'rare' | 'epic' | 'legendary' }
@@ -61,8 +63,8 @@ router.post('/catch', requireAuth, async (req, res) => {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
 
-    name = typeof parsed.name === 'string' ? parsed.name.slice(0, 30) : null;
-    type = VALID_TYPES.includes(parsed.type) ? parsed.type : 'creature';
+    name  = typeof parsed.name  === 'string' ? parsed.name.slice(0, 30)  : null;
+    type  = VALID_TYPES.includes(parsed.type) ? parsed.type : 'creature';
     emoji = typeof parsed.emoji === 'string' ? parsed.emoji.slice(0, 8) : '❓';
 
     if (!name) return res.status(500).json({ error: 'AI returned empty name' });
@@ -71,36 +73,51 @@ router.post('/catch', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'AI name generation failed' });
   }
 
-  // ── 2. DALL-E 2로 픽셀아트 이미지 생성 ──
+  // ── 2. PixelLab Pixflux 로 픽셀아트 생성 ──
   let imageUrl = null;
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.PIXELLAB_SECRET) {
     try {
-      const { OpenAI } = require('openai');
-      const openai = new OpenAI();
-
       const rarityStyle = {
-        rare:      'blue and purple cosmic tones, glowing',
-        epic:      'red and gold fiery tones, intense glow',
-        legendary: 'golden divine radiance, legendary aura',
-      }[rarity] || 'colorful';
+        rare:      'rare space creature, blue and purple cosmic tones, glowing aura',
+        epic:      'epic space entity, red and gold fiery tones, intense cosmic glow',
+        legendary: 'supreme legendary cosmic being, golden divine radiance, awe-inspiring',
+      }[rarity] || 'colorful space creature';
 
       const imgPrompt =
-        `pixel art game sprite: "${name}", retro 16-bit style, ` +
-        `${rarityStyle}, dark navy space background, centered character, ` +
-        `simple clean design, no text, no words, video game icon`;
+        `${name}, ${rarityStyle}, ` +
+        `retro 16-bit pixel art game sprite, centered, simple clean design, ` +
+        `dark space background, game icon style, no text`;
 
-      const imgRes = await openai.images.generate({
-        model: 'dall-e-2',
-        prompt: imgPrompt,
-        n: 1,
-        size: '256x256',
-        response_format: 'b64_json', // CORS 없이 바로 데이터로 전달
+      const plRes = await fetch(`${PIXELLAB_BASE_URL}/generate-image-pixflux`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.PIXELLAB_SECRET}`,
+        },
+        body: JSON.stringify({
+          description: imgPrompt,
+          image_size: { width: 64, height: 64 },
+          negative_description: 'text, words, letters, watermark, blurry, human face, realistic',
+          text_guidance_scale: 8.0,
+          no_background: false,
+        }),
+        signal: AbortSignal.timeout(15000), // 15초 타임아웃
       });
 
-      const b64 = imgRes.data[0]?.b64_json;
-      if (b64) imageUrl = `data:image/png;base64,${b64}`;
+      if (plRes.ok) {
+        const plData = await plRes.json();
+        const b64 = plData?.image?.base64;
+        if (b64) {
+          imageUrl = b64; // 이미 "data:image/png;base64,..." 형식
+          const cost = plData?.usage?.usd;
+          if (cost) console.log(`[PixelLab] ${name} (${rarity}) — $${cost.toFixed(5)}`);
+        }
+      } else {
+        const errText = await plRes.text().catch(() => '');
+        console.error('[AI /catch] PixelLab error:', plRes.status, errText);
+      }
     } catch (err) {
-      console.error('[AI /catch] DALL-E error:', err.message || err);
+      console.error('[AI /catch] PixelLab error:', err.message || err);
       // 이미지 실패해도 이름은 정상 반환
     }
   }
