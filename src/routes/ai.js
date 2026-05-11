@@ -21,6 +21,15 @@ const RARITY_SCRAP_YARD_KO = {
 
 const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris', 'cosmic', 'scrap'];
 
+/** 일반·희귀 공유 캐시(shared_pixel_arts.name) — `shared`로 시작하는 키만 사용 */
+const SHARED_SCRAPYARD_CACHE_PREFIX = 'shared:scrapyard:';
+
+function sharedScrapyardCacheKey(displayName) {
+  const d = String(displayName || '').trim();
+  const maxLen = Math.max(1, 100 - SHARED_SCRAPYARD_CACHE_PREFIX.length);
+  return `${SHARED_SCRAPYARD_CACHE_PREFIX}${d.slice(0, maxLen)}`;
+}
+
 const PIXELLAB_BASE_URL = 'https://api.pixellab.ai/v1';
 
 const TYPE_STYLE = {
@@ -98,7 +107,7 @@ async function generatePixelLabImage(name, rarity, type) {
 }
 
 /* ── POST /api/ai/catch ─────────────────────────────────────
-   에픽·전설용: Claude로 이름/타입/이모지 생성 + PixelLab 이미지 (캐시 없음)
+   에픽·전설용: Claude + PixelLab (shared_pixel_arts 에는 절대 저장하지 않음 — 유저 catches 만)
    body: { rarity: 'epic' | 'legendary' }
    response: { name, type, emoji, imageUrl? }
 ──────────────────────────────────────────────────────────── */
@@ -165,9 +174,10 @@ router.post('/catch', requireAuth, async (req, res) => {
 });
 
 /* ── POST /api/ai/image ──────────────────────────────────────
-   일반·희귀용: 이름 기반으로 공유 캐시 확인 → 없으면 PixelLab 생성 후 저장
+   일반·희귀: PixelLab 완료 후 shared_pixel_arts 에 저장 (name = `shared:scrapyard:` + 표시용 이름)
+   동일 표시 이름이면 캐시 hit → imageUrl 만 반환 (에픽+ 는 이 API 사용 불가)
    body: { name: string, type: string, rarity: 'common' | 'rare' }
-   response: { imageUrl: string | null, cached: boolean, bonusCoins: number, coins: number | null }
+   response: { imageUrl, cached, bonusCoins, coins }
 ──────────────────────────────────────────────────────────── */
 const SCAN_BONUS_COINS = 100;
 
@@ -200,15 +210,16 @@ router.post('/image', requireAuth, async (req, res) => {
 
   const cleanName = name.trim();
   const cleanType = VALID_TYPES.includes(type) ? type : 'scrap';
+  const cacheKey = sharedScrapyardCacheKey(cleanName);
 
-  // ── 1. 공유 캐시 조회 (Prisma 미설정 시 건너뜀) ──
+  // ── 1. 공유 캐시 조회 (이름은 shared:scrapyard: 접두 + 표시용 이름)
   try {
     const cached = await prisma.sharedPixelArt.findUnique({
-      where: { name: cleanName },
+      where: { name: cacheKey },
       select: { imageData: true },
     });
     if (cached?.imageData) {
-      console.log(`[SharedPixelArt] cache hit: "${cleanName}"`);
+      console.log(`[SharedPixelArt] cache hit: "${cacheKey}" (display "${cleanName}")`);
       const bonus = await grantScanBonus(req.user.id);
       return res.json({ imageUrl: cached.imageData, cached: true, ...bonus });
     }
@@ -217,21 +228,21 @@ router.post('/image', requireAuth, async (req, res) => {
     console.warn('[SharedPixelArt] cache lookup skipped:', dbErr.message);
   }
 
-  // ── 2. PixelLab으로 이미지 생성 (캐시 실패 여부와 무관하게 항상 시도) ──
+  // ── 2. PixelLab — 프롬프트에는 표시용 이름만 사용
   const imageUrl = await generatePixelLabImage(cleanName, rarity, cleanType);
   if (!imageUrl) {
     console.warn(`[AI /image] PixelLab returned null for "${cleanName}" (${rarity})`);
     return res.json({ imageUrl: null, cached: false, bonusCoins: 0, coins: null });
   }
 
-  // ── 3. 공유 캐시에 저장 (실패해도 이미지는 정상 반환) ──
+  // ── 3. 공유 캐시 저장 (에픽+ 전용 엔드포인트는 여기를 거치지 않음)
   try {
     await prisma.sharedPixelArt.upsert({
-      where:  { name: cleanName },
-      create: { name: cleanName, imageData: imageUrl, rarity, type: cleanType },
+      where:  { name: cacheKey },
+      create: { name: cacheKey, imageData: imageUrl, rarity, type: cleanType },
       update: { imageData: imageUrl, rarity, type: cleanType },
     });
-    console.log(`[SharedPixelArt] saved: "${cleanName}" (${rarity})`);
+    console.log(`[SharedPixelArt] saved: "${cacheKey}" (${rarity})`);
   } catch (dbErr) {
     console.warn('[SharedPixelArt] save skipped (non-fatal):', dbErr.message);
   }
@@ -249,16 +260,16 @@ router.get('/floaters', async (req, res) => {
   const limit = Math.min(40, Math.max(1, parseInt(req.query.limit) || 20));
   try {
     const arts = await prisma.sharedPixelArt.findMany({
-      take: limit * 3,
+      take: limit * 6,
       select: { name: true, imageData: true },
       orderBy: { createdAt: 'desc' },
     });
-    // 서버 사이드 셔플
-    for (let i = arts.length - 1; i > 0; i--) {
+    const filtered = arts.filter((a) => !String(a.name || '').startsWith(SHARED_SCRAPYARD_CACHE_PREFIX));
+    for (let i = filtered.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [arts[i], arts[j]] = [arts[j], arts[i]];
+      [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
     }
-    res.json({ arts: arts.slice(0, limit) });
+    res.json({ arts: filtered.slice(0, limit) });
   } catch (err) {
     console.warn('[AI /floaters]', err.message);
     res.json({ arts: [] });
