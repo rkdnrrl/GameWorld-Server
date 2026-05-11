@@ -32,4 +32,16 @@ function rollEquipmentStats(tier, catchIds) {
   };
 }
 
-module.exports = { rollEquipmentStats };
+/** 재료 Catch 행들의 rarity 중 가장 높은 등급을 장비 롤 티어로 사용 */
+function tierFromCatches(rows) {
+  const order = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  let best = 0;
+  for (const r of rows) {
+    const t = String(r.rarity || 'common').toLowerCase();
+    const v = Object.prototype.hasOwnProperty.call(order, t) ? order[t] : 0;
+    if (v > best) best = v;
+  }
+  return ['common', 'rare', 'epic', 'legendary'][best];
+}
+
+module.exports = { rollEquipmentStats, tierFromCatches };
