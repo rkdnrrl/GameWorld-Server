@@ -6,16 +6,6 @@
  */
 const GAMES = [
   {
-    id: 'rock-clicker',
-    title: '돌깨기 클리커',
-    description: '바위를 연타해서 부수고 게임머니를 모으세요!',
-    url: process.env.ROCK_CLICKER_URL || 'http://13.125.187.132/rock-clicker',
-    // 싱글플레이 — statusUrl 없음
-    emoji: '🪨',
-    tags: ['싱글플레이', '클리커'],
-    category: 'earn',
-  },
-  {
     id: 'space-fishing',
     title: '우주 낚시',
     description: '우주 공간에서 희귀한 생명체와 유물을 낚아보세요!',
