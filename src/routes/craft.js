@@ -19,6 +19,31 @@ const GEMINI_NAME_TIMEOUT_MS = 12_000;
 const PIXELLAB_FORGE_MS = 110_000;
 const SHARED_FORGE_EQUIP_PREFIX = 'shared:forge-equip:';
 
+/** 클라이언트에 노출해도 되는 Gemini 실패 분류 (원인 점검용) */
+function safeNameAiSkipReason(raw) {
+  const s = String(raw || 'unknown');
+  if (s === 'no_api_key') return 'no_api_key';
+  if (s === 'timeout') return 'timeout';
+  if (s === 'network') return 'network';
+  if (s === 'incomplete_response') return 'incomplete_response';
+  if (s === 'exception') return 'exception';
+  if (s.startsWith('http_')) return 'api_error';
+  if (s.startsWith('blocked')) return 'blocked';
+  if (s === 'parse_failed' || s === 'bad_json' || s === 'empty_name') return 'parse_error';
+  return 'unknown';
+}
+
+function attachForgeNameAiMeta(payload, { wantAiName, hasDynamic, hasRecipe, nameSource, geminiForgeSkipReason }) {
+  if (!wantAiName || !hasDynamic || hasRecipe) return;
+  payload.nameAiRequested = true;
+  if (nameSource === 'ai') {
+    payload.nameAiUsed = true;
+    return;
+  }
+  payload.nameAiUsed = false;
+  payload.nameAiSkipReason = safeNameAiSkipReason(geminiForgeSkipReason);
+}
+
 function normalizeSourceMaterialsJson(raw) {
   if (!Array.isArray(raw)) return [];
   if (raw.length > 0 && typeof raw[0] === 'string') {
@@ -175,6 +200,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
 
     /** 동적 제련 + AI: 트랜잭션 전에 재료 조회·Gemini(이름+스탯+내구) (DB 락 최소화) */
     let precomputedAiBundle = null;
+    let geminiForgeSkipReason = null;
     if (hasDynamic && wantAiName) {
       const preview = await resolveCraftMaterials(prisma, req.user.id, materials);
       if (preview.err === 'NOT_FOUND_OR_SOLD') {
@@ -216,9 +242,17 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
             stats: ai.stats,
             nameClass: ai.nameClass === 'signature' ? 'signature' : 'ordinary',
           };
+        } else {
+          geminiForgeSkipReason = ai.reason || 'incomplete_response';
+          console.warn(
+            '[craft/equipment] Gemini forge bundle not used:',
+            geminiForgeSkipReason,
+            ai.detail ? String(ai.detail).slice(0, 240) : '',
+          );
         }
-      } catch {
-        /* Gemini 실패 시 트랜잭션에서 롤·클라이언트 name */
+      } catch (e) {
+        geminiForgeSkipReason = e && e.name === 'AbortError' ? 'timeout' : 'exception';
+        console.warn('[craft/equipment] Gemini forge exception:', e && e.message ? e.message : e);
       } finally {
         clearTimeout(timer);
       }
@@ -436,6 +470,13 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           if (outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass) {
             payloadCached.nameClass = precomputedAiBundle.nameClass;
           }
+          attachForgeNameAiMeta(payloadCached, {
+            wantAiName,
+            hasDynamic,
+            hasRecipe,
+            nameSource: outcome.nameSource,
+            geminiForgeSkipReason,
+          });
           return res.status(201).json(payloadCached);
         }
       } catch (e) {
@@ -493,6 +534,13 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     if (outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass) {
       payload.nameClass = precomputedAiBundle.nameClass;
     }
+    attachForgeNameAiMeta(payload, {
+      wantAiName,
+      hasDynamic,
+      hasRecipe,
+      nameSource: outcome.nameSource,
+      geminiForgeSkipReason,
+    });
     res.status(201).json(payload);
   } catch (err) {
     next(err);
