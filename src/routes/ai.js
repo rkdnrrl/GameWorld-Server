@@ -882,6 +882,7 @@ router.get('/floaters', async (req, res) => {
     const pool = includeScrapyard
       ? arts.slice()
       : arts.filter((a) => !String(a.name || '').startsWith(SHARED_SCRAPYARD_CACHE_PREFIX));
+    const stripPrefix = (name) => {
       const s = String(name || '');
       return s.startsWith(SHARED_SCRAPYARD_CACHE_PREFIX)
         ? s.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length)
