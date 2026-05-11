@@ -10,6 +10,31 @@ function pseudoSizeFromEquipmentTier(tier) {
 }
 
 /**
+ * 재료 슬롯에서 크기 요약만 (AI 능력치와 병합할 때 사용).
+ * @param {{ kind: 'catch'|'equipment', id: string, size?: number|null, tier?: string }[]} materialSlots
+ */
+function materialSizeSummary(materialSlots) {
+  const slots = Array.isArray(materialSlots) ? materialSlots : [];
+  const sizesIn = slots.map((m) => {
+    if (m.kind === 'equipment') {
+      return pseudoSizeFromEquipmentTier(m.tier);
+    }
+    const z = m.size;
+    return z != null && Number.isFinite(Number(z)) && Number(z) > 0 ? Number(z) : null;
+  });
+  const validSizes = sizesIn.filter((v) => v != null && Number.isFinite(Number(v)) && Number(v) > 0);
+  let avgSourceSize = null;
+  let maxSourceSize = null;
+  if (validSizes.length > 0) {
+    const sum = validSizes.reduce((a, b) => a + b, 0);
+    const avg = sum / validSizes.length;
+    avgSourceSize = Number(avg.toFixed(2));
+    maxSourceSize = Math.max(...validSizes);
+  }
+  return { avgSourceSize, maxSourceSize };
+}
+
+/**
  * 재료 슬롯(catch·장비) + 결과 티어로 결정론적 능력치.
  * @param {string} tier — 결과 장비 롤에 쓰는 배율 티어
  * @param {{ kind: 'catch'|'equipment', id: string, size?: number|null, tier?: string }[]} materialSlots
@@ -53,7 +78,6 @@ function rollEquipmentStats(tier, materialSlots) {
 
   let avgSourceSize = null;
   let maxSourceSize = null;
-  /** 평균·최대 size 로 배율 (낚시 size 대략 3~38 구간 가정) */
   let sizeMul = 1;
   let maxBoost = 1;
   if (validSizes.length > 0) {
@@ -78,10 +102,13 @@ function rollEquipmentStats(tier, materialSlots) {
   }
 
   const base = 3 + Math.floor(next() * 8) * effectiveMul;
+  const durabilityMax = Math.max(28, Math.round(48 + next() * 85 * effectiveMul));
   return {
     attackBonus: Math.round(base + next() * 6 * effectiveMul),
     defenseBonus: Math.round(base * 0.6 + next() * 5 * effectiveMul),
     speedBonus: Number((0.02 + next() * 0.06 * effectiveMul).toFixed(3)),
+    durabilityMax,
+    durability: durabilityMax,
     avgSourceSize,
     maxSourceSize,
   };
@@ -119,4 +146,5 @@ module.exports = {
   tierFromCatches,
   tierFromMaterials,
   pseudoSizeFromEquipmentTier,
+  materialSizeSummary,
 };

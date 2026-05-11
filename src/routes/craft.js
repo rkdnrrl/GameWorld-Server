@@ -3,10 +3,10 @@ const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { RECIPES } = require('../lib/forgeRecipes');
 const { matchingSubsetForRecipe } = require('../lib/forgeValidate');
-const { rollEquipmentStats, tierFromMaterials } = require('../lib/forgeRollStats');
+const { rollEquipmentStats, tierFromMaterials, materialSizeSummary } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { heuristicEquipmentNameFromResolved } = require('../lib/forgeHeuristicName');
-const { generateForgeEquipmentNameFromMaterials } = require('../lib/geminiEquipmentName');
+const { generateForgeEquipmentBundleFromMaterials } = require('../lib/geminiEquipmentName');
 
 const router = Router();
 
@@ -108,7 +108,7 @@ router.get('/equipment', requireAuth, async (req, res, next) => {
  * POST /api/craft/equipment
  * A) 레시피 제련: { recipeId, materials | catchIds }
  * B) 동적 제련: materials(2+) + (name | generateNameWithAi)
- *    — generateNameWithAi: true 이면 Gemini 2.5 Flash-Lite 로 이름 생성, 실패 시 name 또는 서버 휴리스틱
+ *    — generateNameWithAi: true 이면 Gemini 로 이름+능력치+내구도(JSON), 실패 시 롤/클라이언트 name
  */
 router.post('/equipment', requireAuth, async (req, res, next) => {
   try {
@@ -149,8 +149,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
 
-    /** 동적 제련 + AI: 트랜잭션 전에 재료 조회·Gemini 호출 (DB 락 최소화) */
-    let precomputedAiName = null;
+    /** 동적 제련 + AI: 트랜잭션 전에 재료 조회·Gemini(이름+스탯+내구) (DB 락 최소화) */
+    let precomputedAiBundle = null;
     if (hasDynamic && wantAiName) {
       const preview = await resolveCraftMaterials(prisma, req.user.id, materials);
       if (preview.err === 'NOT_FOUND_OR_SOLD') {
@@ -164,17 +164,24 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         });
       }
       const tierPv = tierFromMaterials(preview.resolved);
+      const rollSlotsPreview = preview.resolved.map((r) =>
+        r.kind === 'catch'
+          ? { kind: 'catch', id: r.id, size: r.size, tier: r.rarity }
+          : { kind: 'equipment', id: r.id, tier: r.tier },
+      );
+      const sizeExtra = materialSizeSummary(rollSlotsPreview);
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), GEMINI_NAME_TIMEOUT_MS);
       try {
-        const ai = await generateForgeEquipmentNameFromMaterials({
+        const ai = await generateForgeEquipmentBundleFromMaterials({
           resolved: preview.resolved,
           tier: tierPv,
           signal: ac.signal,
+          sizeExtra,
         });
-        if (ai.name) precomputedAiName = ai.name;
+        if (ai.name && ai.stats) precomputedAiBundle = { name: ai.name, stats: ai.stats };
       } catch {
-        /* Gemini 실패 시 트랜잭션 안에서 클라이언트 name / 휴리스틱 */
+        /* Gemini 실패 시 트랜잭션에서 롤·클라이언트 name */
       } finally {
         clearTimeout(timer);
       }
@@ -231,8 +238,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         nameSource = 'recipe';
       } else {
         recipeIdStored = DYNAMIC_RECIPE_ID;
-        if (wantAiName && precomputedAiName) {
-          finalName = sanitizeText(precomputedAiName, 120);
+        if (wantAiName && precomputedAiBundle && precomputedAiBundle.name) {
+          finalName = sanitizeText(precomputedAiBundle.name, 120);
           nameSource = 'ai';
         } else if (hasClientName) {
           finalName = sanitizeText(nameTrim, 120);
@@ -260,7 +267,12 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           ? { kind: 'catch', id: r.id, size: r.size, tier: r.rarity }
           : { kind: 'equipment', id: r.id, tier: r.tier },
       );
-      const stats = rollEquipmentStats(tier, rollSlots);
+      let stats;
+      if (wantAiName && precomputedAiBundle && precomputedAiBundle.stats) {
+        stats = { ...precomputedAiBundle.stats, ...materialSizeSummary(rollSlots) };
+      } else {
+        stats = rollEquipmentStats(tier, rollSlots);
+      }
       const firstArt = resolved.find((u) => u.pixelArt != null)?.pixelArt ?? null;
 
       if (catchIdsNeeded.length > 0) {

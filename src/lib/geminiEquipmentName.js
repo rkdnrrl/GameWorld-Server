@@ -20,15 +20,82 @@ function parseGenerateContentText(json) {
     .trim();
 }
 
+/** Gemini REST responseSchema (OBJECT / STRING / INTEGER / NUMBER) */
+const FORGE_BUNDLE_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    name: {
+      type: 'STRING',
+      description: 'Korean equipment name, max 30 characters, no quotes',
+    },
+    attackBonus: { type: 'INTEGER', description: 'Attack bonus integer' },
+    defenseBonus: { type: 'INTEGER', description: 'Defense bonus integer' },
+    speedBonus: { type: 'NUMBER', description: 'Speed multiplier 0.02–0.20 (e.g. 0.08)' },
+    durabilityMax: { type: 'INTEGER', description: 'Max durability points' },
+    durability: { type: 'INTEGER', description: 'Current durability; new craft equals max' },
+  },
+  required: ['name', 'attackBonus', 'defenseBonus', 'speedBonus', 'durabilityMax', 'durability'],
+};
+
+function tierCaps(tier) {
+  const t = String(tier || 'common').toLowerCase();
+  if (t === 'legendary') return { atk: 72, def: 58, spdHi: 0.22, durHi: 280, durLo: 80 };
+  if (t === 'epic') return { atk: 56, def: 45, spdHi: 0.2, durHi: 220, durLo: 65 };
+  if (t === 'rare') return { atk: 42, def: 34, spdHi: 0.18, durHi: 170, durLo: 50 };
+  return { atk: 30, def: 24, spdHi: 0.16, durHi: 130, durLo: 35 };
+}
+
 /**
- * 재료 목록으로 장비 이름 한 줄 생성 (한국어).
- * @param {{ resolved: object[], tier: string, signal?: AbortSignal }} opts
- * @returns {Promise<{ name: string | null, reason?: string }>}
+ * 모델 출력을 재료 티어 기준으로 클램프 (이름 톤과 맞게 상한만).
+ * @param {object} raw
+ * @param {string} tier
+ * @param {{ avgSourceSize?: number|null, maxSourceSize?: number|null }} [sizeExtra]
+ */
+function normalizeGeminiForgeStats(raw, tier, sizeExtra) {
+  const c = tierCaps(tier);
+  const clampInt = (n, lo, hi) => {
+    const x = Math.round(Number(n));
+    if (!Number.isFinite(x)) return lo;
+    return Math.min(hi, Math.max(lo, x));
+  };
+  const attackBonus = clampInt(raw.attackBonus, 1, c.atk);
+  const defenseBonus = clampInt(raw.defenseBonus, 1, c.def);
+  let spd = Number(raw.speedBonus);
+  if (!Number.isFinite(spd)) spd = 0.04;
+  spd = Math.min(c.spdHi, Math.max(0.01, Number(spd.toFixed(3))));
+  let durabilityMax = clampInt(raw.durabilityMax, c.durLo, c.durHi);
+  let durability = clampInt(raw.durability, 1, durabilityMax);
+  if (durability > durabilityMax) durability = durabilityMax;
+  if (durability < durabilityMax * 0.5) durability = durabilityMax;
+  return {
+    attackBonus,
+    defenseBonus,
+    speedBonus: spd,
+    durabilityMax,
+    durability,
+    avgSourceSize: sizeExtra && sizeExtra.avgSourceSize != null ? sizeExtra.avgSourceSize : null,
+    maxSourceSize: sizeExtra && sizeExtra.maxSourceSize != null ? sizeExtra.maxSourceSize : null,
+  };
+}
+
+/**
+ * 재료 목록으로 장비 이름만 (레거시·폴백).
  */
 async function generateForgeEquipmentNameFromMaterials(opts) {
+  const bundle = await generateForgeEquipmentBundleFromMaterials(opts);
+  if (!bundle || !bundle.name) return { name: null, reason: bundle?.reason || 'empty' };
+  return { name: bundle.name, reason: bundle.reason };
+}
+
+/**
+ * 이름 + 능력치 + 내구도를 한 번에 (이름에 어울리게 설계).
+ * @param {{ resolved: object[], tier: string, signal?: AbortSignal }} opts
+ * @returns {Promise<{ name: string|null, stats: object|null, reason?: string }>}
+ */
+async function generateForgeEquipmentBundleFromMaterials(opts) {
   const key = getGeminiApiKey();
   if (!key) {
-    return { name: null, reason: 'no_api_key' };
+    return { name: null, stats: null, reason: 'no_api_key' };
   }
 
   const { resolved, tier } = opts;
@@ -40,35 +107,63 @@ async function generateForgeEquipmentNameFromMaterials(opts) {
     return `${i + 1}. [장비 재료] 이름:${JSON.stringify(String(r.name || ''))}, 등급:${String(r.tier || 'common')}`;
   });
 
-  const prompt = `당신은 한국어 SF·우주 낚시 톤의 대장간 작명가입니다. 아래 재료를 섞어 새 장비를 제련했을 때 붙일 이름을 하나만 출력하세요.
+  const prompt = `당신은 한국어 SF·우주 낚시 톤 RPG의 장비 설계자입니다. 아래 재료로 새 장비 하나를 설계하세요.
 
-규칙:
-- 출력은 장비 이름 텍스트 한 줄만 (따옴표·가번호·설명·접두어 금지).
-- 최대 30자, 자연스러운 한국어.
-- 느낌에 맞는 희귀도 톤: ${String(tier || 'common')}
+목표 등급(능력치 상한의 기준): ${String(tier || 'common')}
 재료:
-${lines.join('\n')}`;
+${lines.join('\n')}
+
+요구사항:
+1) 장비 이름(name): 한국어, 최대 30자, 자연스럽고 장비답게. 재료 느낌을 살릴 것.
+2) 능력치는 **이름과 세계관에 맞게** 정할 것 (예: 방패·갑옷 느낌이면 방어가 높게, 가벼운 무기면 공격·스피드 등).
+3) speedBonus: 장비에 붙는 이동/공속 보너스 비율로, 소수 **0.02~0.18** 정도 (예: 0.07 = 7%).
+4) 내구도 durabilityMax: 40~220 사이 정수. durability는 신규 제작이므로 **durabilityMax와 같은 값**.
+5) 숫자는 과하지 않게, 등급에 어울리게.
+
+반드시 스키마에 맞는 JSON만 출력하세요.`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+
+  const bodyStructured = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.82,
+      maxOutputTokens: 256,
+      topP: 0.94,
+      responseMimeType: 'application/json',
+      responseSchema: FORGE_BUNDLE_RESPONSE_SCHEMA,
+    },
+  };
+
+  const bodyPlainJson = {
+    contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
+    generationConfig: {
+      temperature: 0.82,
+      maxOutputTokens: 256,
+      topP: 0.94,
+      responseMimeType: 'application/json',
+    },
+  };
 
   let res;
   try {
     res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.88,
-          maxOutputTokens: 96,
-          topP: 0.95,
-        },
-      }),
+      body: JSON.stringify(bodyStructured),
       signal: opts.signal,
     });
+    if (!res.ok && (res.status === 400 || res.status === 404)) {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPlainJson),
+        signal: opts.signal,
+      });
+    }
   } catch (e) {
     const msg = e && e.name === 'AbortError' ? 'timeout' : 'network';
-    return { name: null, reason: msg };
+    return { name: null, stats: null, reason: msg };
   }
 
   if (!res.ok) {
@@ -78,33 +173,57 @@ ${lines.join('\n')}`;
     } catch {
       /* ignore */
     }
-    return { name: null, reason: `http_${res.status}`, detail: body.slice(0, 400) };
+    return { name: null, stats: null, reason: `http_${res.status}`, detail: body.slice(0, 400) };
   }
 
   let json;
   try {
     json = await res.json();
   } catch {
-    return { name: null, reason: 'bad_json' };
+    return { name: null, stats: null, reason: 'bad_json' };
   }
 
   const block = json?.promptFeedback?.blockReason;
   if (block) {
-    return { name: null, reason: `blocked:${block}` };
+    return { name: null, stats: null, reason: `blocked:${block}` };
   }
 
-  let raw = parseGenerateContentText(json);
-  raw = raw.replace(/^[\s"'「『]+|[」』"'.\s]+$/g, '');
-  const oneLine = raw.split(/\r?\n/).map((s) => s.trim()).find(Boolean) || '';
-  const cleaned = oneLine.replace(/^[-*•\d.)]+\s*/, '').slice(0, 120).trim();
-  if (!cleaned) {
-    return { name: null, reason: 'empty_output' };
+  let rawText = parseGenerateContentText(json);
+  if (!rawText && json?.candidates?.[0]?.content?.parts?.[0]?.text == null) {
+    const inline = json?.candidates?.[0]?.content?.parts;
+    if (Array.isArray(inline) && inline[0]?.text) rawText = String(inline[0].text);
   }
-  return { name: cleaned };
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    const m = rawText.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        parsed = JSON.parse(m[0]);
+      } catch {
+        parsed = null;
+      }
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return { name: null, stats: null, reason: 'parse_failed' };
+  }
+
+  const nameRaw = String(parsed.name || '').trim().replace(/^["']|["']$/g, '').slice(0, 120);
+  if (!nameRaw) {
+    return { name: null, stats: null, reason: 'empty_name' };
+  }
+
+  const stats = normalizeGeminiForgeStats(parsed, tier, opts.sizeExtra);
+  return { name: nameRaw, stats, reason: undefined };
 }
 
 module.exports = {
   generateForgeEquipmentNameFromMaterials,
+  generateForgeEquipmentBundleFromMaterials,
+  normalizeGeminiForgeStats,
   getGeminiApiKey,
   getGeminiModel,
   DEFAULT_MODEL,
