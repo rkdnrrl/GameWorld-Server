@@ -198,4 +198,28 @@ router.post('/image', requireAuth, async (req, res) => {
   res.json({ imageUrl, cached: false });
 });
 
+/* ── GET /api/ai/floaters ────────────────────────────────────
+   배경 플로터용: shared_pixel_arts 에서 랜덤 목록 반환
+   인증 불필요 (캐시 읽기 전용)
+──────────────────────────────────────────────────────────── */
+router.get('/floaters', async (req, res) => {
+  const limit = Math.min(40, Math.max(1, parseInt(req.query.limit) || 20));
+  try {
+    const arts = await prisma.sharedPixelArt.findMany({
+      take: limit * 3,
+      select: { name: true, imageData: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    // 서버 사이드 셔플
+    for (let i = arts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arts[i], arts[j]] = [arts[j], arts[i]];
+    }
+    res.json({ arts: arts.slice(0, limit) });
+  } catch (err) {
+    console.warn('[AI /floaters]', err.message);
+    res.json({ arts: [] });
+  }
+});
+
 module.exports = router;
