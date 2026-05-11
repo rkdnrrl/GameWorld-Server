@@ -20,6 +20,7 @@ model User {
   furnitureItems   FurnitureItem[]
   voxelObjects     VoxelObject[]
   voxelPlacements  VoxelPlacement[]
+  smeltStock       SmeltStock[]
 
   @@map("users")
 }
@@ -124,4 +125,17 @@ model CraftedEquipment {
 
   @@index([userId])
   @@map("crafted_equipment")
+}
+
+/// 대장간 용광로 녹인 산출물 (유리액·철괴 등) — 유저별 집계
+model SmeltStock {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String   @db.VarChar(32)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, productId])
+  @@index([userId])
+  @@map("smelt_stock")
 }
