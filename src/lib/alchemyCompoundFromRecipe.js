@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * 주기율표 원소 조합 → **항상 동일한** 게임 산출물 (이름·희귀도·문구·PixelLab 힌트).
+ * 주기율표 원소 조합 → **항상 동일한** 게임 산출물 (이름·문구·PixelLab 힌트). 희귀도는 없음(항상 일반).
  * 같은 기호·수량 집합이면 슬롯 순서·표시 이름이 달라도 결과가 같다.
  */
 
@@ -129,7 +129,7 @@ const VISUAL_HINTS = [
 
 /**
  * @param {{ symbol: string, qty: number, name?: string }[]} slots
- * @returns {{ compoundNameKo: string, itemEmoji: string, rarity: string, rationaleKo: string, formulaStyleKo: string, visualHintEn: string }}
+ * @returns {{ compoundNameKo: string, itemEmoji: string, rarity: 'common', rationaleKo: string, formulaStyleKo: string, visualHintEn: string }}
  */
 function compoundFromRecipeSlots(slots) {
   const merged = mergeSlotsBySymbol(slots);
@@ -139,7 +139,6 @@ function compoundFromRecipeSlots(slots) {
 
   const line = recipeFingerprintLine(merged);
   const hName = hashU32(line, 'name');
-  const hRare = hashU32(line, 'rarity');
   const hEmoji = hashU32(line, 'emoji');
   const hHint = hashU32(line, 'visual');
 
@@ -154,8 +153,7 @@ function compoundFromRecipeSlots(slots) {
     compoundNameKo = `${adj}${noun}「${formulaAscii}」`.slice(0, 50);
   }
 
-  const rarityRoll = hRare % 100;
-  const rarity = rarityRoll < 68 ? 'common' : rarityRoll < 94 ? 'epic' : 'legendary';
+  const rarity = 'common';
 
   const itemEmoji = EMOJI_POOL[hEmoji % EMOJI_POOL.length];
 
