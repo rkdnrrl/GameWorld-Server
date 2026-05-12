@@ -31,7 +31,7 @@ const GAMES = [
   /**
    * 레포: `Singleplay-Game6` — 연금술 · 가마솥
    * nginx 예: `location /singleplay-game6/` → 정적 호스트
-   * 서버 API: `GET /api/alchemy/stash`, `POST /api/alchemy/decompose` — 분해 결과를 DB 연금술 보관함에 적립
+   * 서버 API: `GET /api/alchemy/stash`, `POST /api/alchemy/decompose` — `slots`로 재료 소모(Catch·장비·추출 원소) 후 원소 적립
    */
   {
     id: 'alchemy',

@@ -26,6 +26,13 @@ function isAlchemyStashUnavailableError(err) {
   return false;
 }
 
+function normLine(s) {
+  return String(s != null ? s : '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, MAX_NAME_LEN);
+}
+
 /**
  * GET /api/alchemy/stash — 분해로 쌓인 주기율표 원소 집계
  */
@@ -94,30 +101,168 @@ async function incrementStashForElements(tx, userId, elements) {
   }
 }
 
+function nameMatchesElementLine(nm, sym) {
+  const n = normLine(nm).toLowerCase();
+  const s = String(sym || '').trim().toLowerCase();
+  if (!n || !s) return false;
+  if (n.includes(`(${s})`)) return true;
+  if (n.endsWith(s)) return true;
+  if (n.includes(s)) return true;
+  return false;
+}
+
+/**
+ * 가마솥 슬롯별 서버 재료 소모 (Catch 삭제, 장비 삭제, 추출 원소 재고 차감)
+ * @param {import('@prisma/client').Prisma.TransactionClient} tx
+ * @param {string} userId
+ * @param {string[]} names
+ * @param {object[]} sources — slots[].source
+ */
+async function consumeMaterialSources(tx, userId, names, sources) {
+  for (let i = 0; i < names.length; i += 1) {
+    const nm = names[i];
+    const src = sources[i] || {};
+    const k = String(src.kind || '').toLowerCase();
+
+    if (k === 'catch') {
+      const id = String(src.id || '').trim();
+      if (!id) {
+        const e = new Error('catch id 없음');
+        e.statusCode = 400;
+        throw e;
+      }
+      const row = await tx.catch.findFirst({
+        where: { id, userId, sold: false },
+        select: { id: true, itemName: true },
+      });
+      if (!row) {
+        const e = new Error('일부 낚시 재료를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
+        e.statusCode = 400;
+        throw e;
+      }
+      if (normLine(row.itemName) !== normLine(nm)) {
+        const e = new Error('재료 이름이 서버와 일치하지 않습니다.');
+        e.statusCode = 400;
+        throw e;
+      }
+      await tx.catch.delete({ where: { id: row.id } });
+      continue;
+    }
+
+    if (k === 'equipment') {
+      const id = String(src.id || '').trim();
+      if (!id) {
+        const e = new Error('장비 id 없음');
+        e.statusCode = 400;
+        throw e;
+      }
+      const row = await tx.craftedEquipment.findFirst({
+        where: { id, userId },
+        select: { id: true, name: true },
+      });
+      if (!row) {
+        const e = new Error('일부 장비를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
+        e.statusCode = 400;
+        throw e;
+      }
+      if (normLine(row.name) !== normLine(nm)) {
+        const e = new Error('장비 이름이 서버와 일치하지 않습니다.');
+        e.statusCode = 400;
+        throw e;
+      }
+      await tx.craftedEquipment.delete({ where: { id: row.id } });
+      continue;
+    }
+
+    if (k === 'alchemy_element') {
+      const sym = normalizeElementSymbol(src.symbol);
+      if (!sym || !isValidElementSymbol(sym)) {
+        const e = new Error('추출 원소 기호가 올바르지 않습니다.');
+        e.statusCode = 400;
+        throw e;
+      }
+      if (!nameMatchesElementLine(nm, sym)) {
+        const e = new Error('추출 원소 줄의 이름이 기호와 맞지 않습니다.');
+        e.statusCode = 400;
+        throw e;
+      }
+      const row = await tx.alchemyElementStock.findUnique({
+        where: { userId_symbol: { userId, symbol: sym } },
+        select: { count: true },
+      });
+      if (!row || !Number.isFinite(row.count) || row.count < 1) {
+        const e = new Error('추출 원소 재고가 부족합니다.');
+        e.statusCode = 400;
+        throw e;
+      }
+      const want = Math.max(1, Math.floor(Number(src.qty)) || 1);
+      const use = Math.min(row.count, want);
+      const next = row.count - use;
+      if (next <= 0) {
+        await tx.alchemyElementStock.delete({ where: { userId_symbol: { userId, symbol: sym } } });
+      } else {
+        await tx.alchemyElementStock.update({
+          where: { userId_symbol: { userId, symbol: sym } },
+          data: { count: next },
+        });
+      }
+      continue;
+    }
+
+    const e = new Error('서버에 등록된 재료·장비·추출 원소만 분해할 수 있습니다.');
+    e.statusCode = 400;
+    throw e;
+  }
+}
+
 /**
  * POST /api/alchemy/decompose
- * body: { names: string[] } — 가마솥 재료 이름들; Gemini가 주기율표 원소로 분해 제안 후 **연금술 보관함**에 반영.
+ * body.slots: { name: string, source: { kind, id?, symbol?, qty? } }[] — 가마솥 순서와 동일 (소모 검증)
+ * body.names: (레거시) string[] — 소모 없이 AI만 (원소 적립 시 클라이언트 업데이트 권장)
  */
 router.post('/decompose', requireAuth, async (req, res, next) => {
   try {
     const body = req.body || {};
-    const raw = body.names;
-    if (!Array.isArray(raw)) {
-      return res.status(400).json({ error: { message: 'names 배열이 필요합니다.' } });
-    }
+    let names = [];
+    /** @type {object[] | null} */
+    let sources = null;
 
-    const names = [];
-    for (const x of raw) {
-      if (names.length >= MAX_NAMES) break;
-      const s = String(x != null ? x : '')
-        .trim()
-        .replace(/\s+/g, ' ')
-        .slice(0, MAX_NAME_LEN);
-      if (s) names.push(s);
+    if (Array.isArray(body.slots) && body.slots.length > 0) {
+      sources = [];
+      for (const slot of body.slots) {
+        if (names.length >= MAX_NAMES) break;
+        const nm = normLine(slot && slot.name != null ? slot.name : '');
+        if (!nm) {
+          return res.status(400).json({ error: { message: '슬롯 이름이 비어 있습니다.' } });
+        }
+        names.push(nm);
+        sources.push(slot && slot.source && typeof slot.source === 'object' ? slot.source : {});
+      }
+      for (const src of sources) {
+        const k = String(src.kind || '').toLowerCase();
+        if (k === 'local' || !k) {
+          return res.status(400).json({
+            error: { message: '서버에 없는 재료는 분해할 수 없습니다. 게임월드에서 연 금술만 이용해 주세요.' },
+          });
+        }
+      }
+    } else if (Array.isArray(body.names)) {
+      const raw = body.names;
+      for (const x of raw) {
+        if (names.length >= MAX_NAMES) break;
+        const s = normLine(x);
+        if (s) names.push(s);
+      }
+    } else {
+      return res.status(400).json({ error: { message: 'slots 또는 names 배열이 필요합니다.' } });
     }
 
     if (names.length === 0) {
       return res.status(400).json({ error: { message: '최소 한 개의 재료 이름이 필요합니다.' } });
+    }
+
+    if (sources && sources.length !== names.length) {
+      return res.status(400).json({ error: { message: 'slots와 이름 개수가 맞지 않습니다.' } });
     }
 
     const ac = new AbortController();
@@ -146,8 +291,18 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
     let stashMeta;
 
     if (elements.length > 0) {
+      if (!sources) {
+        return res.status(400).json({
+          error: {
+            message:
+              '원소가 추출되었습니다. 재료를 서버에서 소모하려면 클라이언트를 최신으로 새로고침한 뒤(slots 전송) 다시 시도해 주세요.',
+          },
+        });
+      }
+
       try {
         stashElements = await prisma.$transaction(async (tx) => {
+          await consumeMaterialSources(tx, req.user.id, names, sources);
           await incrementStashForElements(tx, req.user.id, elements);
           const rows = await tx.alchemyElementStock.findMany({
             where: { userId: req.user.id, count: { gt: 0 } },
@@ -161,6 +316,9 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
           }));
         });
       } catch (err) {
+        if (err && err.statusCode === 400) {
+          return res.status(400).json({ error: { message: String(err.message || '요청이 올바르지 않습니다.') } });
+        }
         if (isAlchemyStashUnavailableError(err)) {
           console.warn('[alchemy/decompose] stash persist skipped (migrate deploy?):', err.message);
           stashMeta = { stashUnavailable: true, stashPersistSkipped: true };
