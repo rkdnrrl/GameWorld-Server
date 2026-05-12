@@ -1,13 +1,16 @@
 'use strict';
 
-const crypto = require('crypto');
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { decomposeMaterialNamesToElements } = require('../lib/geminiAlchemyDecompose');
-const { composeElementsToCompound } = require('../lib/geminiAlchemyCompose');
 const { generateCatchPixelArtFromFields, resolveCatchRowPixelArt } = require('../lib/catchPixelArt');
 const { generateAlchemyCompoundPixelArt } = require('../lib/pixelLabAlchemyCompoundArt');
+const {
+  mergeSlotsBySymbol,
+  alchemyRecipeFingerprint,
+  compoundFromRecipeSlots,
+} = require('../lib/alchemyCompoundFromRecipe');
 const { normalizeElementSymbol, isValidElementSymbol } = require('../lib/periodicElementSymbols');
 
 const router = Router();
@@ -18,7 +21,6 @@ const SHARED_ALCHEMY_COMPOUND_PREFIX = 'shared:alchemy-compound:';
 const MAX_NAMES = 16;
 const MAX_NAME_LEN = 120;
 const DECOMPOSE_TIMEOUT_MS = 18_000;
-const COMPOSE_TIMEOUT_MS = 22_000;
 const MIN_COMPOSE_SLOTS = 2;
 const MAX_COMPOSE_SLOTS = 16;
 const MAX_STASH_PER_SYMBOL = 999_999;
@@ -375,29 +377,16 @@ function sharedAlchemyCompoundCacheKey(name, rarity) {
 
 /**
  * 가마솥 원소·수량 집합 지문 — 순서와 줄 표기 이름이 달라도 동일 조합이면 동일 값.
- * @param {{ symbol: string, qty: number }[]} slotsForGemini
+ * @param {{ symbol: string, qty: number, name?: string }[]} slots
  */
-function alchemyRecipeFingerprint(slotsForGemini) {
-  const sorted = [...(slotsForGemini || [])]
-    .map((s) => ({
-      symbol: normalizeElementSymbol(s.symbol),
-      qty: Math.max(1, Math.floor(Number(s.qty)) || 1),
-    }))
-    .filter((s) => s.symbol && isValidElementSymbol(s.symbol))
-    .sort((a, b) => a.symbol.localeCompare(b.symbol) || a.qty - b.qty);
-  const line = sorted.map((s) => `${s.symbol}:${s.qty}`).join('+');
-  return crypto.createHash('sha256').update(line, 'utf8').digest('hex').slice(0, 20);
-}
-
-/** 공유 픽셀아트 조회·저장용 — 동일 조합 재조합 시 PixelLab 생략 */
-function sharedAlchemyCompoundCacheKeyByRecipe(slotsForGemini, rarity) {
+function sharedAlchemyCompoundCacheKeyByRecipe(slots, rarity) {
   const r = String(rarity || 'common').trim().toLowerCase().slice(0, 20) || 'common';
-  const fp = alchemyRecipeFingerprint(slotsForGemini);
+  const fp = alchemyRecipeFingerprint(slots);
   return `${SHARED_ALCHEMY_COMPOUND_PREFIX}${r}:r:${fp}`;
 }
 
 /**
- * POST /api/alchemy/compose — 추출 원소만 슬롯으로 조합 → AI 산출물 + 낚시 보관함(Catch, artifact) 1개
+ * POST /api/alchemy/compose — 추출 원소만 슬롯으로 조합 → 조합식 고정 산출물 + 낚시 보관함(Catch, artifact) 1개
  */
 router.post('/compose', requireAuth, async (req, res, next) => {
   try {
@@ -450,34 +439,15 @@ router.post('/compose', requireAuth, async (req, res, next) => {
       slotsForGemini.push({ name: names[i], symbol: sym, qty });
     }
 
-    const ac = new AbortController();
-    const tid = setTimeout(() => ac.abort(), COMPOSE_TIMEOUT_MS);
-    let ai;
-    try {
-      ai = await composeElementsToCompound(slotsForGemini, { signal: ac.signal });
-    } finally {
-      clearTimeout(tid);
+    const mergedSlots = mergeSlotsBySymbol(slotsForGemini);
+    const totalAtoms = mergedSlots.reduce((acc, s) => acc + s.qty, 0);
+    if (!mergedSlots.length || totalAtoms < 2) {
+      return res.status(400).json({ error: { message: '조합할 원소가 부족합니다.' } });
     }
 
-    if (!ai) {
-      return res.status(503).json({ error: { message: 'AI 키가 설정되어 있지 않습니다.' } });
-    }
-
+    const ai = compoundFromRecipeSlots(mergedSlots);
     if (ai.reason) {
-      if (ai.reason === 'timeout') {
-        return res.status(504).json({ error: { message: '조합 분석 시간이 초과되었습니다.' } });
-      }
-      if (ai.reason === 'network') {
-        return res.status(503).json({ error: { message: '네트워크 오류로 조합에 실패했습니다.' } });
-      }
-      if (ai.reason === 'need_two_elements') {
-        return res.status(400).json({ error: { message: '유효한 원소가 두 종류 이상 필요합니다.' } });
-      }
-      const rs = String(ai.reason);
-      if (rs.startsWith('http_429') || rs.startsWith('http_503')) {
-        return res.status(503).json({ error: { message: 'AI 서비스가 일시적으로 바쁩니다.' } });
-      }
-      return res.status(503).json({ error: { message: '조합 결과를 만들지 못했습니다. 다시 시도해 주세요.' } });
+      return res.status(400).json({ error: { message: '조합식을 처리할 수 없습니다.' } });
     }
 
     const { compoundNameKo, itemEmoji, rarity, rationaleKo, formulaStyleKo, visualHintEn } = ai;
@@ -522,7 +492,7 @@ router.post('/compose', requireAuth, async (req, res, next) => {
       throw err;
     }
 
-    const cacheKeyRecipe = sharedAlchemyCompoundCacheKeyByRecipe(slotsForGemini, rarity);
+    const cacheKeyRecipe = sharedAlchemyCompoundCacheKeyByRecipe(mergedSlots, rarity);
     const cacheKeyLegacy = sharedAlchemyCompoundCacheKey(compoundNameKo, rarity);
     try {
       let cached = await prisma.sharedPixelArt.findUnique({
