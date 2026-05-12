@@ -5,8 +5,7 @@ const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { decomposeMaterialNamesToElements } = require('../lib/geminiAlchemyDecompose');
 const { generateCatchPixelArtFromFields, resolveCatchRowPixelArt } = require('../lib/catchPixelArt');
-const { generateAlchemyComposeFormulaImageDataUrl } = require('../lib/alchemyFormulaSvgArt');
-const { mergeSlotsBySymbol, compoundFromRecipeSlots, recipeFingerprintLine } = require('../lib/alchemyCompoundFromRecipe');
+const { mergeSlotsBySymbol, compoundFromRecipeSlots } = require('../lib/alchemyCompoundFromRecipe');
 const { normalizeElementSymbol, isValidElementSymbol } = require('../lib/periodicElementSymbols');
 
 const router = Router();
@@ -460,26 +459,6 @@ router.post('/compose', requireAuth, async (req, res, next) => {
         return res.status(400).json({ error: { message: String(err.message || '요청이 올바르지 않습니다.') } });
       }
       throw err;
-    }
-
-    try {
-      const primaryFormula =
-        (formulaStyleKo && String(formulaStyleKo).trim()) || recipeFingerprintLine(mergedSlots);
-      const formulaSvg = generateAlchemyComposeFormulaImageDataUrl({
-        primary: primaryFormula,
-        secondary: compoundNameKo,
-      });
-      await prisma.catch.update({
-        where: { id: result.catch.id },
-        data: {
-          pixelArt: {
-            source: 'alchemy_formula_svg',
-            imageDataUrl: formulaSvg,
-          },
-        },
-      });
-    } catch (e) {
-      console.warn('[alchemy/compose] formula SVG thumbnail skipped:', e && e.message ? e.message : e);
     }
 
     const freshRow = await prisma.catch.findUnique({ where: { id: result.catch.id } });
