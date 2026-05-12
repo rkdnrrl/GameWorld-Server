@@ -138,6 +138,18 @@ function compoundFromRecipeSlots(slots) {
   }
 
   const line = recipeFingerprintLine(merged);
+
+  /** 알려진 조합 → 고정 표기 (같은 식이면 항상 동일) */
+  const CANONICAL_BY_LINE = {
+    'H:2+O:1': {
+      compoundNameKo: '물「H2O」',
+      formulaStyleKo: 'H₂O',
+      itemEmoji: '💧',
+      visualHintEn: 'clear round water droplet centered chunky pixels no glass',
+    },
+  };
+  const canonical = CANONICAL_BY_LINE[line];
+
   const hName = hashU32(line, 'name');
   const hEmoji = hashU32(line, 'emoji');
   const hHint = hashU32(line, 'visual');
@@ -145,6 +157,9 @@ function compoundFromRecipeSlots(slots) {
   const formulaAscii = merged
     .map((s) => (s.qty === 1 ? s.symbol : `${s.symbol}${s.qty}`))
     .join('+');
+
+  const labels = merged.map((s) => (s.name && s.name !== s.symbol ? `${s.name}(${s.symbol})` : s.symbol));
+  const listKo = labels.join(', ');
 
   const adj = ADJECTIVES[hName % ADJECTIVES.length];
   const noun = NOUNS[(hName >>> 8) % NOUNS.length];
@@ -155,18 +170,26 @@ function compoundFromRecipeSlots(slots) {
 
   const rarity = 'common';
 
-  const itemEmoji = EMOJI_POOL[hEmoji % EMOJI_POOL.length];
+  let itemEmoji = EMOJI_POOL[hEmoji % EMOJI_POOL.length];
 
-  const labels = merged.map((s) => (s.name && s.name !== s.symbol ? `${s.name}(${s.symbol})` : s.symbol));
-  const listKo = labels.join(', ');
   let rationaleKo = `${listKo}의 비율이 맞물려 「${formulaAscii}」 조합의 산출물이 되었습니다.`;
   if (rationaleKo.length > 220) {
     rationaleKo = `${listKo.slice(0, 120)}… 등이 합쳐져 안정된 산출물이 되었습니다.`.slice(0, 220);
   }
 
-  const formulaStyleKo = merged.map((s) => (s.qty === 1 ? s.symbol : `${s.symbol}×${s.qty}`)).join(' + ');
+  let formulaStyleKo = merged.map((s) => (s.qty === 1 ? s.symbol : `${s.symbol}×${s.qty}`)).join(' + ');
 
-  const visualHintEn = VISUAL_HINTS[hHint % VISUAL_HINTS.length];
+  let visualHintEn = VISUAL_HINTS[hHint % VISUAL_HINTS.length];
+
+  if (canonical) {
+    if (canonical.compoundNameKo) compoundNameKo = String(canonical.compoundNameKo).slice(0, 50);
+    if (canonical.formulaStyleKo) formulaStyleKo = canonical.formulaStyleKo;
+    if (canonical.itemEmoji) itemEmoji = canonical.itemEmoji.slice(0, 10);
+    if (canonical.visualHintEn) visualHintEn = canonical.visualHintEn.slice(0, 220);
+    if (line === 'H:2+O:1') {
+      rationaleKo = `${listKo}가 맞는 비율로 합쳐져 물(H₂O)이 되었습니다.`.slice(0, 220);
+    }
+  }
 
   return {
     compoundNameKo,
