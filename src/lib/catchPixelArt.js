@@ -62,6 +62,22 @@ function generateCatchPixelArtFromFields(item) {
   return { w, h, palette, cells };
 }
 
+/**
+ * PixelLab / 공유 캐시 등 data URL 래스터 스프라이트
+ * @param {unknown} raw
+ * @returns {{ source: string, imageDataUrl: string, cacheKey?: string } | null}
+ */
+function validateImageDataUrlPixelArt(raw) {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const url = typeof raw.imageDataUrl === 'string' ? raw.imageDataUrl.trim() : '';
+  if (!/^data:image\/(png|jpeg|webp);base64,/i.test(url)) return null;
+  const src = typeof raw.source === 'string' && raw.source.trim() ? raw.source.trim().slice(0, 32) : 'pixellab';
+  const ck = typeof raw.cacheKey === 'string' && raw.cacheKey.trim() ? raw.cacheKey.trim().slice(0, 100) : '';
+  const out = { source: src, imageDataUrl: url };
+  if (ck) out.cacheKey = ck;
+  return out;
+}
+
 function validatePixelArt(raw) {
   if (raw == null) return null;
   if (typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -90,6 +106,8 @@ function validatePixelArt(raw) {
  * @param {object} row — itemName, itemType, rarity, size, pixelArt?
  */
 function resolveCatchRowPixelArt(row) {
+  const raster = validateImageDataUrlPixelArt(row.pixelArt);
+  if (raster) return { ...row, pixelArt: raster };
   const existing = validatePixelArt(row.pixelArt);
   if (existing) return { ...row, pixelArt: existing };
   const sizeVal = row.size == null ? 0 : Number(row.size);
@@ -105,5 +123,6 @@ function resolveCatchRowPixelArt(row) {
 module.exports = {
   generateCatchPixelArtFromFields,
   validatePixelArt,
+  validateImageDataUrlPixelArt,
   resolveCatchRowPixelArt,
 };

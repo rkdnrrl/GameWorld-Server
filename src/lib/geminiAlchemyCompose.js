@@ -30,6 +30,11 @@ const COMPOSE_SCHEMA = {
     rarity: { type: 'STRING', description: 'Exactly one of: common, epic, legendary' },
     rationaleKo: { type: 'STRING', description: 'One Korean sentence: how these elements became this' },
     formulaStyleKo: { type: 'STRING', description: 'Optional short e.g. Fe+O 연상' },
+    visualHintEn: {
+      type: 'STRING',
+      description:
+        'English ONLY: one visible object silhouette for 64px sprite (vial, crystal orb, powder pile, corked bottle, sealed pouch). No Korean, no brand names, 12–200 chars.',
+    },
   },
   required: ['compoundNameKo', 'rarity', 'rationaleKo'],
 };
@@ -38,7 +43,7 @@ const COMPOSE_SCHEMA = {
  * 가마솥에 넣은 주기율표 원소들로부터 **하나의** 연금술 산출물 이름·희귀도를 제안한다.
  * @param {{ name: string, symbol: string, qty: number }[]} slots — 검증된 기호·수량
  * @param {{ signal?: AbortSignal }} [opts]
- * @returns {Promise<{ compoundNameKo: string, itemEmoji: string, rarity: string, rationaleKo: string, formulaStyleKo?: string } | null | { reason: string }>}
+ * @returns {Promise<{ compoundNameKo: string, itemEmoji: string, rarity: string, rationaleKo: string, formulaStyleKo?: string, visualHintEn?: string } | null | { reason: string }>}
  */
 async function composeElementsToCompound(slots, opts = {}) {
   const key = getGeminiApiKey();
@@ -72,11 +77,12 @@ async function composeElementsToCompound(slots, opts = {}) {
 4. itemEmoji는 **이모지 한 글자** (없으면 ⚗).
 5. rationaleKo는 한 문장으로 왜 이렇게 합쳐졌는지 한국어로.
 6. formulaStyleKo는 선택: 짧은 화학 느낌 한 줄 (한국어+기호 섞여도 됨).
+7. visualHintEn은 **영어로만**: 픽셀 스프라이트에 그릴 **하나의 물건**의 실루엣 (유리병·가루·결정·구슬 등). 한국어 금지.
 
 가마솥 슬롯:
 ${lines.join('\n')}
 
-반드시 JSON 한 덩어리만: { "compoundNameKo": "…", "itemEmoji": "⚗", "rarity": "common", "rationaleKo": "…", "formulaStyleKo": "…" }`;
+반드시 JSON 한 덩어리만: { "compoundNameKo": "…", "itemEmoji": "⚗", "rarity": "common", "rationaleKo": "…", "formulaStyleKo": "…", "visualHintEn": "small corked glass bottle with green liquid" }`;
 
   const url = (modelId) =>
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent?key=${encodeURIComponent(key)}`;
@@ -98,7 +104,7 @@ ${lines.join('\n')}
       {
         parts: [
           {
-            text: `${prompt}\n\n예: {"compoundNameKo":"녹슨 산화 가루","itemEmoji":"🟤","rarity":"common","rationaleKo":"철과 산소가 만나 산화물 연상.","formulaStyleKo":"Fe+O"}`,
+            text: `${prompt}\n\n예: {"compoundNameKo":"녹슨 산화 가루","itemEmoji":"🟤","rarity":"common","rationaleKo":"철과 산소가 만나 산화물 연상.","formulaStyleKo":"Fe+O","visualHintEn":"pile of rusty brown powder on a tiny heap"}`,
           },
         ],
       },
@@ -190,11 +196,26 @@ ${lines.join('\n')}
       ? parsed.formulaStyleKo.trim().slice(0, 80)
       : '';
 
+  let visualHintEn =
+    typeof parsed.visualHintEn === 'string' && parsed.visualHintEn.trim()
+      ? parsed.visualHintEn.trim().replace(/\s+/g, ' ').slice(0, 220)
+      : '';
+  if (/[가-힣]/.test(visualHintEn)) {
+    visualHintEn = '';
+  }
+
   if (!rationaleKo) {
     return { reason: 'empty_rationale' };
   }
 
-  return { compoundNameKo, itemEmoji, rarity, rationaleKo, formulaStyleKo: formulaStyleKo || undefined };
+  return {
+    compoundNameKo,
+    itemEmoji,
+    rarity,
+    rationaleKo,
+    formulaStyleKo: formulaStyleKo || undefined,
+    visualHintEn: visualHintEn || undefined,
+  };
 }
 
 module.exports = { composeElementsToCompound };
