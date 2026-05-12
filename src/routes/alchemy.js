@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
@@ -361,6 +362,7 @@ function coinValueForComposeRarity(rarity) {
   return 18;
 }
 
+/** 레거시: AI 산출물 한글 이름 + 희귀도 (이전 배포와 호환) */
 function sharedAlchemyCompoundCacheKey(name, rarity) {
   const r = String(rarity || 'common').trim().toLowerCase().slice(0, 20) || 'common';
   const n = String(name || '')
@@ -369,6 +371,29 @@ function sharedAlchemyCompoundCacheKey(name, rarity) {
   const base = `${SHARED_ALCHEMY_COMPOUND_PREFIX}${r}:`;
   const maxLen = Math.max(1, 100 - base.length);
   return `${base}${n.slice(0, maxLen)}`;
+}
+
+/**
+ * 가마솥 원소·수량 집합 지문 — 순서와 줄 표기 이름이 달라도 동일 조합이면 동일 값.
+ * @param {{ symbol: string, qty: number }[]} slotsForGemini
+ */
+function alchemyRecipeFingerprint(slotsForGemini) {
+  const sorted = [...(slotsForGemini || [])]
+    .map((s) => ({
+      symbol: normalizeElementSymbol(s.symbol),
+      qty: Math.max(1, Math.floor(Number(s.qty)) || 1),
+    }))
+    .filter((s) => s.symbol && isValidElementSymbol(s.symbol))
+    .sort((a, b) => a.symbol.localeCompare(b.symbol) || a.qty - b.qty);
+  const line = sorted.map((s) => `${s.symbol}:${s.qty}`).join('+');
+  return crypto.createHash('sha256').update(line, 'utf8').digest('hex').slice(0, 20);
+}
+
+/** 공유 픽셀아트 조회·저장용 — 동일 조합 재조합 시 PixelLab 생략 */
+function sharedAlchemyCompoundCacheKeyByRecipe(slotsForGemini, rarity) {
+  const r = String(rarity || 'common').trim().toLowerCase().slice(0, 20) || 'common';
+  const fp = alchemyRecipeFingerprint(slotsForGemini);
+  return `${SHARED_ALCHEMY_COMPOUND_PREFIX}${r}:r:${fp}`;
 }
 
 /**
@@ -497,23 +522,52 @@ router.post('/compose', requireAuth, async (req, res, next) => {
       throw err;
     }
 
-    const cacheKey = sharedAlchemyCompoundCacheKey(compoundNameKo, rarity);
+    const cacheKeyRecipe = sharedAlchemyCompoundCacheKeyByRecipe(slotsForGemini, rarity);
+    const cacheKeyLegacy = sharedAlchemyCompoundCacheKey(compoundNameKo, rarity);
     try {
-      const cached = await prisma.sharedPixelArt.findUnique({
-        where: { name: cacheKey },
+      let cached = await prisma.sharedPixelArt.findUnique({
+        where: { name: cacheKeyRecipe },
         select: { imageData: true },
       });
+      let resolvedCacheKey = cacheKeyRecipe;
+      if (!cached || !cached.imageData) {
+        cached = await prisma.sharedPixelArt.findUnique({
+          where: { name: cacheKeyLegacy },
+          select: { imageData: true },
+        });
+        resolvedCacheKey = cacheKeyLegacy;
+      }
       if (cached && cached.imageData) {
         await prisma.catch.update({
           where: { id: result.catch.id },
           data: {
             pixelArt: {
               source: 'shared_cache',
-              cacheKey,
+              cacheKey: resolvedCacheKey,
               imageDataUrl: cached.imageData,
             },
           },
         });
+        if (resolvedCacheKey === cacheKeyLegacy && cacheKeyLegacy !== cacheKeyRecipe) {
+          try {
+            await prisma.sharedPixelArt.upsert({
+              where: { name: cacheKeyRecipe },
+              create: {
+                name: cacheKeyRecipe,
+                imageData: cached.imageData,
+                rarity: String(rarity || 'common').slice(0, 20),
+                type: 'alchemy_compound',
+              },
+              update: {
+                imageData: cached.imageData,
+                rarity: String(rarity || 'common').slice(0, 20),
+                type: 'alchemy_compound',
+              },
+            });
+          } catch (e) {
+            console.warn('[alchemy/compose] recipe cache mirror skipped:', e && e.message ? e.message : e);
+          }
+        }
       } else {
         const pixelAc = new AbortController();
         const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_ALCHEMY_COMPOSE_MS);
@@ -536,9 +590,9 @@ router.post('/compose', requireAuth, async (req, res, next) => {
             });
             try {
               await prisma.sharedPixelArt.upsert({
-                where: { name: cacheKey },
+                where: { name: cacheKeyRecipe },
                 create: {
-                  name: cacheKey,
+                  name: cacheKeyRecipe,
                   imageData: png,
                   rarity: String(rarity || 'common').slice(0, 20),
                   type: 'alchemy_compound',
