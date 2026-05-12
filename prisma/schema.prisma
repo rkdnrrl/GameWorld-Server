@@ -13,6 +13,8 @@ model User {
   nickname            String             @unique
   passwordHash        String
   coins               Int                @default(0)
+  /// 운영 콘솔 접근 (또는 환경변수 OPERATOR_EMAILS 목록과 병행)
+  isOperator          Boolean            @default(false)
   /// 낚시 등으로 포획해 서버에 저장한 횟수 누적(재료 소모로 Catch 행이 삭제되어도 감소하지 않음)
   lifetimeCatchCount  Int                @default(0)
   createdAt           DateTime           @default(now())

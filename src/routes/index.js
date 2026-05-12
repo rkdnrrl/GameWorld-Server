@@ -15,5 +15,6 @@ router.use('/smelt', require('./smelt'));
 router.use('/furniture', require('./furniture'));
 router.use('/voxels', require('./voxels'));
 router.use('/ai', require('./ai'));
+router.use('/operator', require('./operator'));
 
 module.exports = router;

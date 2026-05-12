@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { prisma } = require('../db');
 const config = require('../config');
+const { userIsOperator } = require('../middleware/operatorAuth');
 
 const SALT_ROUNDS = 12;
 
@@ -37,11 +38,18 @@ async function signup({ email, nickname, password }) {
       nickname,
       passwordHash,
     },
-    select: { id: true, email: true, nickname: true, createdAt: true },
+    select: {
+      id: true,
+      email: true,
+      nickname: true,
+      coins: true,
+      createdAt: true,
+      isOperator: true,
+    },
   });
 
   const token = signToken(user.id);
-  return { user, token };
+  return { user: { ...user, operatorAccess: userIsOperator(user) }, token };
 }
 
 async function login({ email, password }) {
@@ -65,7 +73,10 @@ async function login({ email, password }) {
       id: user.id,
       email: user.email,
       nickname: user.nickname,
+      coins: user.coins,
       createdAt: user.createdAt,
+      isOperator: user.isOperator,
+      operatorAccess: userIsOperator(user),
     },
     token,
   };
