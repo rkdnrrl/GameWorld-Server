@@ -37,7 +37,7 @@ const GAMES = [
     id: 'alchemy',
     title: '연금술',
     description:
-      '낚시 재료를 가마솥에 넣고 AI 분해로 원소를 추출하면, 원소가 연금술 보관함에 쌓입니다. (조합은 예정)',
+      '왼쪽 보관함의 재료·장비·영혼을 가마솥에 넣고 분해하면, 오른쪽에 주기율표 원소가 쌓입니다. (조합은 예정)',
     url:
       process.env.SINGLEPLAY_GAME6_URL ||
       process.env.ALCHEMY_URL ||

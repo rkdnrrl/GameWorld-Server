@@ -13,6 +13,19 @@ const MAX_NAME_LEN = 120;
 const DECOMPOSE_TIMEOUT_MS = 18_000;
 const MAX_STASH_PER_SYMBOL = 999_999;
 
+/** 테이블 미생성·구 Prisma 클라이언트 등으로 연금술 재고 API를 쓸 수 없을 때 */
+function isAlchemyStashUnavailableError(err) {
+  if (!err) return false;
+  const code = err.code;
+  const msg = String(err.message || '');
+  if (code === 'P2021') return true;
+  if (code === '42P01') return true;
+  if (/relation ["']?alchemy_element_stock["']? does not exist/i.test(msg)) return true;
+  if (/alchemy_element_stock/i.test(msg) && /does not exist|not exist/i.test(msg)) return true;
+  if (/Unknown arg|Unknown field|alchemyElementStock/i.test(msg) && /Invalid/i.test(msg)) return true;
+  return false;
+}
+
 /**
  * GET /api/alchemy/stash — 분해로 쌓인 주기율표 원소 집계
  */
@@ -31,6 +44,10 @@ router.get('/stash', requireAuth, async (req, res, next) => {
       })),
     });
   } catch (err) {
+    if (isAlchemyStashUnavailableError(err)) {
+      console.warn('[alchemy/stash] degraded (run prisma migrate deploy):', err.message);
+      return res.json({ elements: [], meta: { stashUnavailable: true } });
+    }
     next(err);
   }
 });
@@ -126,28 +143,44 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
 
     const elements = result.elements || [];
     let stashElements = [];
+    let stashMeta;
 
     if (elements.length > 0) {
-      stashElements = await prisma.$transaction(async (tx) => {
-        await incrementStashForElements(tx, req.user.id, elements);
-        const rows = await tx.alchemyElementStock.findMany({
-          where: { userId: req.user.id, count: { gt: 0 } },
-          orderBy: [{ atomicNumber: 'asc' }, { symbol: 'asc' }],
+      try {
+        stashElements = await prisma.$transaction(async (tx) => {
+          await incrementStashForElements(tx, req.user.id, elements);
+          const rows = await tx.alchemyElementStock.findMany({
+            where: { userId: req.user.id, count: { gt: 0 } },
+            orderBy: [{ atomicNumber: 'asc' }, { symbol: 'asc' }],
+          });
+          return rows.map((r) => ({
+            symbol: r.symbol,
+            nameKo: r.nameKo,
+            atomicNumber: r.atomicNumber,
+            count: r.count,
+          }));
         });
-        return rows.map((r) => ({
-          symbol: r.symbol,
-          nameKo: r.nameKo,
-          atomicNumber: r.atomicNumber,
-          count: r.count,
-        }));
-      });
+      } catch (err) {
+        if (isAlchemyStashUnavailableError(err)) {
+          console.warn('[alchemy/decompose] stash persist skipped (migrate deploy?):', err.message);
+          stashMeta = { stashUnavailable: true, stashPersistSkipped: true };
+        } else {
+          throw err;
+        }
+      }
     }
+
+    const baseMeta = result.reason && elements.length === 0 ? { note: result.reason } : undefined;
+    const meta =
+      stashMeta || baseMeta
+        ? { ...(baseMeta || {}), ...(stashMeta || {}) }
+        : undefined;
 
     res.json({
       namesInput: names,
       elements,
       stashElements,
-      meta: result.reason && elements.length === 0 ? { note: result.reason } : undefined,
+      meta,
     });
   } catch (err) {
     next(err);
