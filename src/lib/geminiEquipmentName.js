@@ -9,8 +9,16 @@ const {
 /** Google AI Studio / Gemini API — Flash-Lite 계열 */
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
-/** 동적 제련 이름 분기: 이 비율만 서정·시그니처급 이름 허용 (나머지는 초라한 장비 톤) */
-const FORGE_GRAND_SIGNATURE_RATE = 0.05;
+/** 유저 개인 제련 기본값: 웅장·시그니처급 이름 슬롯 (나머지는 초라한 장비 톤). env `FORGE_GRAND_SIGNATURE_RATE`로 0~1 조절. */
+const DEFAULT_FORGE_GRAND_SIGNATURE_RATE = 1 / 100_000;
+
+function getForgeGrandSignatureRate() {
+  const raw = process.env.FORGE_GRAND_SIGNATURE_RATE;
+  if (raw == null || String(raw).trim() === '') return DEFAULT_FORGE_GRAND_SIGNATURE_RATE;
+  const n = Number(String(raw).trim());
+  if (!Number.isFinite(n) || n < 0 || n > 1) return DEFAULT_FORGE_GRAND_SIGNATURE_RATE;
+  return n;
+}
 
 /** 재료 풀네임 나열·인벤토리 문장 금지 (「○○의 ◇◇검」 같은 서사 이름은 허용) */
 function nameViolatesForgeStyle(name, resolved) {
@@ -159,7 +167,7 @@ async function generateForgeEquipmentNameFromMaterials(opts) {
 
 /**
  * 이름 + 희귀도(itemTier) + 능력치 + 내구도를 한 번에.
- * 요청마다 약 5%(`FORGE_GRAND_SIGNATURE_RATE`)는 서정·시그니처 톤, 나머지는 초라한 장비 톤으로 프롬프트 분기.
+ * 서정·시그니처 톤은 기본 약 1/100000(`DEFAULT_FORGE_GRAND_SIGNATURE_RATE`)만 허용 — 나머지는 초라한 장비 톤.
  * @param {{ resolved: object[], signal?: AbortSignal }} opts
  * @returns {Promise<{ name: string|null, visualHintEn?: string|null, stats: object|null, tier?: string, nameClass?: 'signature'|'ordinary', reason?: string }>}
  */
@@ -171,7 +179,8 @@ async function generateForgeEquipmentBundleFromMaterials(opts) {
 
   const { resolved } = opts;
   const model = getGeminiModel();
-  const grandSignatureRoll = Math.random() < FORGE_GRAND_SIGNATURE_RATE;
+  const signatureRate = getForgeGrandSignatureRate();
+  const grandSignatureRoll = Math.random() < signatureRate;
 
   const lines = (resolved || []).map((r, i) => {
     const mood =
@@ -182,12 +191,12 @@ async function generateForgeEquipmentBundleFromMaterials(opts) {
   });
 
   const modeBlock = grandSignatureRoll
-    ? `=== 이번 제련 출력 모드: 특별 분기 (전체의 약 5%에 해당하는 슬롯) ===
+    ? `=== 이번 제련 출력 모드: 특별 분기 (개인 장비에서는 거의 나오지 않는 극히 드문 슬롯) ===
 이번에만 이름은 **반드시** 웅장·시적·서사적으로 인상적인 풀네임으로 짓는다 (한글 대략 10~24자 권장).
 예시 톤: 달빛의 선율검, 지옥의 명멸검, 심연을 읽는 자의 파멸창, 균열 너머의 요람.
 nameClass는 반드시 "signature". itemTier는 이름에 맞게 epic 또는 legendary 중 하나.
 이 모드에서는 멋없는 초라한 이름을 쓰면 안 된다.`
-    : `=== 이번 제련 출력 모드: 일반 분기 (대부분의 경우, 약 95%) ===
+    : `=== 이번 제련 출력 모드: 일반 분기 (거의 모든 개인 제련이 여기에 해당) ===
 이름은 **멋지지 않게** 초라하고 현실감·패잔병·고물 느낌으로 짓는다 (한글 대략 6~22자).
 찢어진·부숴진·다 부숴진·낡은·쓸모없는·엉성한·반쯤 망가진·녹슨·깨진·누더기·허접한 같은 어휘를 적극 활용해도 좋다.
 좋은 예시 톤: 찢어진 검, 부숴진 검, 다 부숴진 고철방패, 쓸모없는 창, 낡아빠진 나무방패, 반쪽난 도끼, 엉성하게 박은 철판방패.
@@ -382,7 +391,8 @@ module.exports = {
   getGeminiApiKey,
   getGeminiModel,
   getGeminiFallbackModelId,
+  getForgeGrandSignatureRate,
   DEFAULT_MODEL,
   DEFAULT_FALLBACK_MODEL,
-  FORGE_GRAND_SIGNATURE_RATE,
+  DEFAULT_FORGE_GRAND_SIGNATURE_RATE,
 };
