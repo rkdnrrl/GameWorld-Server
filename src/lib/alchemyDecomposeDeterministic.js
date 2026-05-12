@@ -117,11 +117,33 @@ function normSpaces(s) {
 }
 
 /** 조합 산출물 분해 시 증발(원소 미적립) — 튜닝 가능 */
-const COMPOSE_SUBLIMATE_TOTAL = 0.06;
+const COMPOSE_SUBLIMATE_TOTAL = 0.14;
 /** TOTAL 구간 직후 ~ 이 값까지 누적이면 부분 증발 구간 */
-const COMPOSE_SUBLIMATE_PARTIAL_CUMULATIVE = 0.06 + 0.22;
+const COMPOSE_SUBLIMATE_PARTIAL_CUMULATIVE = 0.14 + 0.42;
 /** 부분 증발 구간에서 원소 하나가 날아갈 확률(독립 시행) */
-const COMPOSE_SUBLIMATE_EACH_DROP = 0.4;
+const COMPOSE_SUBLIMATE_EACH_DROP = 0.58;
+
+/**
+ * 연금술 조합 산출물 이름 관례: `…「원소식」`(Cu)(Cu)…` 처럼 「」 뒤에 괄호 기호만 이어짐.
+ * DB에 itemType이 비어 있어도 증발 규칙을 적용하기 위한 보조 판별.
+ * @param {string} rawName
+ */
+function looksLikeAlchemyComposeCatchName(rawName) {
+  const s = normSpaces(rawName);
+  if (!/\([A-Za-z]{1,3}\)/.test(s)) return false;
+  return /「[^」]{1,48}」(\([A-Za-z]{1,3}\))+$/.test(s);
+}
+
+/**
+ * @param {DecomposeSlotHint} slot
+ * @param {string} rawName
+ * @param {string[]} parenSyms
+ */
+function shouldApplyComposeSublimate(slot, rawName, parenSyms) {
+  if (!parenSyms || parenSyms.length === 0) return false;
+  if (String(slot.itemType || '').toLowerCase() === 'artifact') return true;
+  return looksLikeAlchemyComposeCatchName(rawName);
+}
 
 /**
  * @param {string[]} syms
@@ -149,10 +171,6 @@ function applyComposeArtifactSublimate(syms, rng) {
     };
   }
   return { syms: syms.slice() };
-}
-
-function isComposeArtifactDecomposeSlot(slot) {
-  return String(slot.itemType || '').toLowerCase() === 'artifact';
 }
 
 /** 이름 안의 `(Fe)` `(H)` … IUPAC 기호만 순서·중복 유지해 수집 (조합 산출물 접미사용) */
@@ -225,7 +243,7 @@ function decomposeMaterialsDeterministic(hints, opts = {}) {
     const parenSyms = parenSymbolSequence(rawName);
     if (parenSyms.length > 0) {
       let outSyms = parenSyms;
-      if (isComposeArtifactDecomposeSlot(slot)) {
+      if (shouldApplyComposeSublimate(slot, rawName, parenSyms)) {
         const sub = applyComposeArtifactSublimate(parenSyms, rng);
         outSyms = sub.syms;
         if (sub.meta) {
