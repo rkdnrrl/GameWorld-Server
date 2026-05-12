@@ -28,14 +28,22 @@ const GAMES = [
     tags: ['싱글플레이', '조합', '제작', '중세'],
     category: 'earn',
   },
-  /** 레포: `Singleplay-Game6` — 연금술 · 가마솥 */
+  /**
+   * 레포: `Singleplay-Game6` — 연금술 · 가마솥
+   * nginx 예: `location /singleplay-game6/` → 정적 호스트
+   * 서버 API: `POST /api/alchemy/decompose` (로그인·GEMINI_API_KEY) — 재료 이름 → 주기율표 원소 분석
+   */
   {
     id: 'alchemy',
     title: '연금술',
-    description: '재료를 가마솥에 모아, 끓이며 조합을 시험해 보세요.',
-    url: process.env.SINGLEPLAY_GAME6_URL || process.env.ALCHEMY_URL || 'http://13.125.187.132/singleplay-game6',
+    description:
+      '낚시 보관함 재료를 가마솥에 넣고 AI 분해로 원소를 추출하세요. (조합은 예정)',
+    url:
+      process.env.SINGLEPLAY_GAME6_URL ||
+      process.env.ALCHEMY_URL ||
+      'http://13.125.187.132/singleplay-game6',
     emoji: '🧪',
-    tags: ['싱글플레이', '조합', '연금술'],
+    tags: ['싱글플레이', '조합', '연금술', '분해'],
     category: 'earn',
   },
   {
