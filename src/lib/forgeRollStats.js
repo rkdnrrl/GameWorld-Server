@@ -1,39 +1,5 @@
 'use strict';
 
-/** 장비 재료는 낚시 size 대역에 맞춘 가상 크기(티어 기반) */
-function pseudoSizeFromEquipmentTier(tier) {
-  const t = String(tier || 'common').toLowerCase();
-  if (t === 'legendary') return 34;
-  if (t === 'epic') return 26;
-  if (t === 'rare') return 18;
-  return 12;
-}
-
-/**
- * 재료 슬롯에서 크기 요약만 (AI 능력치와 병합할 때 사용).
- * @param {{ kind: 'catch'|'equipment', id: string, size?: number|null, tier?: string }[]} materialSlots
- */
-function materialSizeSummary(materialSlots) {
-  const slots = Array.isArray(materialSlots) ? materialSlots : [];
-  const sizesIn = slots.map((m) => {
-    if (m.kind === 'equipment') {
-      return pseudoSizeFromEquipmentTier(m.tier);
-    }
-    const z = m.size;
-    return z != null && Number.isFinite(Number(z)) && Number(z) > 0 ? Number(z) : null;
-  });
-  const validSizes = sizesIn.filter((v) => v != null && Number.isFinite(Number(v)) && Number(v) > 0);
-  let avgSourceSize = null;
-  let maxSourceSize = null;
-  if (validSizes.length > 0) {
-    const sum = validSizes.reduce((a, b) => a + b, 0);
-    const avg = sum / validSizes.length;
-    avgSourceSize = Number(avg.toFixed(2));
-    maxSourceSize = Math.max(...validSizes);
-  }
-  return { avgSourceSize, maxSourceSize };
-}
-
 /**
  * 재료 슬롯(catch·장비) + 결과 티어로 결정론적 능력치.
  * @param {string} tier — 결과 장비 롤에 쓰는 배율 티어
@@ -58,42 +24,8 @@ function rollEquipmentStats(tier, materialSlots) {
     }
   }
 
-  const sizesIn = slots.map((m) => {
-    if (m.kind === 'equipment') {
-      return pseudoSizeFromEquipmentTier(m.tier);
-    }
-    const z = m.size;
-    return z != null && Number.isFinite(Number(z)) && Number(z) > 0 ? Number(z) : null;
-  });
-
-  for (let si = 0; si < sizesIn.length; si += 1) {
-    const v = sizesIn[si];
-    if (v != null && Number.isFinite(Number(v)) && Number(v) > 0) {
-      const n = Math.round(Number(v) * 1000) >>> 0;
-      seed = (seed + n + si * 17) >>> 0;
-    }
-  }
-
-  const validSizes = sizesIn.filter((v) => v != null && Number.isFinite(Number(v)) && Number(v) > 0);
-
-  let avgSourceSize = null;
-  let maxSourceSize = null;
-  let sizeMul = 1;
-  let maxBoost = 1;
-  if (validSizes.length > 0) {
-    const sum = validSizes.reduce((a, b) => a + b, 0);
-    const avg = sum / validSizes.length;
-    avgSourceSize = Number(avg.toFixed(2));
-    maxSourceSize = Math.max(...validSizes);
-    const lo = 3;
-    const hi = 38;
-    const clamped = Math.min(hi, Math.max(lo, avg));
-    sizeMul = 0.9 + ((clamped - lo) / (hi - lo)) * 0.28;
-    const mx = Math.min(hi, Math.max(lo, maxSourceSize));
-    maxBoost = 1 + ((mx - lo) / (hi - lo)) * 0.1;
-  }
-
-  const effectiveMul = tierMul * sizeMul * maxBoost;
+  /** 재료 크기·낚시 size는 능력치에 반영하지 않음 — 티어·재료 id 시드만 사용 */
+  const effectiveMul = tierMul;
 
   let state = (seed ^ 0x9e3779b9) >>> 0;
   function next() {
@@ -109,8 +41,6 @@ function rollEquipmentStats(tier, materialSlots) {
     speedBonus: Number((0.02 + next() * 0.06 * effectiveMul).toFixed(3)),
     durabilityMax,
     durability: durabilityMax,
-    avgSourceSize,
-    maxSourceSize,
   };
 }
 
@@ -145,6 +75,4 @@ module.exports = {
   rollEquipmentStats,
   tierFromCatches,
   tierFromMaterials,
-  pseudoSizeFromEquipmentTier,
-  materialSizeSummary,
 };

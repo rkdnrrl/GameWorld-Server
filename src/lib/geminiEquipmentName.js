@@ -73,6 +73,11 @@ const FORGE_BUNDLE_RESPONSE_SCHEMA = {
       type: 'STRING',
       description: 'Name quality class: signature | ordinary',
     },
+    itemTier: {
+      type: 'STRING',
+      description:
+        'Equipment rarity tier: common | rare | epic | legendary — from how impressive the Korean name is only; never from material rarity/size',
+    },
   },
   required: ['name', 'attackBonus', 'defenseBonus', 'speedBonus', 'durabilityMax', 'durability'],
 };
@@ -85,13 +90,27 @@ function tierCaps(tier) {
   return { atk: 30, def: 24, spdHi: 0.16, durHi: 130, durLo: 35 };
 }
 
+const VALID_ITEM_TIERS = ['common', 'rare', 'epic', 'legendary'];
+
+/** 모델이 고른 희귀도(이름 멋짐 기준)를 정규화. 누락 시 nameClass로만 보조. signature면 최소 rare. */
+function normalizeGeminiItemTier(parsed) {
+  const raw = String(parsed.itemTier || parsed.equipmentTier || '').trim().toLowerCase();
+  const nc = String(parsed.nameClass || '').trim().toLowerCase();
+  const idx = (x) => {
+    const i = VALID_ITEM_TIERS.indexOf(x);
+    return i >= 0 ? i : 0;
+  };
+  let t = VALID_ITEM_TIERS.includes(raw) ? raw : nc === 'signature' ? 'epic' : 'common';
+  if (nc === 'signature' && idx(t) < idx('rare')) t = 'rare';
+  return t;
+}
+
 /**
- * 모델 출력을 재료 티어 기준으로 클램프 (이름 톤과 맞게 상한만).
+ * 모델 출력을 itemTier(이름 기반) 상한으로 클램프.
  * @param {object} raw
- * @param {string} tier
- * @param {{ avgSourceSize?: number|null, maxSourceSize?: number|null }} [sizeExtra]
+ * @param {string} tier — common|rare|epic|legendary (Gemini itemTier)
  */
-function normalizeGeminiForgeStats(raw, tier, sizeExtra) {
+function normalizeGeminiForgeStats(raw, tier) {
   const c = tierCaps(tier);
   const clampInt = (n, lo, hi) => {
     const x = Math.round(Number(n));
@@ -113,8 +132,6 @@ function normalizeGeminiForgeStats(raw, tier, sizeExtra) {
     speedBonus: spd,
     durabilityMax,
     durability,
-    avgSourceSize: sizeExtra && sizeExtra.avgSourceSize != null ? sizeExtra.avgSourceSize : null,
-    maxSourceSize: sizeExtra && sizeExtra.maxSourceSize != null ? sizeExtra.maxSourceSize : null,
   };
 }
 
@@ -128,9 +145,9 @@ async function generateForgeEquipmentNameFromMaterials(opts) {
 }
 
 /**
- * 이름 + 능력치 + 내구도를 한 번에 (이름에 어울리게 설계).
- * @param {{ resolved: object[], tier: string, signal?: AbortSignal }} opts
- * @returns {Promise<{ name: string|null, stats: object|null, nameClass?: 'signature'|'ordinary', reason?: string }>}
+ * 이름 + 희귀도(itemTier) + 능력치 + 내구도를 한 번에 (이름의 웅장함·시적임에 맞춤).
+ * @param {{ resolved: object[], signal?: AbortSignal }} opts
+ * @returns {Promise<{ name: string|null, stats: object|null, tier?: string, nameClass?: 'signature'|'ordinary', reason?: string }>}
  */
 async function generateForgeEquipmentBundleFromMaterials(opts) {
   const key = getGeminiApiKey();
@@ -138,22 +155,19 @@ async function generateForgeEquipmentBundleFromMaterials(opts) {
     return { name: null, stats: null, reason: 'no_api_key' };
   }
 
-  const { resolved, tier } = opts;
+  const { resolved } = opts;
   const model = getGeminiModel();
   const lines = (resolved || []).map((r, i) => {
-    if (r.kind === 'catch') {
-      return `${i + 1}. [낚시 재료] 이름:${JSON.stringify(String(r.itemName || ''))}, 희귀도:${String(r.rarity || 'common')}, 크기:${r.size != null ? r.size : '?'}`;
-    }
-    if (r.kind === 'smelt') {
-      return `${i + 1}. [용광로 산출물] 이름:${JSON.stringify(String(r.name || ''))}, 등급:${String(r.rarity || 'common')}`;
-    }
-    return `${i + 1}. [장비 재료] 이름:${JSON.stringify(String(r.name || ''))}, 등급:${String(r.tier || 'common')}`;
+    const mood =
+      r.kind === 'catch'
+        ? String(r.itemName || '').trim()
+        : String(r.name || '').trim();
+    return `${i + 1}. 재료에서 떠오르는 분위기·소재 힌트(문구 그대로 복사·재료 나열 금지): ${JSON.stringify(mood || '알 수 없음')}`;
   });
 
   const prompt = `당신은 한국어 SF·우주 낚시 톤 RPG의 장비 설계자입니다. 아래 재료로 새 장비 하나를 설계하세요.
 
-목표 등급(능력치 상한의 기준): ${String(tier || 'common')}
-재료 (참고용 — 이름에 그대로 베껴 쓰지 말 것. 분위기·재질·전설 느낌만 차용):
+재료 (참고용 — 이름에 그대로 베껴 쓰지 말 것. 분위기·재질·전설 느낌만 차용. 재료의 게임 내 희귀도·크기는 **판단에 사용하지 말 것**):
 ${lines.join('\n')}
 
 이름(name) 규칙 — 매우 중요:
@@ -165,11 +179,15 @@ ${lines.join('\n')}
   - 정말 멋있거나 예쁜, 인상적인 고유 이름이면 "signature"
   - 무난하고 평범하면 "ordinary"
 
+itemTier (희귀도) — **이름이 얼마나 웅장·시적·인상적인지에만** 근거해 고를 것: common | rare | epic | legendary 중 하나.
+- 재료 희귀도·낚시 크기·장비 등급 같은 입력 수치는 **절대 반영하지 말 것**.
+- 이름이 평범하면 common~rare, 서사적·장엄하면 epic~legendary 후보.
+
 능력치:
-2) 능력치는 **이름과 세계관에 맞게** 정할 것 (예: 방패·갑옷 느낌이면 방어가 높게, 가벼운 무기면 공격·스피드 등).
+2) 능력치는 **이름·itemTier·세계관에 맞게** 정할 것 (예: 방패·갑옷 느낌이면 방어가 높게, 가벼운 무기면 공격·스피드 등). 숫자 상한은 **반드시 itemTier**와 일치할 것.
 3) speedBonus: 장비에 붙는 이동/공속 보너스 비율로, 소수 **0.02~0.18** 정도 (예: 0.07 = 7%).
 4) 내구도 durabilityMax: 40~220 사이 정수. durability는 신규 제작이므로 **durabilityMax와 같은 값**.
-5) 숫자는 과하지 않게, 등급에 어울리게.
+5) 숫자는 과하지 않게, itemTier에 어울리게.
 
 반드시 스키마에 맞는 JSON만 출력하세요.`;
 
@@ -192,7 +210,15 @@ ${lines.join('\n')}
   };
 
   const bodyPlainJson = {
-    contents: [{ parts: [{ text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"달빛의 잔향검","nameClass":"signature","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}` }] }],
+    contents: [
+      {
+        parts: [
+          {
+            text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"달빛의 잔향검","itemTier":"epic","nameClass":"signature","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}`,
+          },
+        ],
+      },
+    ],
     generationConfig: { ...genCfgTokens },
   };
 
@@ -283,10 +309,11 @@ ${lines.join('\n')}
     nameRaw = heuristicEquipmentNameFromResolved(resolved);
   }
 
-  const stats = normalizeGeminiForgeStats(parsed, tier, opts.sizeExtra);
+  const geminiTier = normalizeGeminiItemTier(parsed);
+  const stats = normalizeGeminiForgeStats(parsed, geminiTier);
   const ncRaw = String(parsed.nameClass || '').trim().toLowerCase();
   const nameClass = ncRaw === 'signature' ? 'signature' : 'ordinary';
-  return { name: nameRaw, stats, nameClass, reason: undefined };
+  return { name: nameRaw, stats, tier: geminiTier, nameClass, reason: undefined };
 }
 
 module.exports = {

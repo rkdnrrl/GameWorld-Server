@@ -3,7 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { RECIPES } = require('../lib/forgeRecipes');
 const { matchingSubsetForRecipe } = require('../lib/forgeValidate');
-const { rollEquipmentStats, tierFromMaterials, materialSizeSummary } = require('../lib/forgeRollStats');
+const { rollEquipmentStats, tierFromMaterials } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { heuristicEquipmentNameFromResolved } = require('../lib/forgeHeuristicName');
 const { generateForgeEquipmentBundleFromMaterials } = require('../lib/geminiEquipmentName');
@@ -218,29 +218,19 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           error: { message: '산출물 재고가 부족합니다.' },
         });
       }
-      const tierPv = tierFromMaterials(preview.resolved);
-      const rollSlotsPreview = preview.resolved.map((r) =>
-        r.kind === 'catch'
-          ? { kind: 'catch', id: r.id, size: r.size, tier: r.rarity }
-          : r.kind === 'equipment'
-            ? { kind: 'equipment', id: r.id, tier: r.tier }
-            : { kind: 'smelt', id: r.id, size: r.size, tier: r.rarity },
-      );
-      const sizeExtra = materialSizeSummary(rollSlotsPreview);
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), GEMINI_NAME_TIMEOUT_MS);
       try {
         const ai = await generateForgeEquipmentBundleFromMaterials({
           resolved: preview.resolved,
-          tier: tierPv,
           signal: ac.signal,
-          sizeExtra,
         });
         if (ai.name && ai.stats) {
           precomputedAiBundle = {
             name: ai.name,
             stats: ai.stats,
             nameClass: ai.nameClass === 'signature' ? 'signature' : 'ordinary',
+            tier: String(ai.tier || 'common').slice(0, 20),
           };
         } else {
           geminiForgeSkipReason = ai.reason || 'incomplete_response';
@@ -337,7 +327,11 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         const firstEmoji =
           firstEmojiRow && firstEmojiRow.itemEmoji ? String(firstEmojiRow.itemEmoji).slice(0, 16) : '⚔️';
         itemEmoji = firstEmoji || '⚔️';
-        tier = tierFromMaterials(resolved);
+        if (wantAiName && precomputedAiBundle && precomputedAiBundle.tier) {
+          tier = String(precomputedAiBundle.tier).slice(0, 20);
+        } else {
+          tier = tierFromMaterials(resolved);
+        }
       }
 
       const rollSlots = resolved.map((r) =>
@@ -349,7 +343,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       );
       let stats;
       if (wantAiName && precomputedAiBundle && precomputedAiBundle.stats) {
-        stats = { ...precomputedAiBundle.stats, ...materialSizeSummary(rollSlots) };
+        stats = { ...precomputedAiBundle.stats };
       } else {
         stats = rollEquipmentStats(tier, rollSlots);
       }

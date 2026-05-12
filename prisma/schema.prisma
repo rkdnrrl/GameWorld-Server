@@ -115,7 +115,7 @@ model CraftedEquipment {
   itemEmoji      String   @default("⚔️") @db.VarChar(16)
   tier           String   @default("common") @db.VarChar(20)
   desc           String?  @db.VarChar(400)
-  /// { attackBonus, defenseBonus, speedBonus, durabilityMax, durability?, avgSourceSize?, maxSourceSize? }
+  /// { attackBonus, defenseBonus, speedBonus, durabilityMax, durability? }
   stats          Json
   /// 제작에 소모된 재료 [{ kind: "catch"|"equipment", id }] (레거시: catch id 문자열 배열)
   sourceCatchIds Json
