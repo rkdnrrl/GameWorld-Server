@@ -12,12 +12,12 @@ const RARITY_KO = {
   legendary: '전설',
 };
 
-/** Singleplay-Game3 고철 야드 UI 등급명 — AI 프롬프트용 */
+/** Singleplay-Game3 회수 아이템 UI 등급명 — AI 프롬프트용 */
 const RARITY_SCRAP_YARD_KO = {
-  common:    '잡철(흔한 스크랩)',
-  rare:      '선별(괜찮은 편)',
-  epic:      '우량(좋은 편)',
-  legendary: '특급(극히 희귀)',
+  common:    '일반(흔한 폐품)',
+  rare:      '희귀(괜찮은 편)',
+  epic:      '에픽(값나는 편)',
+  legendary: '전설(극히 드문 물건)',
 };
 
 const VALID_TYPES = ['fish', 'creature', 'artifact', 'crystal', 'debris', 'cosmic', 'scrap'];
@@ -587,9 +587,9 @@ function englishHintFromKoreanItemName(displayName) {
   return '';
 }
 
-/** 고철 야드(Singleplay-Game3) — 희귀도별 금속·조명 묘사 (픽셀 아이콘용) */
+/** Singleplay-Game3 회수 아이템 — 희귀도별 금속·야적 질감 (픽셀 아이콘용, 금속 감지 시) */
 const SCRAP_RARITY_STYLE = {
-  common:    'worn rust patina, dull gray brown steel, flat lighting, humble scrap',
+  common:    'worn rust patina, dull gray brown steel, flat lighting, humble scrap metal or machine part',
   rare:      'cleaner machined steel, cool blue grey highlights, subtle edge gleam',
   epic:      'orange heat glow on edges, welding sparks, stronger metal contrast',
   legendary: 'dark steel with gold trim, ornate bolts, relic-like scrap centerpiece',
@@ -745,7 +745,7 @@ async function generatePixelLabImage(name, rarity, type, visualEn) {
 ──────────────────────────────────────────────────────────── */
 router.post('/catch', requireAuth, async (req, res) => {
   const { rarity = 'epic' } = req.body;
-  const rarityLabel = RARITY_SCRAP_YARD_KO[rarity] || RARITY_KO[rarity] || '우량(에픽)';
+  const rarityLabel = RARITY_SCRAP_YARD_KO[rarity] || RARITY_KO[rarity] || '에픽(값나는 편)';
 
   // ── 1. Claude로 이름/타입/이모지 생성 ──
   let Anthropic;
@@ -760,24 +760,24 @@ router.post('/catch', requireAuth, async (req, res) => {
 
   const anthropic = new Anthropic();
 
-  const namePrompt = `고철·비철 스크랩 야드 게임에서 등급 "${rarityLabel}"인 덩어리를 방금 집었습니다.
-(압연·전기로·형강·와이어·베어링·슬래그·비철 등 산업·재활용 느낌의 이름)
+  const namePrompt = `우주 잔해·폐품 수거 게임에서 등급 "${rarityLabel}"인 **아이템**(금속 파츠·설비 잔재·값나는 부품 등)을 방금 집었습니다.
+(이름은 **산업·재활용·설비 잔해** 느낌을 살되, "그냥 쇳덩이" 한 마디로 끝나지 않게 구체적으로.)
 
 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
 
 {
   "name": "이름 (한국어, 20자 이내, 야드·설비·금속 가공 용어를 섞어 독특하게)",
   "type": "scrap",
-  "emoji": "이 스크랩·금속 덩어리를 표현하는 이모지 1개 (🔩⚙️🪨 등, 생물·물고기 이모지 금지)",
-  "visualEn": "English only, max 22 words: concrete metal prop for pixel sprite (materials shapes only), no people no fish"
+  "emoji": "이 물건·파츠를 표현하는 이모지 1개 (🔩⚙️🪨 등, 생물·물고기 이모지 금지)",
+  "visualEn": "English only, max 22 words: concrete prop for pixel sprite (materials shapes only), no people no fish"
 }
 
 규칙:
 - type은 반드시 문자열 "scrap" 만 (다른 값 금지).
 - visualEn: PixelLab용 — 녹·용접·톱니·코일·I빔 등 **보이는 형태**만 영어로. 인물·문장·한국어 금지.
 - 이름에 후라이팬·프라이팬·냄비·웍·주전자·밥솥 등 **조리 도구**가 들어가면, visualEn은 반드시 그 도구의 **실제 실루엣**(예: 후라이팬=원형 팬+긴 손잡이, 정육면체 금지)을 영어로 구체적으로 쓸 것.
-- 우량·특급: 이름이 무겁고 값나는 재료·설비 잔해 느낌.
-- 잡철·선별: 현실적인 야드 스크랩 이름.
+- 에픽·전설: 무겁고 값나는 재료·설비 잔해·희귀 부품 느낌.
+- 일반·희귀: 현실적인 야적·회수장에서 나올 법한 이름.
 - 절대 반복되지 않도록 창의적으로`;
 
   let name, type, emoji, visualEn = '';
