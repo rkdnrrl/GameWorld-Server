@@ -3,7 +3,7 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
-const { decomposeMaterialNamesToElements } = require('../lib/geminiAlchemyDecompose');
+const { decomposeMaterialsDeterministic } = require('../lib/alchemyDecomposeDeterministic');
 const { generateCatchPixelArtFromFields, resolveCatchRowPixelArt } = require('../lib/catchPixelArt');
 const { mergeSlotsBySymbol, compoundFromRecipeSlots } = require('../lib/alchemyCompoundFromRecipe');
 const { normalizeElementSymbol, isValidElementSymbol } = require('../lib/periodicElementSymbols');
@@ -12,7 +12,6 @@ const router = Router();
 
 const MAX_NAMES = 16;
 const MAX_NAME_LEN = 120;
-const DECOMPOSE_TIMEOUT_MS = 18_000;
 const MIN_COMPOSE_SLOTS = 2;
 const MAX_COMPOSE_SLOTS = 16;
 const MAX_STASH_PER_SYMBOL = 999_999;
@@ -35,6 +34,49 @@ function normLine(s) {
     .trim()
     .replace(/\s+/g, ' ')
     .slice(0, MAX_NAME_LEN);
+}
+
+/**
+ * 분해 시 이름·종류에 맞춰 규칙 기반 원소 추출 (DB에서 슬롯별 메타 보강)
+ * @param {string} userId
+ * @param {string[]} names
+ * @param {object[]|null} sources
+ */
+async function buildDecomposeSlotHints(userId, names, sources) {
+  if (!sources || sources.length !== names.length) {
+    return names.map((name) => ({ name }));
+  }
+  return Promise.all(
+    names.map(async (name, i) => {
+      const src = sources[i] || {};
+      const k = String(src.kind || '').toLowerCase();
+      if (k === 'catch') {
+        const id = String(src.id || '').trim();
+        if (!id) return { name };
+        const row = await prisma.catch.findFirst({
+          where: { id, userId, sold: false },
+          select: { itemName: true, itemType: true },
+        });
+        if (!row) return { name };
+        return { name: row.itemName || name, itemType: row.itemType || null };
+      }
+      if (k === 'equipment') {
+        const id = String(src.id || '').trim();
+        if (!id) return { name };
+        const row = await prisma.craftedEquipment.findFirst({
+          where: { id, userId },
+          select: { name: true, recipeId: true },
+        });
+        if (!row) return { name };
+        return {
+          name: row.name || name,
+          recipeId: row.recipeId || null,
+          kind: 'equipment',
+        };
+      }
+      return { name };
+    }),
+  );
 }
 
 /**
@@ -222,7 +264,7 @@ async function consumeMaterialSources(tx, userId, names, sources) {
 /**
  * POST /api/alchemy/decompose
  * body.slots: { name: string, source: { kind, id?, symbol?, qty? } }[] — 가마솥 순서와 동일 (소모 검증)
- * body.names: (레거시) string[] — 소모 없이 AI만 (원소 적립 시 클라이언트 업데이트 권장)
+ * body.names: (레거시) string[] — 소모 없이 미리보기 불가(슬롯 전송 필요)
  */
 router.post('/decompose', requireAuth, async (req, res, next) => {
   try {
@@ -277,74 +319,60 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: 'slots와 이름 개수가 맞지 않습니다.' } });
     }
 
-    const ac = new AbortController();
-    const tid = setTimeout(() => ac.abort(), DECOMPOSE_TIMEOUT_MS);
-    let result;
-    try {
-      result = await decomposeMaterialNamesToElements(names, { signal: ac.signal });
-    } finally {
-      clearTimeout(tid);
+    let hints = names.map((n) => ({ name: n }));
+    if (sources) {
+      hints = await buildDecomposeSlotHints(req.user.id, names, sources);
     }
 
-    if (!result) {
-      return res.status(503).json({ error: { message: 'AI 키가 설정되어 있지 않습니다.' } });
-    }
-
-    if (result.reason === 'timeout') {
-      return res.status(504).json({ error: { message: '분해 분석 시간이 초과되었습니다. 재시도해 주세요.' } });
-    }
-
-    if (result.reason === 'http_429' || result.reason === 'http_503') {
-      return res.status(503).json({ error: { message: 'AI 서비스가 일시적으로 바쁩니다. 잠시 후 다시 시도해 주세요.' } });
-    }
-
+    const result = decomposeMaterialsDeterministic(hints);
     const elements = result.elements || [];
+
+    if (elements.length === 0) {
+      return res.status(400).json({
+        error: { message: '재료에서 추출할 원소를 계산하지 못했습니다.' },
+      });
+    }
+
     let stashElements = [];
     let stashMeta;
 
-    if (elements.length > 0) {
-      if (!sources) {
-        return res.status(400).json({
-          error: {
-            message:
-              '원소가 추출되었습니다. 재료를 서버에서 소모하려면 클라이언트를 최신으로 새로고침한 뒤(slots 전송) 다시 시도해 주세요.',
-          },
-        });
-      }
+    if (!sources) {
+      return res.status(400).json({
+        error: {
+          message:
+            '원소가 추출되었습니다. 재료를 서버에서 소모하려면 클라이언트를 최신으로 새로고침한 뒤(slots 전송) 다시 시도해 주세요.',
+        },
+      });
+    }
 
-      try {
-        stashElements = await prisma.$transaction(async (tx) => {
-          await consumeMaterialSources(tx, req.user.id, names, sources);
-          await incrementStashForElements(tx, req.user.id, elements);
-          const rows = await tx.alchemyElementStock.findMany({
-            where: { userId: req.user.id, count: { gt: 0 } },
-            orderBy: [{ atomicNumber: 'asc' }, { symbol: 'asc' }],
-          });
-          return rows.map((r) => ({
-            symbol: r.symbol,
-            nameKo: r.nameKo,
-            atomicNumber: r.atomicNumber,
-            count: r.count,
-          }));
+    try {
+      stashElements = await prisma.$transaction(async (tx) => {
+        await consumeMaterialSources(tx, req.user.id, names, sources);
+        await incrementStashForElements(tx, req.user.id, elements);
+        const rows = await tx.alchemyElementStock.findMany({
+          where: { userId: req.user.id, count: { gt: 0 } },
+          orderBy: [{ atomicNumber: 'asc' }, { symbol: 'asc' }],
         });
-      } catch (err) {
-        if (err && err.statusCode === 400) {
-          return res.status(400).json({ error: { message: String(err.message || '요청이 올바르지 않습니다.') } });
-        }
-        if (isAlchemyStashUnavailableError(err)) {
-          console.warn('[alchemy/decompose] stash persist skipped (migrate deploy?):', err.message);
-          stashMeta = { stashUnavailable: true, stashPersistSkipped: true };
-        } else {
-          throw err;
-        }
+        return rows.map((r) => ({
+          symbol: r.symbol,
+          nameKo: r.nameKo,
+          atomicNumber: r.atomicNumber,
+          count: r.count,
+        }));
+      });
+    } catch (err) {
+      if (err && err.statusCode === 400) {
+        return res.status(400).json({ error: { message: String(err.message || '요청이 올바르지 않습니다.') } });
+      }
+      if (isAlchemyStashUnavailableError(err)) {
+        console.warn('[alchemy/decompose] stash persist skipped (migrate deploy?):', err.message);
+        stashMeta = { stashUnavailable: true, stashPersistSkipped: true };
+      } else {
+        throw err;
       }
     }
 
-    const baseMeta = result.reason && elements.length === 0 ? { note: result.reason } : undefined;
-    const meta =
-      stashMeta || baseMeta
-        ? { ...(baseMeta || {}), ...(stashMeta || {}) }
-        : undefined;
+    const meta = stashMeta ? { ...stashMeta } : undefined;
 
     res.json({
       namesInput: names,
