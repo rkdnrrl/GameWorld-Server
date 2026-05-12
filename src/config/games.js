@@ -41,7 +41,7 @@ const GAMES = [
     url:
       process.env.SINGLEPLAY_GAME6_URL ||
       process.env.ALCHEMY_URL ||
-      'http://13.125.187.132/singleplay-game6',
+      'http://13.125.187.132/alchemy',
     emoji: '🧪',
     tags: ['싱글플레이', '조합', '연금술', '분해'],
     category: 'earn',
