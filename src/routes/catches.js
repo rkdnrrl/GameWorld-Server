@@ -99,21 +99,29 @@ router.post('/', requireAuth, async (req, res, next) => {
       });
     }
 
-    const catchRecord = await prisma.catch.create({
-      data: {
-        userId: req.user.id,
-        itemName: itemName.trim(),
-        itemEmoji: emoji,
-        itemType,
-        rarity,
-        size: sizeNum != null && Number.isFinite(sizeNum) ? sizeNum : null,
-        coinValue: coins,
-        sold: false,
-        pixelArt: pixelArtClean,
-      },
+    const { catchRecord, lifetimeCatchTotal } = await prisma.$transaction(async (tx) => {
+      const created = await tx.catch.create({
+        data: {
+          userId: req.user.id,
+          itemName: itemName.trim(),
+          itemEmoji: emoji,
+          itemType,
+          rarity,
+          size: sizeNum != null && Number.isFinite(sizeNum) ? sizeNum : null,
+          coinValue: coins,
+          sold: false,
+          pixelArt: pixelArtClean,
+        },
+      });
+      const u = await tx.user.update({
+        where: { id: req.user.id },
+        data: { lifetimeCatchCount: { increment: 1 } },
+        select: { lifetimeCatchCount: true },
+      });
+      return { catchRecord: created, lifetimeCatchTotal: u.lifetimeCatchCount };
     });
 
-    res.json({ catch: catchRecord });
+    res.json({ catch: catchRecord, lifetimeCatchTotal });
   } catch (err) {
     next(err);
   }
@@ -271,7 +279,11 @@ router.get('/', requireAuth, async (req, res, next) => {
 // 포획 통계
 router.get('/stats', requireAuth, async (req, res, next) => {
   try {
-    const [byRarity, total, unsold] = await Promise.all([
+    const userRow = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { lifetimeCatchCount: true },
+    });
+    const [byRarity, dbCatchCount, unsold] = await Promise.all([
       prisma.catch.groupBy({
         by: ['rarity'],
         where: { userId: req.user.id },
@@ -281,7 +293,11 @@ router.get('/stats', requireAuth, async (req, res, next) => {
       prisma.catch.count({ where: { userId: req.user.id, sold: false } }),
     ]);
 
-    res.json({ total, unsold, byRarity });
+    const lifetime = userRow?.lifetimeCatchCount ?? 0;
+    /** HUD「총 획득」— Catch 행 삭제(제작 재료 등) 후에도 줄지 않도록 누적치 사용 */
+    const total = Math.max(lifetime, dbCatchCount);
+
+    res.json({ total, unsold, byRarity, dbCatchCount, lifetimeCatchCount: lifetime });
   } catch (err) {
     next(err);
   }

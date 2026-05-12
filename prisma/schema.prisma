@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id               String             @id @default(cuid())
-  email            String             @unique
-  nickname         String             @unique
-  passwordHash     String
-  coins            Int                @default(0)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  catches          Catch[]
+  id                  String             @id @default(cuid())
+  email               String             @unique
+  nickname            String             @unique
+  passwordHash        String
+  coins               Int                @default(0)
+  /// 낚시 등으로 포획해 서버에 저장한 횟수 누적(재료 소모로 Catch 행이 삭제되어도 감소하지 않음)
+  lifetimeCatchCount  Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  catches             Catch[]
   craftedEquipment CraftedEquipment[]
   furnitureItems   FurnitureItem[]
   voxelObjects     VoxelObject[]
