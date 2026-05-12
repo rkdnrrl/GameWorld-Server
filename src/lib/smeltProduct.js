@@ -272,12 +272,50 @@ function makeSmeltRule(id, name, emoji, keywords) {
 const SMELT_RULES = SMELT_CATALOG.map((e) => makeSmeltRule(e.id, e.name, e.emoji, e.keywords));
 const ALLOWED_IDS = new Set([...SMELT_CATALOG.map((e) => e.id), 'slag']);
 
-function inferSmeltProductFromMaterialName(materialName) {
-  const n = String(materialName || '');
-  for (let i = 0; i < SMELT_RULES.length; i += 1) {
-    if (SMELT_RULES[i].test(n)) return { ...SMELT_RULES[i].out };
+/** 한 아이템 녹일 때 나올 수 있는 산출물 종류 상한 */
+const MAX_SMELT_YIELDS_PER_ITEM = 3;
+
+function hashMaterialName(s) {
+  let h = 2166136261 >>> 0;
+  const str = String(s || '');
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
   }
-  return { id: 'slag', name: '고철', emoji: '🔩' };
+  return h >>> 0;
+}
+
+/**
+ * 재료/장비 이름에 맞는 산출물 productId 1~3개 (규칙 다중 매칭 + 가끔 부산물 slag).
+ * @param {string} materialName
+ * @returns {string[]}
+ */
+function inferSmeltProductsFromMaterialName(materialName) {
+  const n = String(materialName || '');
+  const hits = [];
+  for (let i = 0; i < SMELT_RULES.length; i += 1) {
+    if (SMELT_RULES[i].test(n)) hits.push(SMELT_RULES[i].out.id);
+  }
+  const seen = new Set();
+  const dedup = [];
+  for (const id of hits) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    dedup.push(id);
+    if (dedup.length >= MAX_SMELT_YIELDS_PER_ITEM) break;
+  }
+  if (dedup.length === 0) return ['slag'];
+  if (dedup.length === 1 && dedup[0] !== 'slag') {
+    if (hashMaterialName(n) % 5 === 0) return [dedup[0], 'slag'];
+  }
+  return dedup;
+}
+
+/** @deprecated 첫 번째 산출물만 — 다중 녹임은 inferSmeltProductsFromMaterialName 사용 */
+function inferSmeltProductFromMaterialName(materialName) {
+  const ids = inferSmeltProductsFromMaterialName(materialName);
+  const id = ids[0] || 'slag';
+  return { ...metaForProductId(id) };
 }
 
 function metaForProductId(productId) {
@@ -290,6 +328,8 @@ function metaForProductId(productId) {
 module.exports = {
   SMELT_CATALOG,
   inferSmeltProductFromMaterialName,
+  inferSmeltProductsFromMaterialName,
+  MAX_SMELT_YIELDS_PER_ITEM,
   metaForProductId,
   ALLOWED_IDS,
 };

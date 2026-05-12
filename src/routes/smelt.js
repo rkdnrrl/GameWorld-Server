@@ -4,7 +4,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const {
-  inferSmeltProductFromMaterialName,
+  inferSmeltProductsFromMaterialName,
   metaForProductId,
   ALLOWED_IDS,
 } = require('../lib/smeltProduct');
@@ -64,7 +64,7 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: `한 번에 최대 ${MAX_MELT_PER_REQUEST}개까지 녹일 수 있습니다.` } });
     }
 
-    let equipProductIds = [];
+    let equipProductYields = [];
     if (equipmentIds.length > 0) {
       const equipRowsPreview = await prisma.craftedEquipment.findMany({
         where: { id: { in: equipmentIds }, userId: req.user.id },
@@ -80,7 +80,7 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), GEMINI_SMELT_TIMEOUT_MS);
       try {
-        equipProductIds = await inferSmeltProductsFromEquipmentNames(orderedNames, { signal: ac.signal });
+        equipProductYields = await inferSmeltProductsFromEquipmentNames(orderedNames, { signal: ac.signal });
       } finally {
         clearTimeout(timer);
       }
@@ -101,8 +101,11 @@ router.post('/melt', requireAuth, async (req, res, next) => {
           return { err: 'NOT_FOUND' };
         }
         for (const row of catchRows) {
-          const p = inferSmeltProductFromMaterialName(row.itemName);
-          delta[p.id] = (delta[p.id] || 0) + 1;
+          const ids = inferSmeltProductsFromMaterialName(row.itemName);
+          for (const pid of ids) {
+            if (!ALLOWED_IDS.has(pid)) continue;
+            delta[pid] = (delta[pid] || 0) + 1;
+          }
         }
         await tx.catch.deleteMany({
           where: {
@@ -123,9 +126,11 @@ router.post('/melt', requireAuth, async (req, res, next) => {
         if (equipRows.length !== equipmentIds.length) {
           return { err: 'NOT_FOUND_EQUIPMENT' };
         }
-        for (const pid of equipProductIds) {
-          if (!ALLOWED_IDS.has(pid)) continue;
-          delta[pid] = (delta[pid] || 0) + 1;
+        for (const list of equipProductYields) {
+          for (const pid of list || []) {
+            if (!ALLOWED_IDS.has(pid)) continue;
+            delta[pid] = (delta[pid] || 0) + 1;
+          }
         }
         await tx.craftedEquipment.deleteMany({
           where: {
