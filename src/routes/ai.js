@@ -816,23 +816,48 @@ router.post('/catch', requireAuth, async (req, res) => {
    일반(common)만: PixelLab 완료 후 shared_pixel_arts 저장 (name = `shared:scrapyard:` + 표시용 이름)
    희귀(rare) 티어는 게임에서 제거됨 — 이 API는 rarity=common 만 허용
    body: { name: string, type: string, rarity: 'common' }
-   response: { imageUrl, cached, bonusCoins, coins }
+   response: { imageUrl, cached, bonusCoins: 0, coins: null } — 스캔 보너스는 POST /api/ai/fishing-scan-bonus 에서만 지급
 ──────────────────────────────────────────────────────────── */
-const SCAN_BONUS_COINS = 100;
 
-async function grantScanBonus(userId) {
+/** 20초당 100원: 경과 ms가 20초의 몇 배인지에 비례 (예: 20s→100, 40s→200). 최대 180초 반영. */
+const SCAN_BONUS_MS_PER_100 = 20_000;
+
+function computeFishingScanBonusFromElapsedMs(rawMs) {
+  const ms = Math.min(180_000, Math.max(0, Math.floor(Number(rawMs) || 0)));
+  return Math.min(999_999, Math.round((ms / SCAN_BONUS_MS_PER_100) * 100));
+}
+
+async function grantFishingScanBonusCoins(userId, amount) {
+  const inc = Math.min(999_999, Math.max(0, Math.floor(Number(amount)) || 0));
+  if (inc <= 0) return { bonusCoins: 0, coins: null };
   try {
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { coins: { increment: SCAN_BONUS_COINS } },
+      data: { coins: { increment: inc } },
       select: { coins: true },
     });
-    return { bonusCoins: SCAN_BONUS_COINS, coins: updated.coins };
+    return { bonusCoins: inc, coins: updated.coins };
   } catch (err) {
-    console.warn('[AI /image] scan bonus failed (non-fatal):', err.message);
+    console.warn('[AI /fishing-scan-bonus] grant failed:', err.message);
     return { bonusCoins: 0, coins: null };
   }
 }
+
+/**
+ * POST /api/ai/fishing-scan-bonus
+ * Singleplay-Game3 심연 스캔 종료 후 1회 호출. body.scanElapsedMs 기준 **20초당 100원**(비례, 180초 상한).
+ */
+router.post('/fishing-scan-bonus', requireAuth, async (req, res) => {
+  try {
+    const raw = req.body && req.body.scanElapsedMs;
+    const amount = computeFishingScanBonusFromElapsedMs(raw);
+    const bonus = await grantFishingScanBonusCoins(req.user.id, amount);
+    return res.json(bonus);
+  } catch (err) {
+    console.warn('[AI /fishing-scan-bonus]', err.message || err);
+    return res.json({ bonusCoins: 0, coins: null });
+  }
+});
 
 const GEMINI_FISHING_TIMEOUT_MS = 14_000;
 
@@ -840,7 +865,7 @@ const GEMINI_FISHING_TIMEOUT_MS = 14_000;
  * POST /api/ai/fishing-common
  * Singleplay-Game3 일반 스크랩: Gemini로 이름·이모지·visualEn 생성 후,
  * shared_pixel_arts(이름 키)에 이미지가 있으면 DB에서만 반환(PixelLab 생략), 없으면 생성·저장.
- * response: { name, type, emoji, imageUrl?, cached, bonusCoins?, coins?, nameSource? }
+ * response: { name, type, emoji, imageUrl?, cached, nameSource?, bonusCoins: 0, coins: null } — 코인 보너스는 /fishing-scan-bonus
  */
 router.post('/fishing-common', requireAuth, async (req, res) => {
   const ac = new AbortController();
@@ -869,7 +894,6 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
       });
       if (cached?.imageData) {
         console.log(`[AI /fishing-common] cache hit: "${cacheKey}"`);
-        const bonus = await grantScanBonus(req.user.id);
         return res.json({
           name: cleanName,
           type,
@@ -877,7 +901,8 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
           imageUrl: cached.imageData,
           cached: true,
           nameSource: 'gemini',
-          ...bonus,
+          bonusCoins: 0,
+          coins: null,
         });
       }
     } catch (dbErr) {
@@ -887,7 +912,6 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
     const imageUrl = await generatePixelLabImage(cleanName, rarity, type, bundle.visualEn);
     if (!imageUrl) {
       console.warn(`[AI /fishing-common] PixelLab null for "${cleanName}"`);
-      const bonus = await grantScanBonus(req.user.id);
       return res.json({
         name: cleanName,
         type,
@@ -896,7 +920,8 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
         cached: false,
         pixelLabFailed: true,
         nameSource: 'gemini',
-        ...bonus,
+        bonusCoins: 0,
+        coins: null,
       });
     }
 
@@ -911,7 +936,6 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
       console.warn('[AI /fishing-common] cache save skipped:', dbErr.message);
     }
 
-    const bonus = await grantScanBonus(req.user.id);
     return res.json({
       name: cleanName,
       type,
@@ -919,7 +943,8 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
       imageUrl,
       cached: false,
       nameSource: 'gemini',
-      ...bonus,
+      bonusCoins: 0,
+      coins: null,
     });
   } catch (err) {
     console.error('[AI /fishing-common]', err.message || err);
@@ -954,8 +979,7 @@ router.post('/image', requireAuth, async (req, res) => {
     });
     if (cached?.imageData) {
       console.log(`[SharedPixelArt] cache hit: "${cacheKey}" (display "${cleanName}")`);
-      const bonus = await grantScanBonus(req.user.id);
-      return res.json({ imageUrl: cached.imageData, cached: true, ...bonus });
+      return res.json({ imageUrl: cached.imageData, cached: true, bonusCoins: 0, coins: null });
     }
   } catch (dbErr) {
     // 테이블 미생성 or prisma generate 미실행 — PixelLab으로 계속
@@ -981,9 +1005,8 @@ router.post('/image', requireAuth, async (req, res) => {
     console.warn('[SharedPixelArt] save skipped (non-fatal):', dbErr.message);
   }
 
-  // ── 4. 스캔 성공 보너스 코인 지급 ──
-  const bonus = await grantScanBonus(req.user.id);
-  res.json({ imageUrl, cached: false, ...bonus });
+  // ── 4. 스캔 보너스는 POST /api/ai/fishing-scan-bonus 에서만 지급 ──
+  res.json({ imageUrl, cached: false, bonusCoins: 0, coins: null });
 });
 
 /* ── GET /api/ai/floaters ────────────────────────────────────
