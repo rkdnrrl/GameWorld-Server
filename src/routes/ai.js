@@ -41,8 +41,8 @@ const TYPE_STYLE = {
   debris:   'space junk, wreckage, broken machine part, scrap metal, fragment',
   cosmic:   'cosmic entity, energy being, abstract space phenomenon',
   scrap:
-    'one chunky industrial metal scrap prop, steel iron alloy, junkyard machine fragment, ' +
-    'nuts bolts gears rebar coil plate shard, heavy readable silhouette, fills most of frame, ' +
+    'salvaged space junk prop: either chunky industrial metal fragment OR recognizable everyday object ' +
+    '(keyboard, shoe, plant pot, dumbbell), heavy readable silhouette, fills most of frame, ' +
     'no fish no ocean no creature face no human',
 };
 
@@ -202,6 +202,24 @@ const KOREAN_NAME_PIXEL_HINTS = [
   ['이어폰', 'in-ear earphones, two small buds connected by thin wire cable'],
   ['키보드', 'flat rectangular keyboard with grid of keys'],
   ['마우스', 'computer mouse with two click buttons and scroll wheel'],
+  ['게임패드', 'video game controller gamepad with dual analog sticks and shoulder buttons'],
+  ['조이스틱', 'arcade joystick with ball top handle on square base'],
+  ['CPU', 'square CPU processor chip with metal heat spreader lid and tiny pins grid'],
+  ['GPU', 'wide graphics card PCB with dual fans heatsink shroud and PCIe bracket'],
+  ['그래픽카드', 'wide graphics card with dual fans heatsink and PCIe connector edge'],
+  ['RAM', 'long slim DDR memory RAM stick module with black PCB and chips'],
+  ['메모리', 'long slim DDR memory RAM stick module with black PCB and chips'],
+  ['파워서플라이', 'ATX PC power supply box with fan grille mesh and cable bundle'],
+  ['SSD', 'flat rectangular M2 or SATA SSD storage drive with label sticker'],
+  ['필통', 'pencil case zip pouch with pens and ruler silhouette'],
+  ['필기구', 'pencil case with pens pencils eraser sticking out'],
+  ['피아노', 'upright piano with keyboard white black keys and wooden cabinet'],
+  ['건반', 'electronic keyboard piano with black and white keys and slim body'],
+  ['청바지', 'folded blue denim jeans pants'],
+  ['반바지', 'short casual shorts'],
+  ['티셔츠', 'folded cotton crew neck t-shirt'],
+  ['후드티', 'hooded sweatshirt with front pocket pouch'],
+  ['셔츠', 'button dress shirt folded neatly'],
   // ━━ 공구 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ['전동드릴', 'power drill with pistol grip handle, trigger, and chuck bit at front'],
   ['임팩드릴', 'impact driver with compact body, trigger, and hex socket bit'],
@@ -605,15 +623,25 @@ function namePrefixIsMetal(name) {
 function buildPixelLabPrompt(displayName, rarity, type, visualEn) {
   const clean = String(displayName || '').trim().slice(0, 48);
   const nameShapeHint = englishHintFromKoreanItemName(clean);
-  // 힌트가 없거나, 힌트에 금속 키워드가 있거나, 이름 자체가 금속 접두로 시작하면 금속 렌더링
-  const hasMetal = !nameShapeHint || hintIsMetal(nameShapeHint) || namePrefixIsMetal(clean);
+  const enHint = typeof visualEn === 'string' ? visualEn.trim().slice(0, 220) : '';
+
+  // 금속 녹·야드 톤은 "금속"일 때만. 한글 힌트 없이 visualEn만 오면(낚시 Gemini) 영어 힌트로 판별
+  let hasMetal;
+  if (namePrefixIsMetal(clean)) {
+    hasMetal = true;
+  } else if (nameShapeHint) {
+    hasMetal = hintIsMetal(nameShapeHint);
+  } else if (type === 'scrap' && enHint) {
+    hasMetal = hintIsMetal(enHint);
+  } else {
+    hasMetal = !nameShapeHint || hintIsMetal(nameShapeHint) || namePrefixIsMetal(clean);
+  }
 
   let typeStyle = TYPE_STYLE[type] || TYPE_STYLE.scrap;
-  if (nameShapeHint && type === 'scrap') {
-    // 힌트가 있으면 힌트가 형태를 설명 — metal 힌트만 공구 묘사 추가
+  if (type === 'scrap' && (nameShapeHint || enHint)) {
     typeStyle = hasMetal
-      ? 'bent but recognizable real tool shape, not abstract geometry'
-      : 'recognizable everyday object shape, not a metal chunk, not a cube';
+      ? 'bent but recognizable real tool or machine part shape, not abstract geometry'
+      : 'recognizable everyday object shape, plastic fabric wood or glass ok, not a plain metal cube';
   }
 
   // 금속 묘사(녹, 강철)는 금속성 힌트일 때만 적용
@@ -621,8 +649,6 @@ function buildPixelLabPrompt(displayName, rarity, type, visualEn) {
     type === 'scrap' && hasMetal
       ? (SCRAP_RARITY_STYLE[rarity] || SCRAP_RARITY_STYLE.common)
       : (RARITY_STYLE[rarity] || RARITY_STYLE.common);
-
-  const enHint = typeof visualEn === 'string' ? visualEn.trim().slice(0, 220) : '';
 
   const parts = [
     nameShapeHint ? nameShapeHint : null,

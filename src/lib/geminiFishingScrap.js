@@ -16,16 +16,17 @@ const FISHING_SCRAP_RESPONSE_SCHEMA = {
   properties: {
     name: {
       type: 'STRING',
-      description: 'Korean scrap yard metal junk name, max 20 chars, industrial tone',
+      description:
+        'Korean everyday object name player recognizes, max 22 chars: PC parts, furniture, clothes, sports, plants, office supplies, appliances — NOT industrial scrap-only names',
     },
     emoji: {
       type: 'STRING',
-      description: 'Single emoji for scrap metal (no fish, no ocean)',
+      description: 'Single emoji matching the object (no fish, no ocean waves)',
     },
     visualEn: {
       type: 'STRING',
       description:
-        'English only, max 22 words: concrete metal prop for pixel sprite, shapes only, no people no fish',
+        'English only, max 24 words: concrete real-world object silhouette for pixel icon (plastic, fabric, wood, glass ok); shapes only; no people no fish',
     },
   },
   required: ['name'],
@@ -41,24 +42,27 @@ async function generateFishingScrapNameBundle(opts = {}) {
   if (!key) return null;
 
   const model = getGeminiModel();
-  const prompt = `당신은 우주 낚시·고철 야드 톤 게임의 작명가입니다.
-방금 플레이어가 "일반(common)" 등급의 스크랩 덩어리를 집었습니다.
+  const prompt = `당신은 우주 낚시 게임의 작명가입니다. 플레이어가 우주 잔해에서 "일반(common)" 등급 아이템 하나를 건졌습니다.
 
-아래 JSON만 출력하세요.
+**중요 — 이름 톤 (반드시 지킬 것)**  
+- 세상에서 실제로 볼 수 있는 **물건·용품·가전·가구·옷·식물** 이름으로 지을 것.  
+- **금지**: 압연·형강·와이어코일·슬래그·비철·I빔·베어링·야드 설비처럼 **공장·고철장 전용 용어 위주** 이름. "고철 덩어리" 느낌만 나오면 실패입니다.
 
-이름(name):
-- 한국어, **20자 이내**
-- 야드·설비·금속·재활용 잔해 느낌 (압연, 형강, 와이어, 베어링, 슬래그, 비철 등)
-- 너무 길게 설명하지 말 것
+**매번 아래 범주 중 하나를 골라 다양하게** (같은 카테고리만 연속으로 내지 말 것):  
+- PC·전자: 키보드, 마우스, 게임패드, 모니터, 본체, 노트북, RAM, CPU, GPU, 파워서플라이, SSD, USB메모리, 웹캠, 헤드셋, 멀티탭 등  
+- 생활·가구: 책상, 의자, 선풍기, 베개, 이불, 스탠드, 필통, 책, 노트, 램프 등  
+- 패션: 모자, 슬리퍼, 운동화, 양말, 장갑, 티셔츠, 후드, 청바지, 반바지 등 (너무 긴 풀네임 대신 짧은 통칭)  
+- 악기·취미: 피아노, 기타, 우쿨렐레, 드럼패드 등  
+- 운동: 덤벨, 케틀벨, 요가매트, 헬스밴드 등  
+- 식물·자연: 잔디, 클로버, 민들레, 장미, 튤립, 소나무, 은행나무 등 (한 단어 또는 짧은 복합어)
 
-emoji:
-- 스크랩·금속을 나타내는 이모지 **1개** (🔩⚙️🪨 등). 물고기·바다·생물 이모지 금지.
+이름(name): 한국어 **22자 이내**, 위 범주에 맞는 **익숙한 사물명**. 나열·설명 문장 금지.
 
-visualEn:
-- PixelLab용 **영어만**, 최대 22단어
-- 녹·용접·톱니·코일·I빔 등 **보이는 형태**만. 사람·문장·한국어 금지.
+emoji: 그 물건에 맞는 이모지 **1개**. 물고기·바다·생물 이모지 금지.
 
-조리 도구 이름이 나오면 visualEn은 그 도구의 **실제 실루엣**(예: 후라이팬=원형 팬+긴 손잡이)을 영어로 구체적으로 쓸 것.`;
+visualEn: PixelLab용 **영어만**, 최대 24단어. **그 물건의 실제 실루엣**(재질: 금속·플라스틱·천·나무 등 자연스럽게). 사람·문장·한국어 금지.
+
+아래 JSON만 출력하세요.`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
 
@@ -78,7 +82,7 @@ visualEn:
       {
         parts: [
           {
-            text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"","emoji":"🔩","visualEn":"bent corroded steel scrap chunk"}`,
+            text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"무선 마우스","emoji":"🖱️","visualEn":"wireless computer mouse with two buttons scroll wheel ergonomic plastic body"}`,
           },
         ],
       },
