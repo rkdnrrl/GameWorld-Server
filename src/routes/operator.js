@@ -19,18 +19,39 @@ function normalizeNameParam(raw) {
   return s;
 }
 
-/** 목록: imageData 제외 (용량) */
+/** 목록: 기본은 imageData 제외. `includeImageData=1` 이면 썸네일용으로 imageData 포함(응답 크기 증가). */
 router.get('/shared-pixel-arts', requireAuth, requireOperator, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    let limit = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const skip = (page - 1) * limit;
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+
+    const includeImageData =
+      req.query.includeImageData === '1' || req.query.includeImageData === 'true';
+    if (includeImageData) {
+      limit = Math.min(limit, 60);
+    }
 
     const where =
       q.length > 0
         ? { name: { contains: q, mode: 'insensitive' } }
         : {};
+
+    const select = includeImageData
+      ? {
+          name: true,
+          rarity: true,
+          type: true,
+          createdAt: true,
+          imageData: true,
+        }
+      : {
+          name: true,
+          rarity: true,
+          type: true,
+          createdAt: true,
+        };
 
     const [rows, total] = await prisma.$transaction([
       prisma.sharedPixelArt.findMany({
@@ -38,12 +59,7 @@ router.get('/shared-pixel-arts', requireAuth, requireOperator, async (req, res, 
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
-        select: {
-          name: true,
-          rarity: true,
-          type: true,
-          createdAt: true,
-        },
+        select,
       }),
       prisma.sharedPixelArt.count({ where }),
     ]);
