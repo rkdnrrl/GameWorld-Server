@@ -324,18 +324,6 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
       hints = await buildDecomposeSlotHints(req.user.id, names, sources);
     }
 
-    const result = decomposeMaterialsDeterministic(hints);
-    const elements = result.elements || [];
-
-    if (elements.length === 0) {
-      return res.status(400).json({
-        error: { message: '재료에서 추출할 원소를 계산하지 못했습니다.' },
-      });
-    }
-
-    let stashElements = [];
-    let stashMeta;
-
     if (!sources) {
       return res.status(400).json({
         error: {
@@ -345,10 +333,27 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
       });
     }
 
+    const result = decomposeMaterialsDeterministic(hints);
+    const elements = result.elements || [];
+
+    if (elements.length === 0) {
+      const sub = result.sublimate;
+      if (!Array.isArray(sub) || sub.length === 0) {
+        return res.status(400).json({
+          error: { message: '재료에서 추출할 원소를 계산하지 못했습니다.' },
+        });
+      }
+    }
+
+    let stashElements = [];
+    let stashMeta;
+
     try {
       stashElements = await prisma.$transaction(async (tx) => {
         await consumeMaterialSources(tx, req.user.id, names, sources);
-        await incrementStashForElements(tx, req.user.id, elements);
+        if (elements.length > 0) {
+          await incrementStashForElements(tx, req.user.id, elements);
+        }
         const rows = await tx.alchemyElementStock.findMany({
           where: { userId: req.user.id, count: { gt: 0 } },
           orderBy: [{ atomicNumber: 'asc' }, { symbol: 'asc' }],
@@ -372,13 +377,18 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
       }
     }
 
-    const meta = stashMeta ? { ...stashMeta } : undefined;
+    const meta = {};
+    if (stashMeta) Object.assign(meta, stashMeta);
+    if (result.sublimate && result.sublimate.length) {
+      meta.composeSublimate = result.sublimate;
+    }
+    const metaOut = Object.keys(meta).length ? meta : undefined;
 
     res.json({
       namesInput: names,
       elements,
       stashElements,
-      meta,
+      meta: metaOut,
     });
   } catch (err) {
     next(err);

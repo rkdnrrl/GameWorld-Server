@@ -116,6 +116,45 @@ function normSpaces(s) {
     .replace(/\s+/g, ' ');
 }
 
+/** 조합 산출물 분해 시 증발(원소 미적립) — 튜닝 가능 */
+const COMPOSE_SUBLIMATE_TOTAL = 0.025;
+/** TOTAL 구간 직후 ~ 이 값까지 누적이면 부분 증발 구간 */
+const COMPOSE_SUBLIMATE_PARTIAL_CUMULATIVE = 0.025 + 0.11;
+/** 부분 증발 구간에서 원소 하나가 날아갈 확률(독립 시행) */
+const COMPOSE_SUBLIMATE_EACH_DROP = 0.28;
+
+/**
+ * @param {string[]} syms
+ * @param {() => number} rng — [0,1)
+ * @returns {{ syms: string[], meta?: { kind: 'total' | 'partial', before: number, after?: number, lost?: number } }}
+ */
+function applyComposeArtifactSublimate(syms, rng) {
+  const before = syms.length;
+  if (before === 0) return { syms: [] };
+  const r = rng();
+  if (r < COMPOSE_SUBLIMATE_TOTAL) {
+    return { syms: [], meta: { kind: 'total', before, after: 0, lost: before } };
+  }
+  if (r < COMPOSE_SUBLIMATE_PARTIAL_CUMULATIVE) {
+    const kept = syms.filter(() => rng() >= COMPOSE_SUBLIMATE_EACH_DROP);
+    const after = kept.length;
+    return {
+      syms: kept,
+      meta: {
+        kind: 'partial',
+        before,
+        after,
+        lost: before - after,
+      },
+    };
+  }
+  return { syms: syms.slice() };
+}
+
+function isComposeArtifactDecomposeSlot(slot) {
+  return String(slot.itemType || '').toLowerCase() === 'artifact';
+}
+
 /** 이름 안의 `(Fe)` `(H)` … IUPAC 기호만 순서·중복 유지해 수집 (조합 산출물 접미사용) */
 function parenSymbolSequence(name) {
   const re = /\(([A-Za-z]{1,3})\)/g;
@@ -161,10 +200,13 @@ function fallbackSymbolsForSlot(slot) {
  * - 이름에 `(H)(O)` 괄호 조성이 있으면 **그것만** 사용(조합 산출물·기호 접미사).
  * - 없으면 키워드 → 없으면 itemType 폴백(기호당 슬롯당 1회).
  * - 여러 슬롯이면 리스트를 순서대로 합쳐 stash에 기호별로 그만큼 +1.
+ * - `itemType: artifact` 이고 이름에 괄호 조성이 있으면(조합 산출물) 분해 시 낮은 확률로 원소가 증발해 적립되지 않을 수 있음.
  * @param {DecomposeSlotHint[]} hints
- * @returns {{ elements: { symbol: string, nameKo: string, atomicNumber?: number, rationaleKo: string }[], reason?: string }}
+ * @param {{ rng?: () => number }} [opts]
+ * @returns {{ elements: { symbol: string, nameKo: string, atomicNumber?: number, rationaleKo: string }[], reason?: string, sublimate?: object[] }}
  */
-function decomposeMaterialsDeterministic(hints) {
+function decomposeMaterialsDeterministic(hints, opts = {}) {
+  const rng = typeof opts.rng === 'function' ? opts.rng : Math.random;
   const list = Array.isArray(hints) ? hints.filter((h) => h && String(h.name || '').trim()) : [];
   if (list.length === 0) {
     return { elements: [], reason: 'empty_names' };
@@ -172,14 +214,28 @@ function decomposeMaterialsDeterministic(hints) {
 
   /** @type {{ symbol: string, rationaleKo: string }[]} */
   const combined = [];
+  /** @type {object[]} */
+  const sublimate = [];
 
-  for (const slot of list) {
+  for (let slotIndex = 0; slotIndex < list.length; slotIndex += 1) {
+    const slot = list[slotIndex];
     const rawName = String(slot.name || '').trim();
     const norm = normSpaces(rawName);
 
     const parenSyms = parenSymbolSequence(rawName);
     if (parenSyms.length > 0) {
-      for (const sym of parenSyms) {
+      let outSyms = parenSyms;
+      if (isComposeArtifactDecomposeSlot(slot)) {
+        const sub = applyComposeArtifactSublimate(parenSyms, rng);
+        outSyms = sub.syms;
+        if (sub.meta) {
+          const m = sub.meta;
+          if (m.kind === 'total' || (m.kind === 'partial' && m.lost > 0)) {
+            sublimate.push({ slotIndex, itemName: rawName.slice(0, 120), ...m });
+          }
+        }
+      }
+      for (const sym of outSyms) {
         combined.push({ symbol: sym, rationaleKo: '이름 괄호 속 원소 조성' });
       }
       continue;
@@ -216,10 +272,12 @@ function decomposeMaterialsDeterministic(hints) {
     };
   });
 
-  return { elements };
+  return { elements, sublimate: sublimate.length ? sublimate : undefined };
 }
 
 module.exports = {
   decomposeMaterialsDeterministic,
   ELEMENT_NAME_KO,
+  parenSymbolSequence,
+  applyComposeArtifactSublimate,
 };
