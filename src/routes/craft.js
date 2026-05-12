@@ -233,6 +233,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           precomputedAiBundle = {
             name: ai.name,
             stats: ai.stats,
+            visualHintEn: ai.visualHintEn || null,
             nameClass: ai.nameClass === 'signature' ? 'signature' : 'ordinary',
             tier: String(ai.tier || 'common').slice(0, 20),
           };
@@ -488,7 +489,12 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const pixelAc = new AbortController();
     const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_FORGE_MS);
     try {
-      const png = await generateCraftedEquipmentPixelArt(createdRow.name, createdRow.tier, pixelAc.signal);
+      const png = await generateCraftedEquipmentPixelArt(
+        createdRow.name,
+        createdRow.tier,
+        pixelAc.signal,
+        precomputedAiBundle && precomputedAiBundle.visualHintEn ? precomputedAiBundle.visualHintEn : null,
+      );
       if (png) {
         await prisma.craftedEquipment.update({
           where: { id: createdRow.id, userId: req.user.id },

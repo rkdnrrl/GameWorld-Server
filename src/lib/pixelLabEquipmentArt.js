@@ -12,27 +12,37 @@ const PIXEL_NEGATIVE =
   'wide establishing shot, tiny subject, panorama, landscape, sky, stars, nebula, galaxy, ' +
   'underwater, ocean, fish, tentacles, anime character, human face, hands, body, ' +
   'text, caption, watermark, logo, signature, QR, HUD, UI frame, speech bubble, ' +
-  'motion blur, depth of field bokeh, jpeg artifacts, empty blank canvas, collage, split screen';
+  'motion blur, depth of field bokeh, jpeg artifacts, empty blank canvas, collage, split screen, ' +
+  'wrong item type, unrelated industrial piston, random hydraulic cylinder, plain metal pipe unrelated to title';
 
 const RARITY_MOOD = {
-  common: 'modest worn steel gray bronze tint',
+  common: 'modest worn materials muted palette',
   rare: 'richer teal-lavender accent subtle glow',
   epic: 'bold violet-gold accent energetic edge glow',
   legendary: 'dramatic sun-gold rim dark core mythical focus',
 };
 
-function buildEquipmentImagePrompt(name, tier) {
+function buildEquipmentImagePrompt(name, tier, visualHintEn) {
   const clean = String(name || '').trim().slice(0, 48);
+  const hint = typeof visualHintEn === 'string' ? visualHintEn.trim().slice(0, 220) : '';
   const r = String(tier || 'common').toLowerCase();
   const mood = RARITY_MOOD[r] || RARITY_MOOD.common;
+
+  const primary = hint
+    ? `PRIMARY SILHOUETTE — draw exactly this object, no substitution: ${hint}`
+    : 'single recognizable RPG equipment piece matching the item title category (sword axe mace spear shield helm gloves boots belt ring cloak staff bow) default to simple shortsword if title is vague';
+
   const parts = [
     'SNES era 16-bit pixel art RPG equipment inventory icon',
     'single object centered large on canvas thick chunky pixels',
-    'weapon tool ring helm belt or armor accessory readable silhouette tiny',
-    'sci-fi space forge metal crystal mix high contrast',
+    primary,
+    'readable chunky silhouette readable at 32px not abstract cube',
     mood,
     'isolated subject empty void around object alpha friendly',
-    clean ? `item name flavor (do not render as text): ${JSON.stringify(clean)}` : null,
+    clean
+      ? `Korean title flavor only never paint letters or text: ${JSON.stringify(clean)}`
+      : null,
+    'materials leather cloth wood iron bronze as implied by PRIMARY line not generic sci-fi scrap',
   ].filter(Boolean);
   return parts.join(', ');
 }
@@ -41,13 +51,14 @@ function buildEquipmentImagePrompt(name, tier) {
  * @param {string} name
  * @param {string} tier
  * @param {AbortSignal} [signal]
+ * @param {string|null} [visualHintEn] — Gemini 영어 실루엣(이름과 동일 물건)
  * @returns {Promise<string|null>} data:image/png;base64,... 또는 null
  */
-async function generateCraftedEquipmentPixelArt(name, tier, signal) {
+async function generateCraftedEquipmentPixelArt(name, tier, signal, visualHintEn) {
   const secret = String(process.env.PIXELLAB_SECRET || '').trim();
   if (!secret) return null;
 
-  const description = buildEquipmentImagePrompt(name, tier);
+  const description = buildEquipmentImagePrompt(name, tier, visualHintEn);
 
   try {
     const plRes = await fetch(`${PIXELLAB_BASE_URL}/generate-image-pixflux`, {

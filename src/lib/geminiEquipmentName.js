@@ -71,6 +71,11 @@ const FORGE_BUNDLE_RESPONSE_SCHEMA = {
       description:
         'Korean gear name: usually shabby/broken-tone 6–22 chars; rarely 10–24 char epic poetic title; no raw material inventory listing',
     },
+    visualHintEn: {
+      type: 'STRING',
+      description:
+        'English only max 22 words: concrete silhouette for pixel icon of THE SAME object as name (materials shapes). Must match category e.g. gloves→gloves not metal rod',
+    },
     attackBonus: { type: 'INTEGER', description: 'Attack bonus integer' },
     defenseBonus: { type: 'INTEGER', description: 'Defense bonus integer' },
     speedBonus: { type: 'NUMBER', description: 'Speed multiplier 0.02–0.20 (e.g. 0.08)' },
@@ -156,7 +161,7 @@ async function generateForgeEquipmentNameFromMaterials(opts) {
  * 이름 + 희귀도(itemTier) + 능력치 + 내구도를 한 번에.
  * 요청마다 약 5%(`FORGE_GRAND_SIGNATURE_RATE`)는 서정·시그니처 톤, 나머지는 초라한 장비 톤으로 프롬프트 분기.
  * @param {{ resolved: object[], signal?: AbortSignal }} opts
- * @returns {Promise<{ name: string|null, stats: object|null, tier?: string, nameClass?: 'signature'|'ordinary', reason?: string }>}
+ * @returns {Promise<{ name: string|null, visualHintEn?: string|null, stats: object|null, tier?: string, nameClass?: 'signature'|'ordinary', reason?: string }>}
  */
 async function generateForgeEquipmentBundleFromMaterials(opts) {
   const key = getGeminiApiKey();
@@ -200,6 +205,12 @@ ${modeBlock}
 - **금지**: 낚시·용광로 재료 **이름을 두 개 이상 그대로 풀어 넣기**, **「○○와 △△의 무기」「○○·△△·□□의 무기」** 같은 인벤토리 나열 문장, **"○○ 와 △△ 와 …"** 식으로 재료만 잇기, 숫자·단위·버전표기 남발.
 - 띄어쓰기는 자연스럽게(필요하면 한 칸). 괄호·따옴표·콜론은 쓰지 말 것.
 
+**이름 ↔ 스프라이트 실루엣 (필수 — 불일치 금지)**  
+- **visualHintEn** 필드: **영어만**, 최대 **22단어**. 위에서 지은 **한글 name과 정확히 같은 범주의 물건**이 픽셀 아이콘으로 보이도록, **보이는 형태·재질·대략적 각도**만 쓸 것 (문장·스토리·한국어 금지).  
+- 예: name이 **가죽 장갑·망치 장갑** 류이면 → \`worn brown leather work gloves pair front view thick cuff visible fingers\` 처럼 **장갑 실루엣**.  
+- name이 **검·도끼·창·방패·투구·반지·벨트** 등이면 그에 맞는 **무기·방어구 실루엣**을 영어로.  
+- **절대 금지**: name은 장갑·옷·가죽인데 visualHintEn을 **금속 실린더·피스톤·랜덤 기계 부품·추상 블록**으로 쓰는 것. name이 말하는 **물건 종류**와 visualHintEn의 **종류**가 다르면 실패입니다.
+
 itemTier (희귀도): common | rare | epic | legendary 중 하나. **위 모드 설명을 반드시 따를 것.** 재료 희귀도·크기는 반영하지 말 것.
 
 능력치:
@@ -233,7 +244,7 @@ itemTier (희귀도): common | rare | epic | legendary 중 하나. **위 모드 
       {
         parts: [
           {
-            text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"찢어진 검","itemTier":"common","nameClass":"ordinary","attackBonus":0,"defenseBonus":0,"speedBonus":0.06,"durabilityMax":100,"durability":100}`,
+            text: `${prompt}\n\n응답은 반드시 JSON 한 덩어리만: {"name":"찢어진 검","visualHintEn":"chipped iron shortsword single edge worn crossguard leather wrap grip front view","itemTier":"common","nameClass":"ordinary","attackBonus":8,"defenseBonus":2,"speedBonus":0.06,"durabilityMax":100,"durability":100}`,
           },
         ],
       },
@@ -319,15 +330,23 @@ itemTier (희귀도): common | rare | epic | legendary 중 하나. **위 모드 
     return { name: null, stats: null, reason: 'parse_failed' };
   }
 
-  let nameRaw = String(parsed.name || '').trim().replace(/^["']|["']$/g, '').slice(0, 120);
+  const originalGeminiName = String(parsed.name || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .slice(0, 120);
+
+  let nameRaw = originalGeminiName;
   if (!nameRaw) {
     return { name: null, stats: null, reason: 'empty_name' };
   }
+
+  let visualHintEn = sanitizeForgeVisualHintEn(parsed.visualHintEn);
 
   if (nameViolatesForgeStyle(nameRaw, resolved)) {
     nameRaw = resolvedMaterialsAreSmeltOnly(resolved)
       ? proceduralSmeltForgeName(resolved)
       : heuristicEquipmentNameFromResolved(resolved);
+    visualHintEn = null;
   }
 
   let geminiTier = normalizeGeminiItemTier(parsed);
@@ -341,7 +360,19 @@ itemTier (희귀도): common | rare | epic | legendary 중 하나. **위 모드 
   }
 
   const stats = normalizeGeminiForgeStats(parsed, geminiTier);
-  return { name: nameRaw, stats, tier: geminiTier, nameClass, reason: undefined };
+  return { name: nameRaw, visualHintEn, stats, tier: geminiTier, nameClass, reason: undefined };
+}
+
+/** PixelLab용 영어 실루엣 — 한글·문장 혼입 시 제거 */
+function sanitizeForgeVisualHintEn(raw) {
+  const s = String(raw || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 280);
+  if (!s) return null;
+  if (/[\u3131-\uAC00\uAC01-\uD79D]/.test(s)) return null;
+  if (!/[a-zA-Z]/.test(s)) return null;
+  return s;
 }
 
 module.exports = {
