@@ -56,7 +56,7 @@ const ELEMENT_NAME_KO = {
 };
 
 /**
- * 이름·종류 키워드로 원소 기호를 누적한다. (한 슬롯 안에서는 기호 중복 없음)
+ * 이름·종류 키워드로 원소 기호를 누적한다. (괄호 조성이 없을 때만 쓰이며, 키워드 경로는 슬롯당 기호 중복 없음)
  * 긴 키워드를 앞에 두면 부분 일치 충돌을 줄일 수 있다.
  * @type {{ patterns: string[], symbols: string[], rationale: string }[]}
  */
@@ -116,8 +116,8 @@ function normSpaces(s) {
     .replace(/\s+/g, ' ');
 }
 
-/** @param {string} name */
-function symbolsFromParentheses(name) {
+/** 이름 안의 `(Fe)` `(H)` … IUPAC 기호만 순서·중복 유지해 수집 (조합 산출물 접미사용) */
+function parenSymbolSequence(name) {
   const re = /\(([A-Za-z]{1,3})\)/g;
   const out = [];
   let m;
@@ -157,7 +157,10 @@ function fallbackSymbolsForSlot(slot) {
 }
 
 /**
- * 슬롯별로 원소를 추출한 뒤 기호 합집합(슬롯마다 +1이 아니라 한 번 분해당 기호당 stash +1).
+ * 슬롯마다 원소 후보를 모은 뒤 이어붙인다.
+ * - 이름에 `(H)(O)` 괄호 조성이 있으면 **그것만** 사용(조합 산출물·기호 접미사).
+ * - 없으면 키워드 → 없으면 itemType 폴백(기호당 슬롯당 1회).
+ * - 여러 슬롯이면 리스트를 순서대로 합쳐 stash에 기호별로 그만큼 +1.
  * @param {DecomposeSlotHint[]} hints
  * @returns {{ elements: { symbol: string, nameKo: string, atomicNumber?: number, rationaleKo: string }[], reason?: string }}
  */
@@ -167,18 +170,22 @@ function decomposeMaterialsDeterministic(hints) {
     return { elements: [], reason: 'empty_names' };
   }
 
-  const merged = new Map();
+  /** @type {{ symbol: string, rationaleKo: string }[]} */
+  const combined = [];
 
   for (const slot of list) {
     const rawName = String(slot.name || '').trim();
     const norm = normSpaces(rawName);
 
-    const slotMap = new Map();
-
-    for (const sym of symbolsFromParentheses(rawName)) {
-      if (!slotMap.has(sym)) slotMap.set(sym, '이름 속 원소 기호');
+    const parenSyms = parenSymbolSequence(rawName);
+    if (parenSyms.length > 0) {
+      for (const sym of parenSyms) {
+        combined.push({ symbol: sym, rationaleKo: '이름 괄호 속 원소 조성' });
+      }
+      continue;
     }
 
+    const slotMap = new Map();
     const fromKw = symbolsFromKeywordRules(norm);
     fromKw.forEach((why, sym) => {
       if (!slotMap.has(sym)) slotMap.set(sym, why);
@@ -194,27 +201,20 @@ function decomposeMaterialsDeterministic(hints) {
     }
 
     slotMap.forEach((why, sym) => {
-      if (!merged.has(sym)) merged.set(sym, why);
+      combined.push({ symbol: sym, rationaleKo: why });
     });
   }
 
-  const elements = [...merged.entries()]
-    .map(([symbol, rationaleKo]) => {
-      const z = getAtomicNumberForSymbol(symbol);
-      const nameKo = ELEMENT_NAME_KO[symbol] || '';
-      return {
-        symbol,
-        nameKo,
-        atomicNumber: z,
-        rationaleKo: String(rationaleKo || '').slice(0, 200),
-      };
-    })
-    .sort((a, b) => {
-      const za = a.atomicNumber != null ? a.atomicNumber : 999;
-      const zb = b.atomicNumber != null ? b.atomicNumber : 999;
-      if (za !== zb) return za - zb;
-      return a.symbol.localeCompare(b.symbol);
-    });
+  const elements = combined.map(({ symbol, rationaleKo }) => {
+    const z = getAtomicNumberForSymbol(symbol);
+    const nameKo = ELEMENT_NAME_KO[symbol] || '';
+    return {
+      symbol,
+      nameKo,
+      atomicNumber: z,
+      rationaleKo: String(rationaleKo || '').slice(0, 200),
+    };
+  });
 
   return { elements };
 }

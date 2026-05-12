@@ -79,6 +79,28 @@ function recipeFingerprintLine(merged) {
 }
 
 /**
+ * 분해 시 `alchemyDecomposeDeterministic`가 괄호 `(H)(O)` 순서·횟수로 원소를 꺼낼 수 있게 이름 접미사 생성
+ * @param {{ symbol: string, qty: number }[]} merged
+ * @param {number} [maxLen] — 접미사 최대 길이(전체 itemName 상한과 맞출 것)
+ */
+function elementParenthesisSuffixFromMerged(merged, maxLen = 200) {
+  const parts = [];
+  let len = 0;
+  outer: for (const s of merged) {
+    const sym = normalizeElementSymbol(s.symbol);
+    if (!sym || !isValidElementSymbol(sym)) continue;
+    const q = Math.max(1, Math.min(32, Math.floor(Number(s.qty)) || 1));
+    for (let i = 0; i < q; i += 1) {
+      const bit = `(${sym})`;
+      if (len + bit.length > maxLen) break outer;
+      parts.push(bit);
+      len += bit.length;
+    }
+  }
+  return parts.join('');
+}
+
+/**
  * @param {{ symbol: string, qty: number, name?: string }[]} slots
  * @returns {string} 20 hex — shared_pixel_arts 키 조각과 동일 규칙
  */
@@ -151,6 +173,15 @@ function compoundFromRecipeSlots(slots) {
     }
   }
 
+  const tail = elementParenthesisSuffixFromMerged(merged);
+  const MAX_ITEM_NAME = 220;
+  if (tail) {
+    let base = compoundNameKo;
+    const room = Math.max(0, MAX_ITEM_NAME - tail.length);
+    if (base.length > room) base = base.slice(0, room);
+    compoundNameKo = `${base}${tail}`;
+  }
+
   return {
     compoundNameKo,
     itemEmoji,
@@ -165,4 +196,5 @@ module.exports = {
   recipeFingerprintLine,
   alchemyRecipeFingerprint,
   compoundFromRecipeSlots,
+  elementParenthesisSuffixFromMerged,
 };
