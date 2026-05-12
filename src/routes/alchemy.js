@@ -249,6 +249,14 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
             error: { message: '서버에 없는 재료는 분해할 수 없습니다. 게임월드에서 연 금술만 이용해 주세요.' },
           });
         }
+        if (k === 'alchemy_element') {
+          return res.status(400).json({
+            error: {
+              message:
+                '추출 원소는 분해할 수 없습니다. 가마솥에서 원소를 빼고 낚시 재료·장비만 넣어 주세요.',
+            },
+          });
+        }
       }
     } else if (Array.isArray(body.names)) {
       const raw = body.names;
