@@ -31,13 +31,13 @@ const GAMES = [
   /**
    * 레포: `Singleplay-Game6` — 연금술 · 가마솥
    * nginx 예: `location /singleplay-game6/` → 정적 호스트
-   * 서버 API: `GET /api/alchemy/stash`, `POST /api/alchemy/decompose` — `slots`로 재료 소모(Catch·장비·추출 원소) 후 원소 적립
+   * 서버 API: `GET /api/alchemy/stash`, `POST /api/alchemy/decompose`, `POST /api/alchemy/compose` — 조합 시 Catch(artifact) 생성
    */
   {
     id: 'alchemy',
     title: '연금술',
     description:
-      '왼쪽 보관함의 재료·장비·영혼을 가마솥에 넣고 분해하면, 오른쪽에 주기율표 원소가 쌓입니다. (조합은 예정)',
+      '추출 원소를 조합해 새 산출물을 만들거나, 재료를 분해해 원소를 모으세요. 조합 결과는 낚시 보관함(artifact)에 들어갑니다.',
     url:
       process.env.SINGLEPLAY_GAME6_URL ||
       process.env.ALCHEMY_URL ||

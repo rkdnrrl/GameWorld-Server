@@ -4,6 +4,8 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { decomposeMaterialNamesToElements } = require('../lib/geminiAlchemyDecompose');
+const { composeElementsToCompound } = require('../lib/geminiAlchemyCompose');
+const { generateCatchPixelArtFromFields, resolveCatchRowPixelArt } = require('../lib/catchPixelArt');
 const { normalizeElementSymbol, isValidElementSymbol } = require('../lib/periodicElementSymbols');
 
 const router = Router();
@@ -11,6 +13,9 @@ const router = Router();
 const MAX_NAMES = 16;
 const MAX_NAME_LEN = 120;
 const DECOMPOSE_TIMEOUT_MS = 18_000;
+const COMPOSE_TIMEOUT_MS = 22_000;
+const MIN_COMPOSE_SLOTS = 2;
+const MAX_COMPOSE_SLOTS = 16;
 const MAX_STASH_PER_SYMBOL = 999_999;
 
 /** 테이블 미생성·구 Prisma 클라이언트 등으로 연금술 재고 API를 쓸 수 없을 때 */
@@ -339,6 +344,163 @@ router.post('/decompose', requireAuth, async (req, res, next) => {
       elements,
       stashElements,
       meta,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+function coinValueForComposeRarity(rarity) {
+  const r = String(rarity || 'common').toLowerCase();
+  if (r === 'legendary') return 80;
+  if (r === 'epic') return 40;
+  return 18;
+}
+
+/**
+ * POST /api/alchemy/compose — 추출 원소만 슬롯으로 조합 → AI 산출물 + 낚시 보관함(Catch, artifact) 1개
+ */
+router.post('/compose', requireAuth, async (req, res, next) => {
+  try {
+    const body = req.body || {};
+    if (!Array.isArray(body.slots) || body.slots.length < MIN_COMPOSE_SLOTS) {
+      return res.status(400).json({
+        error: { message: `조합은 추출 원소를 ${MIN_COMPOSE_SLOTS}개 이상 넣어 주세요.` },
+      });
+    }
+    if (body.slots.length > MAX_COMPOSE_SLOTS) {
+      return res.status(400).json({
+        error: { message: `한 번에 최대 ${MAX_COMPOSE_SLOTS}슬롯까지 조합할 수 있습니다.` },
+      });
+    }
+
+    const names = [];
+    const sources = [];
+    for (const slot of body.slots) {
+      if (names.length >= MAX_COMPOSE_SLOTS) break;
+      const nm = normLine(slot && slot.name != null ? slot.name : '');
+      if (!nm) {
+        return res.status(400).json({ error: { message: '슬롯 이름이 비어 있습니다.' } });
+      }
+      names.push(nm);
+      sources.push(slot && slot.source && typeof slot.source === 'object' ? slot.source : {});
+    }
+
+    for (const src of sources) {
+      const k = String(src.kind || '').toLowerCase();
+      if (k !== 'alchemy_element') {
+        return res.status(400).json({
+          error: {
+            message: '조합은 추출 원소만 가마솥에 넣을 수 있습니다. (낚시 재료·장비는 분해 전용)',
+          },
+        });
+      }
+    }
+
+    const slotsForGemini = [];
+    for (let i = 0; i < names.length; i += 1) {
+      const src = sources[i];
+      const sym = normalizeElementSymbol(src.symbol);
+      if (!sym || !isValidElementSymbol(sym)) {
+        return res.status(400).json({ error: { message: '유효하지 않은 원소 기호가 있습니다.' } });
+      }
+      if (!nameMatchesElementLine(names[i], sym)) {
+        return res.status(400).json({ error: { message: '원소 이름과 기호가 맞지 않습니다.' } });
+      }
+      const qty = Math.max(1, Math.floor(Number(src.qty)) || 1);
+      slotsForGemini.push({ name: names[i], symbol: sym, qty });
+    }
+
+    const ac = new AbortController();
+    const tid = setTimeout(() => ac.abort(), COMPOSE_TIMEOUT_MS);
+    let ai;
+    try {
+      ai = await composeElementsToCompound(slotsForGemini, { signal: ac.signal });
+    } finally {
+      clearTimeout(tid);
+    }
+
+    if (!ai) {
+      return res.status(503).json({ error: { message: 'AI 키가 설정되어 있지 않습니다.' } });
+    }
+
+    if (ai.reason) {
+      if (ai.reason === 'timeout') {
+        return res.status(504).json({ error: { message: '조합 분석 시간이 초과되었습니다.' } });
+      }
+      if (ai.reason === 'network') {
+        return res.status(503).json({ error: { message: '네트워크 오류로 조합에 실패했습니다.' } });
+      }
+      if (ai.reason === 'need_two_elements') {
+        return res.status(400).json({ error: { message: '유효한 원소가 두 종류 이상 필요합니다.' } });
+      }
+      const rs = String(ai.reason);
+      if (rs.startsWith('http_429') || rs.startsWith('http_503')) {
+        return res.status(503).json({ error: { message: 'AI 서비스가 일시적으로 바쁩니다.' } });
+      }
+      return res.status(503).json({ error: { message: '조합 결과를 만들지 못했습니다. 다시 시도해 주세요.' } });
+    }
+
+    const { compoundNameKo, itemEmoji, rarity, rationaleKo, formulaStyleKo } = ai;
+    const coinValue = Math.min(1000, coinValueForComposeRarity(rarity));
+
+    let result;
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        await consumeMaterialSources(tx, req.user.id, names, sources);
+        const pixelArtClean = generateCatchPixelArtFromFields({
+          name: compoundNameKo,
+          size: 0,
+          rarity,
+          type: 'artifact',
+        });
+        const created = await tx.catch.create({
+          data: {
+            userId: req.user.id,
+            itemName: compoundNameKo,
+            itemEmoji: itemEmoji.slice(0, 10),
+            itemType: 'artifact',
+            rarity,
+            size: null,
+            coinValue,
+            sold: false,
+            pixelArt: pixelArtClean,
+          },
+        });
+        const u = await tx.user.update({
+          where: { id: req.user.id },
+          data: { lifetimeCatchCount: { increment: 1 } },
+          select: { lifetimeCatchCount: true },
+        });
+        return { catch: created, lifetimeCatchTotal: u.lifetimeCatchCount };
+      });
+    } catch (err) {
+      if (err && err.statusCode === 400) {
+        return res.status(400).json({ error: { message: String(err.message || '요청이 올바르지 않습니다.') } });
+      }
+      throw err;
+    }
+
+    let catchPayload = result.catch;
+    try {
+      catchPayload = resolveCatchRowPixelArt(result.catch);
+    } catch (e) {
+      /* ignore */
+    }
+
+    res.json({
+      compound: {
+        id: catchPayload.id,
+        itemName: catchPayload.itemName,
+        itemEmoji: catchPayload.itemEmoji,
+        itemType: catchPayload.itemType,
+        rarity: catchPayload.rarity,
+        coinValue: catchPayload.coinValue,
+        pixelArt: catchPayload.pixelArt,
+      },
+      rationaleKo,
+      formulaStyleKo,
+      lifetimeCatchTotal: result.lifetimeCatchTotal,
     });
   } catch (err) {
     next(err);
