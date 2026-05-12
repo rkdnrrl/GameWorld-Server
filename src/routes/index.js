@@ -11,6 +11,7 @@ router.use('/games', require('./games'));
 router.use('/coins', require('./coins'));
 router.use('/catches', require('./catches'));
 router.use('/craft', require('./craft'));
+router.use('/alchemy', require('./alchemy'));
 router.use('/smelt', require('./smelt'));
 router.use('/furniture', require('./furniture'));
 router.use('/voxels', require('./voxels'));

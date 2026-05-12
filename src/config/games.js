@@ -28,6 +28,16 @@ const GAMES = [
     tags: ['싱글플레이', '조합', '제작', '중세'],
     category: 'earn',
   },
+  /** 레포: `Singleplay-Game6` — 연금술 · 가마솥 */
+  {
+    id: 'alchemy',
+    title: '연금술',
+    description: '재료를 가마솥에 모아, 끓이며 조합을 시험해 보세요.',
+    url: process.env.SINGLEPLAY_GAME6_URL || process.env.ALCHEMY_URL || 'http://13.125.187.132/singleplay-game6',
+    emoji: '🧪',
+    tags: ['싱글플레이', '조합', '연금술'],
+    category: 'earn',
+  },
   {
     id: 'cube-multiplay',
     title: '큐브 멀티플레이',
