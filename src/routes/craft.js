@@ -6,6 +6,10 @@ const { matchingSubsetForRecipe } = require('../lib/forgeValidate');
 const { rollEquipmentStats, tierFromMaterials } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { heuristicEquipmentNameFromResolved } = require('../lib/forgeHeuristicName');
+const {
+  proceduralSmeltForgeName,
+  resolvedMaterialsAreSmeltOnly,
+} = require('../lib/forgeSmeltProceduralName');
 const { generateForgeEquipmentBundleFromMaterials } = require('../lib/geminiEquipmentName');
 const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentArt');
 
@@ -313,8 +317,11 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           finalName = sanitizeText(nameTrim, 120);
           nameSource = wantAiName ? 'client_fallback' : 'client';
         } else {
-          finalName = sanitizeText(heuristicEquipmentNameFromResolved(resolved), 120);
-          nameSource = 'heuristic';
+          const smeltOnly = resolvedMaterialsAreSmeltOnly(resolved);
+          finalName = smeltOnly
+            ? sanitizeText(proceduralSmeltForgeName(resolved), 120)
+            : sanitizeText(heuristicEquipmentNameFromResolved(resolved), 120);
+          nameSource = smeltOnly ? 'smelt_procedural' : 'heuristic';
         }
         if (!finalName) {
           return { err: 'BAD_NAME' };
