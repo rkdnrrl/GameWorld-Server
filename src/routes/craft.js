@@ -206,10 +206,12 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
     const smeltCount = materials.filter((m) => m.kind === 'smelt').length;
-    if (smeltCount > 0 && smeltCount < MIN_SMELT_MATERIALS_FOR_FORGE) {
+    const nonSmeltCount = materials.length - smeltCount;
+    /** 산출물(smelt)만 올린 경우에만 최소 개수 요구. 낚시·장비와 섞으면 산출물 1개도 허용(대장간 game.js와 동일). */
+    if (smeltCount > 0 && nonSmeltCount === 0 && smeltCount < MIN_SMELT_MATERIALS_FOR_FORGE) {
       return res.status(400).json({
         error: {
-          message: `산출물을 제련 재료로 쓰려면 최소 ${MIN_SMELT_MATERIALS_FOR_FORGE}개가 필요합니다.`,
+          message: `기초 재료(산출물)만 쓸 때는 최소 ${MIN_SMELT_MATERIALS_FOR_FORGE}개가 필요합니다. 보관함 재료와 함께 올리면 더 적게 써도 됩니다.`,
         },
       });
     }
