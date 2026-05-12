@@ -117,11 +117,11 @@ function normSpaces(s) {
 }
 
 /** 조합 산출물 분해 시 증발(원소 미적립) — 튜닝 가능 */
-const COMPOSE_SUBLIMATE_TOTAL = 0.025;
+const COMPOSE_SUBLIMATE_TOTAL = 0.06;
 /** TOTAL 구간 직후 ~ 이 값까지 누적이면 부분 증발 구간 */
-const COMPOSE_SUBLIMATE_PARTIAL_CUMULATIVE = 0.025 + 0.11;
+const COMPOSE_SUBLIMATE_PARTIAL_CUMULATIVE = 0.06 + 0.22;
 /** 부분 증발 구간에서 원소 하나가 날아갈 확률(독립 시행) */
-const COMPOSE_SUBLIMATE_EACH_DROP = 0.28;
+const COMPOSE_SUBLIMATE_EACH_DROP = 0.4;
 
 /**
  * @param {string[]} syms
@@ -200,7 +200,7 @@ function fallbackSymbolsForSlot(slot) {
  * - 이름에 `(H)(O)` 괄호 조성이 있으면 **그것만** 사용(조합 산출물·기호 접미사).
  * - 없으면 키워드 → 없으면 itemType 폴백(기호당 슬롯당 1회).
  * - 여러 슬롯이면 리스트를 순서대로 합쳐 stash에 기호별로 그만큼 +1.
- * - `itemType: artifact` 이고 이름에 괄호 조성이 있으면(조합 산출물) 분해 시 낮은 확률로 원소가 증발해 적립되지 않을 수 있음.
+ * - `itemType: artifact` 이고 이름에 괄호 조성이 있으면(조합 산출물) 분해 시 확률적으로 원소가 증발해 적립되지 않을 수 있음.
  * @param {DecomposeSlotHint[]} hints
  * @param {{ rng?: () => number }} [opts]
  * @returns {{ elements: { symbol: string, nameKo: string, atomicNumber?: number, rationaleKo: string }[], reason?: string, sublimate?: object[] }}
