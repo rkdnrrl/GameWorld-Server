@@ -24,7 +24,8 @@ model User {
   furnitureItems   FurnitureItem[]
   voxelObjects     VoxelObject[]
   voxelPlacements  VoxelPlacement[]
-  smeltStock       SmeltStock[]
+  smeltStock            SmeltStock[]
+  alchemyElementStocks  AlchemyElementStock[]
 
   @@map("users")
 }
@@ -142,4 +143,19 @@ model SmeltStock {
   @@id([userId, productId])
   @@index([userId])
   @@map("smelt_stock")
+}
+
+/// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)
+model AlchemyElementStock {
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol       String   @db.VarChar(8)
+  nameKo       String?  @db.VarChar(40)
+  atomicNumber Int?
+  count        Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@id([userId, symbol])
+  @@index([userId])
+  @@map("alchemy_element_stock")
 }
