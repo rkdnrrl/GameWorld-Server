@@ -42,7 +42,17 @@ async function inferSmeltProductsFromEquipmentNames(names, opts = {}) {
     .map((x) => `- ${x.id} (${x.name}) keywords: ${x.keywords.join(', ')}`)
     .join('\n');
   const prompt = `당신은 게임 대장간의 용광로 분해 감정사입니다.
-아래 장비 이름 각각을 분해했을 때 가장 그럴듯한 산출물 1개를 고르세요.
+아래 장비 이름 각각을 녹였을 때 나올 법한 산출물 productId 1개를 고르세요.
+
+**이름 힌트 (반드시 참고)**  
+- 키보드·마우스·게임패드·모니터·PC부품·USB·충전기·헤드셋 등 **전자기기** → circuit, silicon, wafer, battery, plastic, glass 중 가장 어울리는 것 (기본은 **circuit**).  
+- 티셔츠·바지·모자·신발·패딩 등 **천·섬유** → **textile** (또는 plastic, rubber).  
+- **가죽·스웨이드·합피·가죽장갑** 등 → **leather**.  
+- **나무·목재·원목·대나무** → **resin**.  
+- **도자기·자기** → **ceramic**.  
+- 은·금 장식이 이름에 **분명히** 드러나면 silver / gold (이름 속 '녹은·검은' 같은 **은** 자만으로는 silver 금지).  
+- 맨 철제 무기·강철 느낌만 강하면 iron.
+
 허용 productId: ${allowed}
 산출물 가이드:
 ${catalogGuide}
