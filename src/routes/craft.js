@@ -112,7 +112,7 @@ function materialsFromBody(body) {
     for (const x of b.materials) {
       if (!x || typeof x !== 'object') continue;
       const id = x.id != null ? String(x.id).trim() : '';
-      if (!id) continue;
+      if (!id || id === 'undefined' || id === 'null') continue;
       const k = String(x.kind || x.type || '').toLowerCase();
       if (k === 'catch' || k === 'fish' || k === 'c') out.push({ kind: 'catch', id });
       else if (k === 'equipment' || k === 'equip' || k === 'crafted' || k === 'e') {
@@ -128,7 +128,32 @@ function materialsFromBody(body) {
   return catchIdsIn
     .map((x) => String(x).trim())
     .filter(Boolean)
+    .filter((id) => id !== 'undefined' && id !== 'null')
     .map((id) => ({ kind: 'catch', id }));
+}
+
+/** id 정규화. catch·equipment는 동일 ID 중복 불가(보관함 중복 행). smelt는 동일 ID 여러 개 = 수량. */
+function normalizeCraftMaterialsList(materials) {
+  const seenNonSmelt = new Set();
+  const out = [];
+  let hadDuplicate = false;
+  for (const m of materials) {
+    if (!m || !m.kind) continue;
+    const id = String(m.id != null ? m.id : '').trim();
+    if (!id || id === 'undefined' || id === 'null') continue;
+    if (m.kind === 'smelt') {
+      out.push({ kind: 'smelt', id });
+      continue;
+    }
+    const key = `${m.kind}:${id}`;
+    if (seenNonSmelt.has(key)) {
+      hadDuplicate = true;
+      continue;
+    }
+    seenNonSmelt.add(key);
+    out.push({ kind: m.kind, id });
+  }
+  return { materials: out, hadDuplicate };
 }
 
 /**
@@ -163,7 +188,23 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const descIn = body.description;
     const wantAiName = Boolean(body.generateNameWithAi || body.aiEquipmentName);
 
-    const materials = materialsFromBody(body);
+    let materials = materialsFromBody(body);
+    const rawMaterialSlots = materials.length;
+    const norm = normalizeCraftMaterialsList(materials);
+    materials = norm.materials;
+    if (norm.hadDuplicate) {
+      return res.status(400).json({
+        error: {
+          message:
+            '같은 재료(동일 ID)가 두 번 들어가 있습니다. 모루에서 중복을 빼거나, 보관함을 새로고침한 뒤 다시 시도해 주세요.',
+        },
+      });
+    }
+    if (rawMaterialSlots > 0 && materials.length === 0) {
+      return res.status(400).json({
+        error: { message: '유효한 재료 id가 없습니다. 낚시 재료는 서버에 저장된 것만, 장비는 제작 목록에 있는 것만 사용할 수 있어요.' },
+      });
+    }
     const smeltCount = materials.filter((m) => m.kind === 'smelt').length;
     if (smeltCount > 0 && smeltCount < MIN_SMELT_MATERIALS_FOR_FORGE) {
       return res.status(400).json({
@@ -313,6 +354,12 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         recipeIdStored = DYNAMIC_RECIPE_ID;
         if (wantAiName && precomputedAiBundle && precomputedAiBundle.name) {
           finalName = sanitizeText(precomputedAiBundle.name, 120);
+          if (!finalName) {
+            finalName = hasClientName
+              ? sanitizeText(nameTrim, 120)
+              : sanitizeText(heuristicEquipmentNameFromResolved(resolved), 120);
+          }
+          if (!finalName) finalName = '무명합금';
           nameSource = 'ai';
         } else if (hasClientName) {
           finalName = sanitizeText(nameTrim, 120);
