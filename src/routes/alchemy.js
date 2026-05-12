@@ -5,18 +5,11 @@ const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { decomposeMaterialNamesToElements } = require('../lib/geminiAlchemyDecompose');
 const { generateCatchPixelArtFromFields, resolveCatchRowPixelArt } = require('../lib/catchPixelArt');
-const { generateAlchemyCompoundPixelArt } = require('../lib/pixelLabAlchemyCompoundArt');
-const {
-  mergeSlotsBySymbol,
-  alchemyRecipeFingerprint,
-  compoundFromRecipeSlots,
-} = require('../lib/alchemyCompoundFromRecipe');
+const { generateAlchemyComposeFormulaImageDataUrl } = require('../lib/alchemyFormulaSvgArt');
+const { mergeSlotsBySymbol, compoundFromRecipeSlots, recipeFingerprintLine } = require('../lib/alchemyCompoundFromRecipe');
 const { normalizeElementSymbol, isValidElementSymbol } = require('../lib/periodicElementSymbols');
 
 const router = Router();
-
-const PIXELLAB_ALCHEMY_COMPOSE_MS = 110_000;
-const SHARED_ALCHEMY_COMPOUND_PREFIX = 'shared:alchemy-compound:';
 
 const MAX_NAMES = 16;
 const MAX_NAME_LEN = 120;
@@ -364,27 +357,6 @@ function coinValueForComposeRarity(rarity) {
   return 18;
 }
 
-/** 레거시: AI 산출물 한글 이름 + 희귀도 (이전 배포와 호환) */
-function sharedAlchemyCompoundCacheKey(name, rarity) {
-  const r = String(rarity || 'common').trim().toLowerCase().slice(0, 20) || 'common';
-  const n = String(name || '')
-    .trim()
-    .replace(/\s+/g, ' ');
-  const base = `${SHARED_ALCHEMY_COMPOUND_PREFIX}${r}:`;
-  const maxLen = Math.max(1, 100 - base.length);
-  return `${base}${n.slice(0, maxLen)}`;
-}
-
-/**
- * 가마솥 원소·수량 집합 지문 — 순서와 줄 표기 이름이 달라도 동일 조합이면 동일 값.
- * @param {{ symbol: string, qty: number, name?: string }[]} slots
- */
-function sharedAlchemyCompoundCacheKeyByRecipe(slots, rarity) {
-  const r = String(rarity || 'common').trim().toLowerCase().slice(0, 20) || 'common';
-  const fp = alchemyRecipeFingerprint(slots);
-  return `${SHARED_ALCHEMY_COMPOUND_PREFIX}${r}:r:${fp}`;
-}
-
 /**
  * POST /api/alchemy/compose — 추출 원소만 슬롯으로 조합 → 조합식 고정 산출물 + 낚시 보관함(Catch, artifact) 1개
  */
@@ -450,10 +422,8 @@ router.post('/compose', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '조합식을 처리할 수 없습니다.' } });
     }
 
-    const { compoundNameKo, itemEmoji, rarity, rationaleKo, formulaStyleKo, visualHintEn } = ai;
+    const { compoundNameKo, itemEmoji, rarity, rationaleKo, formulaStyleKo } = ai;
     const coinValue = Math.min(1000, coinValueForComposeRarity(rarity));
-    const visualHintForLab =
-      visualHintEn && String(visualHintEn).trim() ? String(visualHintEn).trim().slice(0, 220) : null;
 
     let result;
     try {
@@ -492,99 +462,24 @@ router.post('/compose', requireAuth, async (req, res, next) => {
       throw err;
     }
 
-    const cacheKeyRecipe = sharedAlchemyCompoundCacheKeyByRecipe(mergedSlots, rarity);
-    const cacheKeyLegacy = sharedAlchemyCompoundCacheKey(compoundNameKo, rarity);
     try {
-      let cached = await prisma.sharedPixelArt.findUnique({
-        where: { name: cacheKeyRecipe },
-        select: { imageData: true },
+      const primaryFormula =
+        (formulaStyleKo && String(formulaStyleKo).trim()) || recipeFingerprintLine(mergedSlots);
+      const formulaSvg = generateAlchemyComposeFormulaImageDataUrl({
+        primary: primaryFormula,
+        secondary: compoundNameKo,
       });
-      let resolvedCacheKey = cacheKeyRecipe;
-      if (!cached || !cached.imageData) {
-        cached = await prisma.sharedPixelArt.findUnique({
-          where: { name: cacheKeyLegacy },
-          select: { imageData: true },
-        });
-        resolvedCacheKey = cacheKeyLegacy;
-      }
-      if (cached && cached.imageData) {
-        await prisma.catch.update({
-          where: { id: result.catch.id },
-          data: {
-            pixelArt: {
-              source: 'shared_cache',
-              cacheKey: resolvedCacheKey,
-              imageDataUrl: cached.imageData,
-            },
+      await prisma.catch.update({
+        where: { id: result.catch.id },
+        data: {
+          pixelArt: {
+            source: 'alchemy_formula_svg',
+            imageDataUrl: formulaSvg,
           },
-        });
-        if (resolvedCacheKey === cacheKeyLegacy && cacheKeyLegacy !== cacheKeyRecipe) {
-          try {
-            await prisma.sharedPixelArt.upsert({
-              where: { name: cacheKeyRecipe },
-              create: {
-                name: cacheKeyRecipe,
-                imageData: cached.imageData,
-                rarity: String(rarity || 'common').slice(0, 20),
-                type: 'alchemy_compound',
-              },
-              update: {
-                imageData: cached.imageData,
-                rarity: String(rarity || 'common').slice(0, 20),
-                type: 'alchemy_compound',
-              },
-            });
-          } catch (e) {
-            console.warn('[alchemy/compose] recipe cache mirror skipped:', e && e.message ? e.message : e);
-          }
-        }
-      } else {
-        const pixelAc = new AbortController();
-        const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_ALCHEMY_COMPOSE_MS);
-        try {
-          const png = await generateAlchemyCompoundPixelArt(
-            compoundNameKo,
-            rarity,
-            pixelAc.signal,
-            visualHintForLab,
-          );
-          if (png) {
-            await prisma.catch.update({
-              where: { id: result.catch.id },
-              data: {
-                pixelArt: {
-                  source: 'pixellab',
-                  imageDataUrl: png,
-                },
-              },
-            });
-            try {
-              await prisma.sharedPixelArt.upsert({
-                where: { name: cacheKeyRecipe },
-                create: {
-                  name: cacheKeyRecipe,
-                  imageData: png,
-                  rarity: String(rarity || 'common').slice(0, 20),
-                  type: 'alchemy_compound',
-                },
-                update: {
-                  imageData: png,
-                  rarity: String(rarity || 'common').slice(0, 20),
-                  type: 'alchemy_compound',
-                },
-              });
-            } catch (e) {
-              console.warn('[alchemy/compose] shared cache save skipped:', e && e.message ? e.message : e);
-            }
-          }
-        } catch (e) {
-          console.warn('[alchemy/compose] PixelLab sprite skipped:', e && e.message ? e.message : e);
-        } finally {
-          clearTimeout(pixelTimer);
-        }
-      }
+        },
+      });
     } catch (e) {
-      console.warn('[alchemy/compose] shared cache / PixelLab skipped:', e && e.message ? e.message : e);
+      console.warn('[alchemy/compose] formula SVG thumbnail skipped:', e && e.message ? e.message : e);
     }
 
     const freshRow = await prisma.catch.findUnique({ where: { id: result.catch.id } });

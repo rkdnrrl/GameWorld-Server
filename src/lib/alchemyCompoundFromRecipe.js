@@ -92,44 +92,9 @@ function hashU32(line, salt) {
   return crypto.createHash('sha256').update(`${line}\0${salt}`, 'utf8').digest().readUInt32BE(0);
 }
 
-const VISUAL_HINTS = [
-  'small corked glass bottle with colored liquid centered chunky pixels',
-  'single crystal shard cluster centered chunky pixels',
-  'heap of metallic powder centered chunky pixels',
-  'round glass vial with cork stopper centered chunky pixels',
-  'glowing mineral orb centered chunky pixels',
-  'sealed wax pouch bundle centered chunky pixels',
-  'alchemy flask with narrow neck centered chunky pixels',
-  'two fused metal ingots small centered chunky pixels',
-  'cracked geode half with shiny core centered chunky pixels',
-  'tiny mortar with dust pile centered chunky pixels',
-  'amber resin blob centered chunky pixels',
-  'blue-white salt crystals pile centered chunky pixels',
-  'iron-gray nugget centered chunky pixels',
-  'copper-green patina chunk centered chunky pixels',
-  'purple gem chip centered chunky pixels',
-  'golden dust swirl centered chunky pixels',
-  'opaque ceramic jar centered chunky pixels',
-  'double bubble glass ampoule centered chunky pixels',
-  'spiral galaxy dust in a jar centered chunky pixels',
-  'molten slag droplet cooled centered chunky pixels',
-  'stacked flat tablets centered chunky pixels',
-  'rough meteorite chip centered chunky pixels',
-  'teal liquid in round-bottom flask centered chunky pixels',
-  'silver wire coil ball centered chunky pixels',
-  'red powder mound centered chunky pixels',
-  'green glass marble sized orb centered chunky pixels',
-  'black sand cone centered chunky pixels',
-  'white chalky brick chip centered chunky pixels',
-  'bronze gear fused blob centered chunky pixels',
-  'iridescent oil slick bead centered chunky pixels',
-  'smoky quartz point centered chunky pixels',
-  'fossilized shell fragment centered chunky pixels',
-];
-
 /**
  * @param {{ symbol: string, qty: number, name?: string }[]} slots
- * @returns {{ compoundNameKo: string, itemEmoji: string, rarity: 'common', rationaleKo: string, formulaStyleKo: string, visualHintEn: string }}
+ * @returns {{ compoundNameKo: string, itemEmoji: string, rarity: 'common', rationaleKo: string, formulaStyleKo: string }}
  */
 function compoundFromRecipeSlots(slots) {
   const merged = mergeSlotsBySymbol(slots);
@@ -145,14 +110,12 @@ function compoundFromRecipeSlots(slots) {
       compoundNameKo: '물「H2O」',
       formulaStyleKo: 'H₂O',
       itemEmoji: '💧',
-      visualHintEn: 'clear round water droplet centered chunky pixels no glass',
     },
   };
   const canonical = CANONICAL_BY_LINE[line];
 
   const hName = hashU32(line, 'name');
   const hEmoji = hashU32(line, 'emoji');
-  const hHint = hashU32(line, 'visual');
 
   const formulaAscii = merged
     .map((s) => (s.qty === 1 ? s.symbol : `${s.symbol}${s.qty}`))
@@ -179,13 +142,10 @@ function compoundFromRecipeSlots(slots) {
 
   let formulaStyleKo = merged.map((s) => (s.qty === 1 ? s.symbol : `${s.symbol}×${s.qty}`)).join(' + ');
 
-  let visualHintEn = VISUAL_HINTS[hHint % VISUAL_HINTS.length];
-
   if (canonical) {
     if (canonical.compoundNameKo) compoundNameKo = String(canonical.compoundNameKo).slice(0, 50);
     if (canonical.formulaStyleKo) formulaStyleKo = canonical.formulaStyleKo;
     if (canonical.itemEmoji) itemEmoji = canonical.itemEmoji.slice(0, 10);
-    if (canonical.visualHintEn) visualHintEn = canonical.visualHintEn.slice(0, 220);
     if (line === 'H:2+O:1') {
       rationaleKo = `${listKo}가 맞는 비율로 합쳐져 물(H₂O)이 되었습니다.`.slice(0, 220);
     }
@@ -197,7 +157,6 @@ function compoundFromRecipeSlots(slots) {
     rarity,
     rationaleKo,
     formulaStyleKo,
-    visualHintEn,
   };
 }
 

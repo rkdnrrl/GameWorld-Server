@@ -31,7 +31,7 @@ const GAMES = [
   /**
    * 레포: `Singleplay-Game6` — 연금술 · 가마솥
    * nginx 예: `location /singleplay-game6/` → 정적 호스트
-   * 서버 API: `GET /api/alchemy/stash`, `POST /api/alchemy/decompose`, `POST /api/alchemy/compose` — 조합 시 Catch(artifact) 생성
+   * 서버 API: `GET /api/alchemy/stash`, `POST /api/alchemy/decompose`, `POST /api/alchemy/compose` — 조합 시 Catch(artifact) 생성, 썸네일은 화학식 스타일 SVG
    */
   {
     id: 'alchemy',

@@ -70,7 +70,11 @@ function generateCatchPixelArtFromFields(item) {
 function validateImageDataUrlPixelArt(raw) {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const url = typeof raw.imageDataUrl === 'string' ? raw.imageDataUrl.trim() : '';
-  if (!/^data:image\/(png|jpeg|webp);base64,/i.test(url)) return null;
+  const isRaster = /^data:image\/(png|jpeg|webp);base64,/i.test(url);
+  const isSvg =
+    /^data:image\/svg\+xml/i.test(url) &&
+    (url.includes(';base64,') || url.includes('charset=utf-8,') || /data:image\/svg\+xml,/.test(url));
+  if (!isRaster && !isSvg) return null;
   const src = typeof raw.source === 'string' && raw.source.trim() ? raw.source.trim().slice(0, 32) : 'pixellab';
   const ck = typeof raw.cacheKey === 'string' && raw.cacheKey.trim() ? raw.cacheKey.trim().slice(0, 100) : '';
   const out = { source: src, imageDataUrl: url };
