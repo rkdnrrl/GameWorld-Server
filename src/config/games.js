@@ -28,6 +28,19 @@ const GAMES = [
     tags: ['싱글플레이', '조합', '제작', '중세'],
     category: 'earn',
   },
+  /** 레포: `Singleplay-Game7` — 던전 탐험 · 대장간 장비 실전 사용 */
+  {
+    id: 'dungeon',
+    title: '던전 탐험',
+    description: '대장간에서 만든 장비를 들고 던전에 뛰어드세요. 적의 공격을 회피하거나 반격하며 층을 내려가세요.',
+    url:
+      process.env.SINGLEPLAY_GAME7_URL ||
+      process.env.DUNGEON_URL ||
+      'http://13.125.187.132/dungeon',
+    emoji: '⚔️',
+    tags: ['싱글플레이', '던전', '액션', '장비'],
+    category: 'earn',
+  },
   /**
    * 레포: `Singleplay-Game6` — 연금술 · 가마솥
    * nginx 예: `location /singleplay-game6/` → 정적 호스트
