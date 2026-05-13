@@ -72,15 +72,26 @@ function weaponHintFromKoreanName(name) {
   return '';
 }
 
-function buildEquipmentImagePrompt(name, tier, visualHintEn) {
+const SLOT_VISUAL_HINTS = {
+  weapon:    '', // weaponHintFromKoreanName handles weapon
+  head:      'helmet armor headgear visor face guard single isolated object',
+  chest:     'breastplate chest armor plate cuirass pauldrons single isolated object',
+  pants:     'armored leggings cuisses leg guards greaves single isolated object',
+  gloves:    'gauntlets armored gloves metal knuckles single isolated object',
+  boots:     'armored boots sabatons foot armor single isolated object',
+  accessory: 'ring gemstone ornate band amulet pendant single isolated object',
+};
+
+function buildEquipmentImagePrompt(name, tier, visualHintEn, slot) {
   const clean = String(name || '').trim().slice(0, 48);
   const r = String(tier || 'common').toLowerCase();
   const mood = RARITY_MOOD[r] || RARITY_MOOD.common;
 
-  // visualHintEn(Gemini 제공) 우선, 없으면 이름에서 자동 추출
+  // visualHintEn(Gemini 제공) 우선, 없으면 이름 키워드, 그 다음 슬롯 고정 힌트
+  const slotHint = SLOT_VISUAL_HINTS[String(slot || 'weapon')] || '';
   const rawHint = typeof visualHintEn === 'string' && visualHintEn.trim()
     ? visualHintEn.trim()
-    : weaponHintFromKoreanName(clean);
+    : (weaponHintFromKoreanName(clean) || slotHint);
   const hint = rawHint.slice(0, 220);
 
   const primary = hint
@@ -107,13 +118,14 @@ function buildEquipmentImagePrompt(name, tier, visualHintEn) {
  * @param {string} tier
  * @param {AbortSignal} [signal]
  * @param {string|null} [visualHintEn] — Gemini 영어 실루엣(이름과 동일 물건)
+ * @param {string} [slot] — 장비 슬롯 (weapon|head|chest|pants|gloves|boots|accessory)
  * @returns {Promise<string|null>} data:image/png;base64,... 또는 null
  */
-async function generateCraftedEquipmentPixelArt(name, tier, signal, visualHintEn) {
+async function generateCraftedEquipmentPixelArt(name, tier, signal, visualHintEn, slot) {
   const secret = String(process.env.PIXELLAB_SECRET || '').trim();
   if (!secret) return null;
 
-  const description = buildEquipmentImagePrompt(name, tier, visualHintEn);
+  const description = buildEquipmentImagePrompt(name, tier, visualHintEn, slot);
 
   try {
     const plRes = await fetch(`${PIXELLAB_BASE_URL}/generate-image-pixflux`, {
@@ -155,4 +167,4 @@ async function generateCraftedEquipmentPixelArt(name, tier, signal, visualHintEn
   }
 }
 
-module.exports = { generateCraftedEquipmentPixelArt, buildEquipmentImagePrompt };
+module.exports = { generateCraftedEquipmentPixelArt, buildEquipmentImagePrompt, SLOT_VISUAL_HINTS };
