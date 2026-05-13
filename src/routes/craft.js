@@ -226,7 +226,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       const { resolved } = load;
 
       // 2. 메타 계산
-      const finalName = proceduralSmeltForgeName(resolved);
+      const finalName = proceduralSmeltForgeName(resolved, slot);
       const tier = tierFromMaterials(resolved);
       const rollSlots = resolved.map((r) => ({
         kind: r.kind,

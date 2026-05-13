@@ -47,22 +47,18 @@ const MID = [
   '메탈릭',
 ];
 
-const FORM = [
-  '검',
-  '창',
-  '도끼',
-  '방패',
-  '철퇴',
-  '망치',
-  '낫',
-  '단검',
-  '대검',
-  '투창',
-  '원반',
-  '장검',
-  '미늘창',
-  '비수',
-];
+// 슬롯별 장비 형태 (절차적 이름 FORM 휠)
+const FORM_BY_SLOT = {
+  weapon:    ['검','창','도끼','방패','철퇴','망치','낫','단검','대검','투창','원반','장검','미늘창','비수'],
+  head:      ['투구','헬멧','두건','면갑','철모','가면','봉황관','두갑','마법사모자','기사투구','철각모','두갑환','쾌두건','왕관'],
+  chest:     ['흉갑','갑옷','판금갑옷','사슬갑옷','가죽갑옷','로브','전투복','철갑의','기사갑옷','마법사로브','조끼','흉심갑','천갑옷','방호갑'],
+  pants:     ['각반','정강이받이','하의갑','전투하의','가죽하의','갑각하의','경갑하의','철갑하의','기사하의','마법하의','판금각반','강화각반','전투각반','중갑하의'],
+  gloves:    ['건틀릿','장갑','철장갑','가죽장갑','마법장갑','전투장갑','손목갑','경갑장갑','판금장갑','기사장갑','암흑장갑','봉황장갑','손갑','중갑장갑'],
+  boots:     ['부츠','발갑','전투화','경갑화','판금화','기사화','마법화','가죽부츠','철갑화','강화부츠','발등갑','철각','철발갑','중갑화'],
+  accessory: ['반지','목걸이','팔찌','귀걸이','아뮬렛','부적','마법구슬','탈리스만','토템','문장','수호석','전투반지','결정반지','마력구슬'],
+};
+
+const FORM = FORM_BY_SLOT.weapon; // 하위 호환
 
 const VARIANT = ['', '재', '연', '초', '극', '저', '고', '균', '내', '외'];
 
@@ -104,10 +100,12 @@ function resolvedMaterialsAreSmeltOnly(resolved) {
 /**
  * 산출물 전용 절차적 이름 (한글, 길이 제한).
  * @param {{ kind: string, id?: string }[]} resolved — smelt 행만 있을 것
+ * @param {string} [slot] — weapon|head|chest|pants|gloves|boots|accessory
  */
-function proceduralSmeltForgeName(resolved) {
+function proceduralSmeltForgeName(resolved, slot) {
   const rows = Array.isArray(resolved) ? resolved.filter((r) => r && r.kind === 'smelt') : [];
-  if (rows.length === 0) return '무명산출합금';
+  const formPool = FORM_BY_SLOT[String(slot || 'weapon')] || FORM_BY_SLOT.weapon;
+  if (rows.length === 0) return `무명산출${formPool[0]}`;
 
   const seedKey = rows.map((r) => String(r.id || '').trim().toLowerCase()).sort().join('|');
   const seed = hashSeed(seedKey);
@@ -117,7 +115,7 @@ function proceduralSmeltForgeName(resolved) {
 
   const q = pick(QUALITY);
   const m = pick(MID);
-  const f = pick(FORM);
+  const f = pick(formPool);
   const v = pick(VARIANT);
   const raw = `${q}${v}${m}${f}`;
   return raw.slice(0, MAX_EQUIP_NAME);
