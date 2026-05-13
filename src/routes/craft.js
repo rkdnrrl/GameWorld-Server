@@ -160,6 +160,23 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const body = req.body || {};
     let materials = materialsFromBody(body);
 
+    const SLOT_EMOJIS = {
+      weapon: '⚔️', head: '🪖', chest: '🧥', pants: '👖',
+      gloves: '🧤', boots: '👢', accessory: '💍',
+    };
+    const SLOT_WEIGHTS = {
+      weapon:    { atk: 1.0, def: 0.3, spd: 0.6, hp: 0.0, dur: true  },
+      head:      { atk: 0.0, def: 0.9, spd: 0.0, hp: 0.7, dur: false },
+      chest:     { atk: 0.0, def: 1.3, spd: 0.0, hp: 1.2, dur: false },
+      pants:     { atk: 0.0, def: 0.7, spd: 0.9, hp: 0.4, dur: false },
+      gloves:    { atk: 0.8, def: 0.2, spd: 0.6, hp: 0.0, dur: false },
+      boots:     { atk: 0.0, def: 0.3, spd: 1.4, hp: 0.0, dur: false },
+      accessory: { atk: 0.5, def: 0.5, spd: 0.5, hp: 0.6, dur: false },
+    };
+    const slot = Object.prototype.hasOwnProperty.call(SLOT_EMOJIS, String(body.slot || ''))
+      ? String(body.slot) : 'weapon';
+    const itemEmoji = SLOT_EMOJIS[slot];
+
     // smelt 아닌 재료 거부
     const nonSmelt = materials.filter((m) => m.kind !== 'smelt');
     if (nonSmelt.length > 0) {
@@ -268,7 +285,16 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       }
 
       // 5b. 성공 처리 — 장비 생성
-      const stats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
+      const rawStats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
+      const w = SLOT_WEIGHTS[slot];
+      const stats = {
+        equipSlot: slot,
+        attackBonus:  w.atk > 0 ? Math.max(1, Math.round(rawStats.attackBonus  * w.atk)) : 0,
+        defenseBonus: w.def > 0 ? Math.max(1, Math.round(rawStats.defenseBonus * w.def)) : 0,
+        speedBonus:   w.spd > 0 ? Number(Math.max(0.01, Math.min(0.5, rawStats.speedBonus * w.spd)).toFixed(3)) : 0,
+        durabilityMax: w.dur ? rawStats.durabilityMax : 0,
+        hpBonus: w.hp > 0 ? Math.max(5, Math.round((rawStats.defenseBonus * 3 + rawStats.attackBonus * 0.5) * w.hp)) : 0,
+      };
       const desc = `기초 재료 ${materials.length}종을 제련했습니다.`.slice(0, 400);
       const sourceStored = materials.map((m) => ({ kind: m.kind, id: m.id }));
       const created = await tx.craftedEquipment.create({
@@ -276,7 +302,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           userId: req.user.id,
           recipeId: DYNAMIC_RECIPE_ID,
           name: String(finalName).slice(0, 120),
-          itemEmoji: '⚔️',
+          itemEmoji,
           tier: String(tier || 'common').slice(0, 20),
           desc,
           stats,
