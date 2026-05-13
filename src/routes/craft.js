@@ -3,7 +3,12 @@ const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const { RECIPES } = require('../lib/forgeRecipes');
 const { matchingSubsetForRecipe } = require('../lib/forgeValidate');
-const { rollEquipmentStats, tierFromMaterials } = require('../lib/forgeRollStats');
+const {
+  rollEquipmentStats,
+  applyProficiencyToStats,
+  proficiencyLevelFromCount,
+  tierFromMaterials,
+} = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { heuristicEquipmentNameFromResolved } = require('../lib/forgeHeuristicName');
 const {
@@ -17,7 +22,8 @@ const router = Router();
 
 const DYNAMIC_RECIPE_ID = 'dynamic';
 const MAX_DYNAMIC_MATERIALS = 12;
-const MIN_SMELT_MATERIALS_FOR_FORGE = 5;
+/** 모루에서 산출물만으로 제련 시 최소 개수 (2개 이상) */
+const MIN_SMELT_MATERIALS_FOR_FORGE = 2;
 const GEMINI_NAME_TIMEOUT_MS = 12_000;
 /** PixelLab 장비 스프라이트 — 긴 호출이므로 트랜잭션 밖에서만 */
 const PIXELLAB_FORGE_MS = 110_000;
@@ -157,6 +163,23 @@ function normalizeCraftMaterialsList(materials) {
 }
 
 /**
+ * GET /api/craft/proficiency — 현재 유저의 숙련도 정보
+ */
+router.get('/proficiency', requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { smithingProficiency: true },
+    });
+    const count = user ? (user.smithingProficiency || 0) : 0;
+    const levelInfo = proficiencyLevelFromCount(count);
+    res.json({ smithingProficiency: count, levelInfo });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * GET /api/craft/equipment?limit=50
  * — 로그인 유저의 제작 장비 목록 (최신순)
  */
@@ -205,14 +228,18 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         error: { message: '유효한 재료 id가 없습니다. 낚시 재료는 서버에 저장된 것만, 장비는 제작 목록에 있는 것만 사용할 수 있어요.' },
       });
     }
-    const smeltCount = materials.filter((m) => m.kind === 'smelt').length;
-    const nonSmeltCount = materials.length - smeltCount;
-    /** 산출물(smelt)만 올린 경우에만 최소 개수 요구. 낚시·장비와 섞으면 산출물 1개도 허용(대장간 game.js와 동일). */
-    if (smeltCount > 0 && nonSmeltCount === 0 && smeltCount < MIN_SMELT_MATERIALS_FOR_FORGE) {
+    // 모루는 용광로 산출물(smelt)만 허용
+    const nonSmelt = materials.filter((m) => m.kind !== 'smelt');
+    if (nonSmelt.length > 0) {
       return res.status(400).json({
         error: {
-          message: `기초 재료(산출물)만 쓸 때는 최소 ${MIN_SMELT_MATERIALS_FOR_FORGE}개가 필요합니다. 보관함 재료와 함께 올리면 더 적게 써도 됩니다.`,
+          message: '모루에는 기초 재료(용광로 산출물)만 사용할 수 있습니다. 낚시 재료·장비를 먼저 용광로에 넣어 녹이세요.',
         },
+      });
+    }
+    if (materials.length < MIN_SMELT_MATERIALS_FOR_FORGE) {
+      return res.status(400).json({
+        error: { message: `기초 재료(산출물)가 최소 ${MIN_SMELT_MATERIALS_FOR_FORGE}개 필요합니다.` },
       });
     }
     const fingerprint = materials.filter((m) => m.kind !== 'smelt').map((m) => `${m.kind}:${m.id}`);
@@ -244,6 +271,15 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         error: { message: `재료는 최대 ${MAX_DYNAMIC_MATERIALS}개까지입니다.` },
       });
     }
+
+    // 숙련도 미리 조회 (req.user에 포함돼 있으면 재사용, 아니면 DB 조회)
+    const currentProficiency = typeof req.user.smithingProficiency === 'number'
+      ? req.user.smithingProficiency
+      : (await prisma.user.findUnique({
+          where: { id: req.user.id },
+          select: { smithingProficiency: true },
+        })).smithingProficiency || 0;
+    const profInfo = proficiencyLevelFromCount(currentProficiency);
 
     /** 동적 제련 + AI: 트랜잭션 전에 재료 조회·Gemini(이름+스탯+내구) (DB 락 최소화) */
     let precomputedAiBundle = null;
@@ -400,9 +436,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       );
       let stats;
       if (wantAiName && precomputedAiBundle && precomputedAiBundle.stats) {
-        stats = { ...precomputedAiBundle.stats };
+        stats = applyProficiencyToStats({ ...precomputedAiBundle.stats }, profInfo.mul);
       } else {
-        stats = rollEquipmentStats(tier, rollSlots);
+        stats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
       }
       const firstArt = resolved.find((u) => u.pixelArt != null)?.pixelArt ?? null;
 
@@ -488,6 +524,21 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '장비 이름이 비어 있습니다.' } });
     }
 
+    // 제련 성공 → 숙련도 +1
+    let newProficiency = currentProficiency;
+    let newProfInfo = profInfo;
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user.id },
+        data: { smithingProficiency: { increment: 1 } },
+        select: { smithingProficiency: true },
+      });
+      newProficiency = updatedUser.smithingProficiency;
+      newProfInfo = proficiencyLevelFromCount(newProficiency);
+    } catch (e) {
+      console.warn('[craft/equipment] proficiency increment failed (non-fatal):', e && e.message ? e.message : e);
+    }
+
     const createdRow = outcome.equipment;
     const artCachePolicy =
       outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass === 'signature'
@@ -521,6 +572,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           if (outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass) {
             payloadCached.nameClass = precomputedAiBundle.nameClass;
           }
+          payloadCached.smithingProficiency = newProficiency;
+          payloadCached.proficiencyLevelInfo = newProfInfo;
           attachForgeNameAiMeta(payloadCached, {
             wantAiName,
             hasDynamic,
@@ -590,6 +643,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     if (outcome.nameSource === 'ai' && precomputedAiBundle && precomputedAiBundle.nameClass) {
       payload.nameClass = precomputedAiBundle.nameClass;
     }
+    payload.smithingProficiency = newProficiency;
+    payload.proficiencyLevelInfo = newProfInfo;
     attachForgeNameAiMeta(payload, {
       wantAiName,
       hasDynamic,

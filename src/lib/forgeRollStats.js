@@ -1,11 +1,47 @@
 'use strict';
 
 /**
- * 재료 슬롯(catch·장비) + 결과 티어로 결정론적 능력치.
- * @param {string} tier — 결과 장비 롤에 쓰는 배율 티어
- * @param {{ kind: 'catch'|'equipment', id: string, size?: number|null, tier?: string }[]} materialSlots
+ * 대장간 숙련도 단계별 정보.
+ * @param {number} totalCrafts — smithingProficiency (총 제련 성공 횟수)
+ * @returns {{ tier: number, name: string, mul: number, next: number|null }}
  */
-function rollEquipmentStats(tier, materialSlots) {
+function proficiencyLevelFromCount(totalCrafts) {
+  const n = Math.max(0, Math.floor(Number(totalCrafts) || 0));
+  if (n < 10)  return { tier: 0, name: '견습 대장장이',    mul: 1.0,  next: 10  };
+  if (n < 30)  return { tier: 1, name: '장인 수련',        mul: 1.15, next: 30  };
+  if (n < 60)  return { tier: 2, name: '숙련 대장장이',    mul: 1.35, next: 60  };
+  if (n < 100) return { tier: 3, name: '명장',             mul: 1.6,  next: 100 };
+  return        { tier: 4, name: '전설의 대장장이',         mul: 2.0,  next: null };
+}
+
+/**
+ * Gemini·rollEquipmentStats 로 얻은 스탯에 숙련도 배율 적용.
+ * @param {{ attackBonus, defenseBonus, speedBonus, durabilityMax, durability? }} stats
+ * @param {number} profMul
+ */
+function applyProficiencyToStats(stats, profMul) {
+  const m = (typeof profMul === 'number' && Number.isFinite(profMul) && profMul > 0) ? profMul : 1.0;
+  if (m <= 1.0) return stats;
+  const durMax = Math.max(28, Math.round(stats.durabilityMax * m));
+  const dur = stats.durability != null
+    ? Math.max(1, Math.round(stats.durability * m))
+    : durMax;
+  return {
+    attackBonus:   Math.round(stats.attackBonus  * m),
+    defenseBonus:  Math.round(stats.defenseBonus * m),
+    speedBonus:    Number((stats.speedBonus * m).toFixed(3)),
+    durabilityMax: durMax,
+    durability:    dur,
+  };
+}
+
+/**
+ * 재료 슬롯 + 결과 티어 + 숙련도 배율로 결정론적 능력치.
+ * @param {string} tier — 결과 장비 롤에 쓰는 배율 티어
+ * @param {{ kind: string, id: string, size?: number|null, tier?: string }[]} materialSlots
+ * @param {number} [proficiencyMul=1.0] — 숙련도 배율 (proficiencyLevelFromCount().mul)
+ */
+function rollEquipmentStats(tier, materialSlots, proficiencyMul) {
   const slots = Array.isArray(materialSlots) ? materialSlots : [];
   const t = String(tier || 'common').toLowerCase();
   const tierMul =
@@ -13,6 +49,8 @@ function rollEquipmentStats(tier, materialSlots) {
     t === 'epic' ? 1.7 :
     t === 'rare' ? 1.35 :
     1;
+  const profMul = (typeof proficiencyMul === 'number' && Number.isFinite(proficiencyMul) && proficiencyMul > 0)
+    ? proficiencyMul : 1.0;
 
   const seedTokens = slots.map((m) => `${m.kind === 'equipment' ? 'e' : 'c'}:${String(m.id)}`);
 
@@ -24,8 +62,7 @@ function rollEquipmentStats(tier, materialSlots) {
     }
   }
 
-  /** 재료 크기·낚시 size는 능력치에 반영하지 않음 — 티어·재료 id 시드만 사용 */
-  const effectiveMul = tierMul;
+  const effectiveMul = tierMul * profMul;
 
   let state = (seed ^ 0x9e3779b9) >>> 0;
   function next() {
@@ -36,15 +73,15 @@ function rollEquipmentStats(tier, materialSlots) {
   const base = 3 + Math.floor(next() * 8) * effectiveMul;
   const durabilityMax = Math.max(28, Math.round(48 + next() * 85 * effectiveMul));
   return {
-    attackBonus: Math.round(base + next() * 6 * effectiveMul),
+    attackBonus:  Math.round(base + next() * 6 * effectiveMul),
     defenseBonus: Math.round(base * 0.6 + next() * 5 * effectiveMul),
-    speedBonus: Number((0.02 + next() * 0.06 * effectiveMul).toFixed(3)),
+    speedBonus:   Number((0.02 + next() * 0.06 * effectiveMul).toFixed(3)),
     durabilityMax,
     durability: durabilityMax,
   };
 }
 
-/** catch·제작 장비 재료에서 가장 높은 등급을 결과 롤 티어로 사용 */
+/** smelt 재료에서 가장 높은 등급을 결과 롤 티어로 사용 */
 function tierFromMaterials(slots) {
   const order = { common: 0, rare: 1, epic: 2, legendary: 3 };
   let best = 0;
@@ -73,6 +110,8 @@ function tierFromCatches(rows) {
 
 module.exports = {
   rollEquipmentStats,
+  applyProficiencyToStats,
+  proficiencyLevelFromCount,
   tierFromCatches,
   tierFromMaterials,
 };

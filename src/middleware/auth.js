@@ -23,6 +23,7 @@ async function requireAuth(req, res, next) {
         email: true,
         nickname: true,
         coins: true,
+        smithingProficiency: true,
         createdAt: true,
         isOperator: true,
       },
