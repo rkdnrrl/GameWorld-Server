@@ -14,6 +14,8 @@ const router = Router();
 const MAX_MELT_PER_REQUEST = 40;
 const MAX_STOCK_PER_PRODUCT = 999_999;
 const GEMINI_SMELT_TIMEOUT_MS = 7000;
+/** 장비 녹일 때 각 재료의 생존 확률 (0.0~1.0) */
+const EQUIP_SMELT_SURVIVAL_RATE = 0.70;
 
 function rowsToStockPayload(rows) {
   const stock = {};
@@ -64,25 +66,41 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: `한 번에 최대 ${MAX_MELT_PER_REQUEST}개까지 녹일 수 있습니다.` } });
     }
 
-    let equipProductYields = [];
+    // 장비 사전 조회 — sourceCatchIds로 실제 재료 확인
+    let equipRows = [];
+    let geminiEquipIds = []; // sourceCatchIds 없는 구형 장비 → Gemini fallback
+    let geminiEquipProductYields = [];
+
     if (equipmentIds.length > 0) {
-      const equipRowsPreview = await prisma.craftedEquipment.findMany({
+      equipRows = await prisma.craftedEquipment.findMany({
         where: { id: { in: equipmentIds }, userId: req.user.id },
-        select: { id: true, name: true },
+        select: { id: true, name: true, sourceCatchIds: true },
       });
-      if (equipRowsPreview.length !== equipmentIds.length) {
+      if (equipRows.length !== equipmentIds.length) {
         return res.status(400).json({
           error: { message: '일부 장비를 찾을 수 없거나 이미 처리되었습니다.' },
         });
       }
-      const namesById = new Map(equipRowsPreview.map((r) => [String(r.id), String(r.name || '')]));
-      const orderedNames = equipmentIds.map((id) => namesById.get(id) || '');
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), GEMINI_SMELT_TIMEOUT_MS);
-      try {
-        equipProductYields = await inferSmeltProductsFromEquipmentNames(orderedNames, { signal: ac.signal });
-      } finally {
-        clearTimeout(timer);
+      // sourceCatchIds가 없는(구형) 장비는 Gemini로 처리
+      geminiEquipIds = equipRows
+        .filter((r) => {
+          const mats = Array.isArray(r.sourceCatchIds) ? r.sourceCatchIds.filter((m) => m && m.kind === 'smelt') : [];
+          return mats.length === 0;
+        })
+        .map((r) => r.id);
+
+      if (geminiEquipIds.length > 0) {
+        const geminiNames = geminiEquipIds.map((id) => {
+          const row = equipRows.find((r) => r.id === id);
+          return row ? String(row.name || '') : '';
+        });
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), GEMINI_SMELT_TIMEOUT_MS);
+        try {
+          geminiEquipProductYields = await inferSmeltProductsFromEquipmentNames(geminiNames, { signal: ac.signal });
+        } finally {
+          clearTimeout(timer);
+        }
       }
     }
 
@@ -115,28 +133,49 @@ router.post('/melt', requireAuth, async (req, res, next) => {
         });
       }
 
+      const recovered = {}; // { productId: count }
+      const lost      = {}; // { productId: count }
+
       if (equipmentIds.length > 0) {
-        const equipRows = await tx.craftedEquipment.findMany({
-          where: {
-            id: { in: equipmentIds },
-            userId: req.user.id,
-          },
+        // 트랜잭션 내 재확인
+        const txEquipRows = await tx.craftedEquipment.findMany({
+          where: { id: { in: equipmentIds }, userId: req.user.id },
           select: { id: true },
         });
-        if (equipRows.length !== equipmentIds.length) {
+        if (txEquipRows.length !== equipmentIds.length) {
           return { err: 'NOT_FOUND_EQUIPMENT' };
         }
-        for (const list of equipProductYields) {
-          for (const pid of list || []) {
-            if (!ALLOWED_IDS.has(pid)) continue;
-            delta[pid] = (delta[pid] || 0) + 1;
+
+        // 재료 기록이 있는 장비 — 소실률 적용
+        for (const row of equipRows) {
+          const smeltMats = Array.isArray(row.sourceCatchIds)
+            ? row.sourceCatchIds.filter((m) => m && m.kind === 'smelt')
+            : [];
+          if (smeltMats.length > 0) {
+            for (const mat of smeltMats) {
+              const pid = String(mat.id || '').trim();
+              if (!ALLOWED_IDS.has(pid)) continue;
+              if (Math.random() < EQUIP_SMELT_SURVIVAL_RATE) {
+                delta[pid]     = (delta[pid]     || 0) + 1;
+                recovered[pid] = (recovered[pid] || 0) + 1;
+              } else {
+                lost[pid] = (lost[pid] || 0) + 1;
+              }
+            }
           }
         }
+
+        // 재료 기록 없는 구형 장비 — Gemini 결과 사용 (소실 없음)
+        for (const list of geminiEquipProductYields) {
+          for (const pid of list || []) {
+            if (!ALLOWED_IDS.has(pid)) continue;
+            delta[pid]     = (delta[pid]     || 0) + 1;
+            recovered[pid] = (recovered[pid] || 0) + 1;
+          }
+        }
+
         await tx.craftedEquipment.deleteMany({
-          where: {
-            id: { in: equipRows.map((r) => r.id) },
-            userId: req.user.id,
-          },
+          where: { id: { in: txEquipRows.map((r) => r.id) }, userId: req.user.id },
         });
       }
 
@@ -166,7 +205,7 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       const allRows = await tx.smeltStock.findMany({
         where: { userId: req.user.id },
       });
-      return { stock: rowsToStockPayload(allRows) };
+      return { stock: rowsToStockPayload(allRows), recovered, lost };
     });
 
     if (out.err === 'NOT_FOUND' || out.err === 'NOT_FOUND_EQUIPMENT') {
@@ -175,7 +214,13 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       });
     }
 
-    res.json({ stock: out.stock });
+    // recovered/lost를 이름·이모지 포함 배열로 변환해 응답
+    const toList = (obj) =>
+      Object.entries(obj || {})
+        .filter(([, c]) => c > 0)
+        .map(([pid, count]) => { const meta = metaForProductId(pid); return { id: pid, name: meta.name, emoji: meta.emoji, count }; });
+
+    res.json({ stock: out.stock, recovered: toList(out.recovered), lost: toList(out.lost) });
   } catch (err) {
     next(err);
   }
