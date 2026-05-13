@@ -110,11 +110,7 @@ function avgMaterialStrength(slots) {
 }
 
 /**
- * 평균 강도 점수 → 한글 등급 레이블.
- * - 약함: 1.0~1.49  (common 위주)
- * - 보통: 1.5~2.49  (rare 위주)
- * - 강함: 2.5~3.49  (epic 위주)
- * - 최강: 3.5~4.0   (legendary 위주)
+ * 평균 강도 점수 → 한글 등급 레이블 (UI 표시용).
  * @param {number} avgStr
  * @returns {'약함'|'보통'|'강함'|'최강'}
  */
@@ -123,6 +119,56 @@ function strengthGradeLabel(avgStr) {
   if (avgStr >= 2.5) return '강함';
   if (avgStr >= 1.5) return '보통';
   return '약함';
+}
+
+/**
+ * 사용된 고유 등급 수 → 조합 품질 레이블.
+ * 재료를 다양하게 섞을수록 높은 등급.
+ * @param {number} uniqueTierCount 1~4
+ * @returns {'단조로운 조합'|'보통 조합'|'좋은 조합'|'최상 조합'}
+ */
+function harmonyLabel(uniqueTierCount) {
+  if (uniqueTierCount >= 4) return '최상 조합';
+  if (uniqueTierCount >= 3) return '좋은 조합';
+  if (uniqueTierCount >= 2) return '보통 조합';
+  return '단조로운 조합';
+}
+
+/**
+ * 재료 조합의 "장인 배율" — 강도 다양성이 높을수록 강한 장비.
+ *
+ * 같은 등급만 사용 → 다양성 보너스 없음 (강함만 써도 최강 아님)
+ * 약~최강을 골고루 혼합 → 최대 배율
+ *
+ * 근사 배율 예시:
+ *   모두 common  : ~0.40   모두 rare    : ~0.70
+ *   모두 epic    : ~1.00   모두 legendary: ~1.30
+ *   보통+강함+최강 : ~1.92   약+보통+강함  : ~1.62
+ *   약+보통+강함+최강: ~2.22  ← 최고
+ *
+ * @param {{ tier?: string, rarity?: string }[]} slots
+ * @returns {number} 0.10 ~ ~2.22
+ */
+function craftHarmonyMul(slots) {
+  const arr = Array.isArray(slots) ? slots : [];
+  if (arr.length === 0) return 0.40;
+
+  const scores = arr.map((s) => strengthFromTier(s.tier || s.rarity || 'common'));
+  const n = scores.length;
+  const avg = scores.reduce((a, b) => a + b, 0) / n;
+
+  // 1. 평균 품질 기여 (0.40 ~ 1.30): 강한 재료일수록 기본 품질↑
+  const avgMul = 0.40 + (avg - 1.0) / 3.0 * 0.90;
+
+  // 2. 다양성 보너스: 고유 등급 수 (1→0 / 2→+0.40 / 3→+0.80 / 4→+1.20)
+  const uniqueTierCount = new Set(scores).size;
+  const divBonus = (uniqueTierCount - 1) * 0.40;
+
+  // 3. 분산 보너스: 강약 차이가 클수록 추가 (최대 ~0.23)
+  const variance = scores.reduce((a, s) => a + (s - avg) ** 2, 0) / n;
+  const spreadBonus = Math.sqrt(variance) * 0.15;
+
+  return Math.max(0.10, avgMul + divBonus + spreadBonus);
 }
 
 /**
@@ -144,10 +190,9 @@ function strengthGradeLabel(avgStr) {
 function rollEquipmentStats(_tier, materialSlots, proficiencyMul) {
   const slots = Array.isArray(materialSlots) ? materialSlots : [];
 
-  // ── 재료 강도 배율 ─────────────────────────────────────────
-  // 약함(1)→0.50 / 보통(2)→1.17 / 강함(3)→1.83 / 최강(4)→2.50
-  const avgStr = avgMaterialStrength(slots);
-  const strengthMul = 0.5 + (avgStr - 1.0) / 3.0 * 2.0;
+  // ── 장인 배율: 다양성 + 균형으로 계산 ────────────────────
+  // 같은 등급만 써도 최강 아님 — 약~최강 골고루 섞을 때 최고
+  const strengthMul = craftHarmonyMul(slots);
 
   // ── 숙련도 배율 ───────────────────────────────────────────
   const profMul = (typeof proficiencyMul === 'number' && Number.isFinite(proficiencyMul) && proficiencyMul > 0)
@@ -210,4 +255,6 @@ module.exports = {
   strengthFromTier,
   avgMaterialStrength,
   strengthGradeLabel,
+  harmonyLabel,
+  craftHarmonyMul,
 };

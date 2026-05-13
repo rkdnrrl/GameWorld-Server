@@ -11,6 +11,7 @@ const {
   tierFromMaterials,
   avgMaterialStrength,
   strengthGradeLabel,
+  harmonyLabel,
 } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { proceduralSmeltForgeName } = require('../lib/forgeSmeltProceduralName');
@@ -216,8 +217,10 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       }));
       const materialAvgStr = avgMaterialStrength(rollSlots);
       const materialStrengthLabel = strengthGradeLabel(materialAvgStr);
+      const uniqueTierCount = new Set(rollSlots.map((s) => s.tier || 'common')).size;
+      const materialHarmonyLabel = harmonyLabel(uniqueTierCount);
 
-      // 3. 성공/실패 판정
+      // 3. 성공/실패 판정 (성공률은 평균 강도 기반 — 강한 재료일수록 다루기 어려움)
       const successRate = calcSuccessRate(currentProficiency, materialAvgStr);
       const succeeded = Math.random() < successRate;
 
@@ -254,6 +257,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         return {
           success: false,
           materialStrengthLabel,
+          materialHarmonyLabel,
+          uniqueTierCount,
           successRate,
           returnedMaterials,
         };
@@ -280,6 +285,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         success: true,
         equipment: created,
         materialStrengthLabel,
+        materialHarmonyLabel,
+        uniqueTierCount,
         successRate,
       };
     });
@@ -311,7 +318,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       console.warn('[craft/equipment] proficiency increment failed (non-fatal):', e?.message);
     }
 
-    const { materialStrengthLabel, successRate } = outcome;
+    const { materialStrengthLabel, materialHarmonyLabel, uniqueTierCount, successRate } = outcome;
     const successRatePct = Math.round(successRate * 100);
 
     // ── 실패 응답 ─────────────────────────────────────────────
@@ -325,6 +332,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         success: false,
         successRatePct,
         materialStrengthLabel,
+        materialHarmonyLabel,
+        uniqueTierCount,
         returnedMaterials: returnedList,
         smithingProficiency: newProficiency,
         proficiencyLevelInfo: newProfInfo,
@@ -356,6 +365,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           equipment: toPublicEquipment(freshCached || createdRow),
           nameSource: 'smelt_procedural',
           materialStrengthLabel,
+          materialHarmonyLabel,
+          uniqueTierCount,
           smithingProficiency: newProficiency,
           proficiencyLevelInfo: newProfInfo,
           proficiencyGain: Number(profGain.toFixed(6)),
@@ -411,6 +422,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       equipment: toPublicEquipment(fresh || createdRow),
       nameSource: 'smelt_procedural',
       materialStrengthLabel,
+      materialHarmonyLabel,
+      uniqueTierCount,
       smithingProficiency: newProficiency,
       proficiencyLevelInfo: newProfInfo,
       proficiencyGain: Number(profGain.toFixed(6)),
