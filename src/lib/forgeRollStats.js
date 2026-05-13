@@ -1,17 +1,61 @@
 'use strict';
 
 /**
- * 대장간 숙련도 단계별 정보.
- * @param {number} totalCrafts — smithingProficiency (총 제련 성공 횟수)
- * @returns {{ tier: number, name: string, mul: number, next: number|null }}
+ * 숙련도 float → 장비 스탯 배율.
+ *   mul = 1.0 + ln(1 + n) × 0.30
+ *   n=0  → ×1.000   n=1  → ×1.208   n=3  → ×1.416
+ *   n=5  → ×1.537   n=10 → ×1.717   n=20 → ×1.922
+ *   n=50 → ×2.193   n=100→ ×2.515
+ * @param {number} profFloat
+ * @returns {number}
  */
-function proficiencyLevelFromCount(totalCrafts) {
-  const n = Math.max(0, Math.floor(Number(totalCrafts) || 0));
-  if (n < 10)  return { tier: 0, name: '견습 대장장이',    mul: 1.0,  next: 10  };
-  if (n < 30)  return { tier: 1, name: '장인 수련',        mul: 1.15, next: 30  };
-  if (n < 60)  return { tier: 2, name: '숙련 대장장이',    mul: 1.35, next: 60  };
-  if (n < 100) return { tier: 3, name: '명장',             mul: 1.6,  next: 100 };
-  return        { tier: 4, name: '전설의 대장장이',         mul: 2.0,  next: null };
+function proficiencyMulFromValue(profFloat) {
+  const n = Math.max(0, Number(profFloat) || 0);
+  return Number((1.0 + Math.log(1 + n) * 0.30).toFixed(4));
+}
+
+/**
+ * 대장간 숙련도 정보 반환 (레거시 호환 유지).
+ * tier/name/next 필드는 더 이상 사용하지 않습니다.
+ * @param {number} totalProficiency — smithingProficiency (float)
+ * @returns {{ mul: number }}
+ */
+function proficiencyLevelFromCount(totalProficiency) {
+  return { mul: proficiencyMulFromValue(totalProficiency) };
+}
+
+/**
+ * 제련 성공 확률 (0.20 ~ 0.93).
+ *   숙련도 높을수록 성공률↑ / 재료 강도 높을수록 성공률↓
+ *   base = 0.65 + √prof × 0.06
+ *   강도보정 = −(avgStr − 2) × 0.05
+ *     약함(1): +5%  보통(2): ±0%  강함(3): −5%  최강(4): −10%
+ * @param {number} proficiency
+ * @param {number} avgMaterialStr — 1.0~4.0
+ * @returns {number} 0.20~0.93
+ */
+function calcSuccessRate(proficiency, avgMaterialStr) {
+  const prof = Math.max(0, Number(proficiency) || 0);
+  const avg  = Math.max(1, Math.min(4, Number(avgMaterialStr) || 2));
+  const base  = 0.65 + Math.sqrt(prof) * 0.06;
+  const adj   = -(avg - 2) * 0.05;
+  return Math.min(0.93, Math.max(0.20, base + adj));
+}
+
+/**
+ * 제련 후 숙련도 증가량 (현실적 감소 수익).
+ *   성공: 0.005~0.015 기본 / 실패: 0.001~0.005 기본
+ *   현재 숙련도가 높을수록 증가폭이 줄어듦: ÷ (1 + √prof × 0.5)
+ * @param {number} currentProf
+ * @param {boolean} succeeded
+ * @returns {number}
+ */
+function calcProficiencyGain(currentProf, succeeded) {
+  const base = succeeded
+    ? 0.005 + Math.random() * 0.010   // 성공: 0.005 ~ 0.015
+    : 0.001 + Math.random() * 0.004;  // 실패: 0.001 ~ 0.005
+  const dimin = 1 + Math.sqrt(Math.max(0, Number(currentProf) || 0)) * 0.5;
+  return base / dimin;
 }
 
 /**
@@ -158,6 +202,9 @@ module.exports = {
   rollEquipmentStats,
   applyProficiencyToStats,
   proficiencyLevelFromCount,
+  proficiencyMulFromValue,
+  calcSuccessRate,
+  calcProficiencyGain,
   tierFromCatches,
   tierFromMaterials,
   strengthFromTier,

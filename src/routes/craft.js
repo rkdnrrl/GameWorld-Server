@@ -6,6 +6,8 @@ const { prisma } = require('../db');
 const {
   rollEquipmentStats,
   proficiencyLevelFromCount,
+  calcSuccessRate,
+  calcProficiencyGain,
   tierFromMaterials,
   avgMaterialStrength,
   strengthGradeLabel,
@@ -13,6 +15,7 @@ const {
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { proceduralSmeltForgeName } = require('../lib/forgeSmeltProceduralName');
 const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentArt');
+const { metaForProductId } = require('../lib/smeltProduct');
 
 const router = Router();
 
@@ -23,6 +26,9 @@ const MIN_SMELT_MATERIALS_FOR_FORGE = 2;
 /** PixelLab 장비 스프라이트 타임아웃 */
 const PIXELLAB_FORGE_MS = 110_000;
 const SHARED_FORGE_EQUIP_PREFIX = 'shared:forge-equip:';
+/** 실패 시 재료 반환 비율 (25~60%) */
+const FAIL_RETURN_RATE_MIN = 0.25;
+const FAIL_RETURN_RATE_MAX = 0.60;
 
 // ─── 헬퍼 ────────────────────────────────────────────────────
 
@@ -110,9 +116,9 @@ router.get('/proficiency', requireAuth, async (req, res, next) => {
       where: { id: req.user.id },
       select: { smithingProficiency: true },
     });
-    const count = user ? (user.smithingProficiency || 0) : 0;
-    const levelInfo = proficiencyLevelFromCount(count);
-    res.json({ smithingProficiency: count, levelInfo });
+    const prof = user ? (user.smithingProficiency || 0) : 0;
+    const levelInfo = proficiencyLevelFromCount(prof);
+    res.json({ smithingProficiency: prof, levelInfo });
   } catch (err) {
     next(err);
   }
@@ -139,13 +145,17 @@ router.get('/equipment', requireAuth, async (req, res, next) => {
 /**
  * POST /api/craft/equipment
  * — 용광로 산출물(smelt)만으로 장비 제련.
- *   같은 산출물 조합 → 같은 이름·능력치·이미지 (절차적, 결정론적).
+ *
+ * 성공/실패 판정:
+ *   - 성공률 = 65% + √숙련도×6%  (재료 강도↑ → 확률↓)
+ *   - 성공: 장비 생성 + 숙련도 0.005~0.015 증가
+ *   - 실패: 장비 파괴 + 재료 25~60% 반환 + 숙련도 0.001~0.005 증가
+ *
  * body: { materials: [{ kind: 'smelt', id: string }] }
  */
 router.post('/equipment', requireAuth, async (req, res, next) => {
   try {
     const body = req.body || {};
-
     let materials = materialsFromBody(body);
 
     // smelt 아닌 재료 거부
@@ -158,9 +168,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
     if (materials.length === 0) {
-      return res.status(400).json({
-        error: { message: '재료 목록이 비어 있습니다.' },
-      });
+      return res.status(400).json({ error: { message: '재료 목록이 비어 있습니다.' } });
     }
     if (materials.length < MIN_SMELT_MATERIALS_FOR_FORGE) {
       return res.status(400).json({
@@ -173,7 +181,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
 
-    // 숙련도 조회
+    // ── 숙련도 조회 ───────────────────────────────────────────
     const currentProficiency = typeof req.user.smithingProficiency === 'number'
       ? req.user.smithingProficiency
       : ((await prisma.user.findUnique({
@@ -182,7 +190,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         }))?.smithingProficiency || 0);
     const profInfo = proficiencyLevelFromCount(currentProficiency);
 
-    // 재료 소모 개수 집계 (smelt stock 차감용)
+    // 재료 소모 개수 집계
     const smeltNeedById = {};
     for (const m of materials) {
       const sid = String(m.id || '').trim();
@@ -190,13 +198,14 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       smeltNeedById[sid] = (smeltNeedById[sid] || 0) + 1;
     }
 
-    // ── 트랜잭션: 재고 확인 → 소모 → 장비 생성 ──────────────
+    // ── 트랜잭션 ──────────────────────────────────────────────
     const outcome = await prisma.$transaction(async (tx) => {
+      // 1. 재료 유효성 확인
       const load = await resolveCraftMaterials(tx, req.user.id, materials);
       if (load.err) return { err: load.err };
       const { resolved } = load;
 
-      // 절차적 이름 (결정론적: 같은 산출물 조합 → 같은 이름)
+      // 2. 메타 계산
       const finalName = proceduralSmeltForgeName(resolved);
       const tier = tierFromMaterials(resolved);
       const rollSlots = resolved.map((r) => ({
@@ -205,13 +214,14 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         size: r.size,
         tier: r.rarity,
       }));
-      // 재료 강도 등급 계산 (약함/보통/강함/최강) — 응답에 포함
       const materialAvgStr = avgMaterialStrength(rollSlots);
       const materialStrengthLabel = strengthGradeLabel(materialAvgStr);
-      const stats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
-      const desc = `기초 재료 ${materials.length}종을 제련했습니다.`.slice(0, 400);
 
-      // smelt 재고 차감
+      // 3. 성공/실패 판정
+      const successRate = calcSuccessRate(currentProficiency, materialAvgStr);
+      const succeeded = Math.random() < successRate;
+
+      // 4. smelt 재고 차감 (성공/실패 모두 소모)
       for (const [productId, usedCount] of Object.entries(smeltNeedById)) {
         const updated = await tx.smeltStock.updateMany({
           where: {
@@ -227,6 +237,31 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         where: { userId: req.user.id, count: { lte: 0 } },
       });
 
+      // 5a. 실패 처리 — 재료 일부 반환 후 종료
+      if (!succeeded) {
+        const returnedMaterials = {}; // { productId: count }
+        for (const [productId, usedCount] of Object.entries(smeltNeedById)) {
+          const rate = FAIL_RETURN_RATE_MIN + Math.random() * (FAIL_RETURN_RATE_MAX - FAIL_RETURN_RATE_MIN);
+          const returnCount = Math.floor(usedCount * rate);
+          if (returnCount <= 0) continue;
+          returnedMaterials[productId] = returnCount;
+          await tx.smeltStock.upsert({
+            where: { userId_productId: { userId: req.user.id, productId } },
+            create: { userId: req.user.id, productId, count: returnCount },
+            update: { count: { increment: returnCount } },
+          });
+        }
+        return {
+          success: false,
+          materialStrengthLabel,
+          successRate,
+          returnedMaterials,
+        };
+      }
+
+      // 5b. 성공 처리 — 장비 생성
+      const stats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
+      const desc = `기초 재료 ${materials.length}종을 제련했습니다.`.slice(0, 400);
       const sourceStored = materials.map((m) => ({ kind: m.kind, id: m.id }));
       const created = await tx.craftedEquipment.create({
         data: {
@@ -241,9 +276,15 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           pixelArt: null,
         },
       });
-      return { equipment: created, materialStrengthLabel };
+      return {
+        success: true,
+        equipment: created,
+        materialStrengthLabel,
+        successRate,
+      };
     });
 
+    // ── 트랜잭션 오류 처리 ────────────────────────────────────
     if (outcome.err === 'NOT_FOUND_OR_SOLD') {
       return res.status(400).json({ error: { message: '낚시 재료를 찾을 수 없거나 이미 판매된 항목입니다.' } });
     }
@@ -254,13 +295,14 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '산출물 재고가 부족합니다.' } });
     }
 
-    // ── 숙련도 +1 ─────────────────────────────────────────────
+    // ── 숙련도 증가 (성공/실패 모두, 성공이 더 많이) ──────────
+    const profGain = calcProficiencyGain(currentProficiency, outcome.success);
     let newProficiency = currentProficiency;
     let newProfInfo = profInfo;
     try {
       const updatedUser = await prisma.user.update({
         where: { id: req.user.id },
-        data: { smithingProficiency: { increment: 1 } },
+        data: { smithingProficiency: { increment: profGain } },
         select: { smithingProficiency: true },
       });
       newProficiency = updatedUser.smithingProficiency;
@@ -269,11 +311,32 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       console.warn('[craft/equipment] proficiency increment failed (non-fatal):', e?.message);
     }
 
+    const { materialStrengthLabel, successRate } = outcome;
+    const successRatePct = Math.round(successRate * 100);
+
+    // ── 실패 응답 ─────────────────────────────────────────────
+    if (!outcome.success) {
+      // returnedMaterials를 이름/이모지 포함한 배열로 변환
+      const returnedList = Object.entries(outcome.returnedMaterials || {}).map(([pid, cnt]) => {
+        const meta = metaForProductId(pid);
+        return { id: pid, name: meta.name, emoji: meta.emoji, count: cnt };
+      });
+      return res.status(200).json({
+        success: false,
+        successRatePct,
+        materialStrengthLabel,
+        returnedMaterials: returnedList,
+        smithingProficiency: newProficiency,
+        proficiencyLevelInfo: newProfInfo,
+        proficiencyGain: Number(profGain.toFixed(6)),
+      });
+    }
+
+    // ── 성공: 이미지 처리 ────────────────────────────────────
     const createdRow = outcome.equipment;
-    const materialStrengthLabel = outcome.materialStrengthLabel || '보통';
     const cacheKey = sharedForgeEquipCacheKey(createdRow.name, createdRow.tier);
 
-    // ── 이미지 캐시 확인 (같은 이름+티어 → 같은 이미지) ──────
+    // 이미지 캐시 확인 (같은 이름+티어 → 같은 이미지)
     try {
       const cached = await prisma.sharedPixelArt.findUnique({
         where: { name: cacheKey },
@@ -283,27 +346,26 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         await prisma.craftedEquipment.update({
           where: { id: createdRow.id, userId: req.user.id },
           data: {
-            pixelArt: {
-              source: 'shared_cache',
-              cacheKey,
-              imageDataUrl: cached.imageData,
-            },
+            pixelArt: { source: 'shared_cache', cacheKey, imageDataUrl: cached.imageData },
           },
         });
         const freshCached = await prisma.craftedEquipment.findUnique({ where: { id: createdRow.id } });
         return res.status(201).json({
+          success: true,
+          successRatePct,
           equipment: toPublicEquipment(freshCached || createdRow),
           nameSource: 'smelt_procedural',
           materialStrengthLabel,
           smithingProficiency: newProficiency,
           proficiencyLevelInfo: newProfInfo,
+          proficiencyGain: Number(profGain.toFixed(6)),
         });
       }
     } catch (e) {
       console.warn('[craft/equipment] cache lookup skipped:', e?.message);
     }
 
-    // ── PixelLab 새 이미지 생성 ───────────────────────────────
+    // PixelLab 새 이미지 생성
     const pixelAc = new AbortController();
     const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_FORGE_MS);
     try {
@@ -311,14 +373,13 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         createdRow.name,
         createdRow.tier,
         pixelAc.signal,
-        null, // visualHintEn 없음 (절차적)
+        null,
       );
       if (png) {
         await prisma.craftedEquipment.update({
           where: { id: createdRow.id, userId: req.user.id },
           data: { pixelArt: { source: 'pixellab', imageDataUrl: png } },
         });
-        // 공유 캐시 저장 (같은 이름+티어는 앞으로 캐시 히트)
         try {
           await prisma.sharedPixelArt.upsert({
             where: { name: cacheKey },
@@ -345,11 +406,14 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
 
     const fresh = await prisma.craftedEquipment.findUnique({ where: { id: createdRow.id } });
     res.status(201).json({
+      success: true,
+      successRatePct,
       equipment: toPublicEquipment(fresh || createdRow),
       nameSource: 'smelt_procedural',
       materialStrengthLabel,
       smithingProficiency: newProficiency,
       proficiencyLevelInfo: newProfInfo,
+      proficiencyGain: Number(profGain.toFixed(6)),
     });
   } catch (err) {
     next(err);
