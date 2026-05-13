@@ -22,15 +22,70 @@ const RARITY_MOOD = {
   legendary: 'dramatic sun-gold rim dark core mythical focus',
 };
 
+/**
+ * 한국어 장비 이름에서 무기/방어구 종류를 추출해 영어 실루엣 힌트로 변환.
+ * FORM 배열 키워드 + 일반 장비 키워드를 순서대로 검사 (긴 키워드 우선).
+ *
+ * @param {string} name — 한국어 장비 이름
+ * @returns {string} 영어 실루엣 설명 (매칭 없으면 빈 문자열)
+ */
+function weaponHintFromKoreanName(name) {
+  const n = String(name || '');
+
+  // 긴 키워드를 앞에 두어 하위 문자열 오탐 방지 (미늘창 > 창)
+  const TABLE = [
+    // FORM 목록 매핑
+    ['미늘창',  'halberd polearm long shaft wide curved blade'],
+    ['대검',    'great sword broad two-handed sword long wide blade'],
+    ['단검',    'dagger short blade pointed'],
+    ['장검',    'longsword straight long one-handed sword'],
+    ['투창',    'javelin throwing spear slim long shaft pointed tip'],
+    ['철퇴',    'flail mace spiked ball on chain handle'],
+    ['도끼',    'axe wide curved blade on handle'],
+    ['방패',    'shield round or kite shaped defensive equipment'],
+    ['망치',    'warhammer large hammer head on long handle'],
+    ['비수',    'stiletto thin needle blade dagger'],
+    ['원반',    'chakram disc throwing ring circular blade'],
+    ['창',      'spear long pole pointed tip'],
+    ['검',      'sword straight blade hilt guard'],
+    ['낫',      'scythe curved long blade on pole war-scythe'],
+    // 추가 일반 장비 키워드
+    ['활',      'bow recurve or longbow'],
+    ['석궁',    'crossbow horizontal bow with stock'],
+    ['지팡이',  'staff long wooden rod orb or gem on top'],
+    ['완드',    'wand short magical rod glowing tip'],
+    ['갑옷',    'full plate armor chestplate pauldrons'],
+    ['흉갑',    'breastplate chest armor'],
+    ['투구',    'helm helmet armor headgear visor'],
+    ['장갑',    'gauntlets armored gloves'],
+    ['부츠',    'armored boots greaves'],
+    ['반지',    'ring gemstone ornate band'],
+    ['목걸이',  'amulet necklace pendant gem'],
+    ['망토',    'cloak long flowing fabric cape'],
+    ['벨트',    'belt girdle leather straps buckle'],
+    ['로브',    'robe long mage cloth garment'],
+  ];
+
+  for (const [ko, en] of TABLE) {
+    if (n.includes(ko)) return en;
+  }
+  return '';
+}
+
 function buildEquipmentImagePrompt(name, tier, visualHintEn) {
   const clean = String(name || '').trim().slice(0, 48);
-  const hint = typeof visualHintEn === 'string' ? visualHintEn.trim().slice(0, 220) : '';
   const r = String(tier || 'common').toLowerCase();
   const mood = RARITY_MOOD[r] || RARITY_MOOD.common;
 
+  // visualHintEn(Gemini 제공) 우선, 없으면 이름에서 자동 추출
+  const rawHint = typeof visualHintEn === 'string' && visualHintEn.trim()
+    ? visualHintEn.trim()
+    : weaponHintFromKoreanName(clean);
+  const hint = rawHint.slice(0, 220);
+
   const primary = hint
     ? `PRIMARY SILHOUETTE — draw exactly this object, no substitution: ${hint}`
-    : 'single recognizable RPG equipment piece matching the item title category (sword axe mace spear shield helm gloves boots belt ring cloak staff bow) default to simple shortsword if title is vague';
+    : 'single recognizable RPG equipment piece matching the item title category (sword axe mace spear shield helm gloves boots belt ring cloak staff bow) — if title is ambiguous draw a plain shortsword';
 
   const parts = [
     'SNES era 16-bit pixel art RPG equipment inventory icon',
