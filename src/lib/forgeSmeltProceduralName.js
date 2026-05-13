@@ -109,7 +109,7 @@ function proceduralSmeltForgeName(resolved) {
   const rows = Array.isArray(resolved) ? resolved.filter((r) => r && r.kind === 'smelt') : [];
   if (rows.length === 0) return '무명산출합금';
 
-  const seedKey = rows.map((r) => String(r.id || '').trim().toLowerCase()).join('|');
+  const seedKey = rows.map((r) => String(r.id || '').trim().toLowerCase()).sort().join('|');
   const seed = hashSeed(seedKey);
   const rnd = mulberry32(seed);
 
