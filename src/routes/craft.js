@@ -375,6 +375,21 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
 
+    // ── 첫 조합 감지 (정렬된 재료 ID + 슬롯 해시) ──────────────
+    let firstDiscovery = false;
+    try {
+      const recipeKey = `recipe:${slot}:${materials.map((m) => m.id).sort().join('|')}`;
+      const existing = await prisma.sharedPixelArt.findUnique({ where: { name: recipeKey } });
+      if (!existing) {
+        firstDiscovery = true;
+        await prisma.sharedPixelArt.create({
+          data: { name: recipeKey, imageData: 'registry', rarity: outcome.equipment.tier, type: 'recipe_registry' },
+        });
+      }
+    } catch (e) {
+      console.warn('[craft/equipment] recipe registry skipped:', e?.message);
+    }
+
     // ── 성공: 이미지 처리 ────────────────────────────────────
     const createdRow = outcome.equipment;
     const cacheKey = sharedForgeEquipCacheKey(createdRow.name, createdRow.tier, slot);
@@ -457,6 +472,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       successRatePct,
       equipment: toPublicEquipment(fresh || createdRow),
       nameSource: 'smelt_procedural',
+      firstDiscovery,
       materialStrengthLabel,
       materialHarmonyLabel,
       uniqueTierCount,

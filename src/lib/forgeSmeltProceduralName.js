@@ -107,7 +107,8 @@ function proceduralSmeltForgeName(resolved, slot) {
   const formPool = FORM_BY_SLOT[String(slot || 'weapon')] || FORM_BY_SLOT.weapon;
   if (rows.length === 0) return `무명산출${formPool[0]}`;
 
-  const seedKey = rows.map((r) => String(r.id || '').trim().toLowerCase()).sort().join('|');
+  // 순서 유지 — 재료를 넣는 순서에 따라 다른 이름 생성
+  const seedKey = rows.map((r) => String(r.id || '').trim().toLowerCase()).join('|');
   const seed = hashSeed(seedKey);
   const rnd = mulberry32(seed);
 
