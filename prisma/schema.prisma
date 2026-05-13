@@ -28,6 +28,7 @@ model User {
   voxelPlacements  VoxelPlacement[]
   smeltStock            SmeltStock[]
   alchemyElementStocks  AlchemyElementStock[]
+  dungeonSave           DungeonSave?
 
   @@map("users")
 }
@@ -145,6 +146,16 @@ model SmeltStock {
   @@id([userId, productId])
   @@index([userId])
   @@map("smelt_stock")
+}
+
+/// 던전 탐험 (Singleplay-Game7) 세이브 — 유저당 1개
+model DungeonSave {
+  userId  String   @id
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data    Json
+  savedAt DateTime @updatedAt
+
+  @@map("dungeon_saves")
 }
 
 /// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)
