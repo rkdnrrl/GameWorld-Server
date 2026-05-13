@@ -35,47 +35,93 @@ function applyProficiencyToStats(stats, profMul) {
   };
 }
 
+// ─── 재료 강도 ────────────────────────────────────────────────
+
 /**
- * 재료 슬롯 + 결과 티어 + 숙련도 배율로 결정론적 능력치.
- * @param {string} tier — 결과 장비 롤에 쓰는 배율 티어
- * @param {{ kind: string, id: string, size?: number|null, tier?: string }[]} materialSlots
+ * smelt 산출물의 rarity/tier 문자열 → 강도 점수 (1=약함, 2=보통, 3=강함, 4=최강)
+ * @param {string} tier
+ * @returns {1|2|3|4}
+ */
+function strengthFromTier(tier) {
+  const t = String(tier || 'common').toLowerCase();
+  if (t === 'legendary') return 4;
+  if (t === 'epic') return 3;
+  if (t === 'rare') return 2;
+  return 1; // common
+}
+
+/**
+ * 재료 슬롯 배열의 평균 강도 점수 (1.0 ~ 4.0).
+ * @param {{ tier?: string, rarity?: string }[]} slots
+ * @returns {number}
+ */
+function avgMaterialStrength(slots) {
+  const arr = Array.isArray(slots) ? slots : [];
+  if (arr.length === 0) return 1;
+  let total = 0;
+  for (const s of arr) {
+    total += strengthFromTier(s.tier || s.rarity || 'common');
+  }
+  return total / arr.length;
+}
+
+/**
+ * 평균 강도 점수 → 한글 등급 레이블.
+ * - 약함: 1.0~1.49  (common 위주)
+ * - 보통: 1.5~2.49  (rare 위주)
+ * - 강함: 2.5~3.49  (epic 위주)
+ * - 최강: 3.5~4.0   (legendary 위주)
+ * @param {number} avgStr
+ * @returns {'약함'|'보통'|'강함'|'최강'}
+ */
+function strengthGradeLabel(avgStr) {
+  if (avgStr >= 3.5) return '최강';
+  if (avgStr >= 2.5) return '강함';
+  if (avgStr >= 1.5) return '보통';
+  return '약함';
+}
+
+/**
+ * 재료 슬롯 + 숙련도 배율로 랜덤 능력치 산출.
+ *
+ * ● 이미지는 이름+티어로 캐시 — 결정론적 (변경 없음)
+ * ● 능력치는 매번 다름: 재료 강도(약함~최강) × 숙련도 × 운(Math.random)
+ *
+ * 강도 배율 매핑:
+ *   약함(avg 1) → ×0.50   보통(avg 2) → ×1.17
+ *   강함(avg 3) → ×1.83   최강(avg 4) → ×2.50
+ *
+ * 종합 배율 = 강도배율 × 숙련도배율 (최소 0.1, 최대 약 5.0)
+ *
+ * @param {string} _tier — 현재 미사용 (이미지 캐시에서만 쓰임), 호환성 유지
+ * @param {{ kind: string, id: string, size?: number|null, tier?: string, rarity?: string }[]} materialSlots
  * @param {number} [proficiencyMul=1.0] — 숙련도 배율 (proficiencyLevelFromCount().mul)
  */
-function rollEquipmentStats(tier, materialSlots, proficiencyMul) {
+function rollEquipmentStats(_tier, materialSlots, proficiencyMul) {
   const slots = Array.isArray(materialSlots) ? materialSlots : [];
-  const t = String(tier || 'common').toLowerCase();
-  const tierMul =
-    t === 'legendary' ? 2.2 :
-    t === 'epic' ? 1.7 :
-    t === 'rare' ? 1.35 :
-    1;
+
+  // ── 재료 강도 배율 ─────────────────────────────────────────
+  // 약함(1)→0.50 / 보통(2)→1.17 / 강함(3)→1.83 / 최강(4)→2.50
+  const avgStr = avgMaterialStrength(slots);
+  const strengthMul = 0.5 + (avgStr - 1.0) / 3.0 * 2.0;
+
+  // ── 숙련도 배율 ───────────────────────────────────────────
   const profMul = (typeof proficiencyMul === 'number' && Number.isFinite(proficiencyMul) && proficiencyMul > 0)
     ? proficiencyMul : 1.0;
 
-  const seedTokens = slots.map((m) => `${m.kind === 'equipment' ? 'e' : 'c'}:${String(m.id)}`);
+  // ── 종합 배율 ─────────────────────────────────────────────
+  const effectiveMul = Math.max(0.1, strengthMul * profMul);
 
-  let seed = 0;
-  for (const tok of [...seedTokens].sort()) {
-    const s = String(tok);
-    for (let i = 0; i < s.length; i += 1) {
-      seed = (Math.imul(seed, 33) + s.charCodeAt(i)) >>> 0;
-    }
-  }
+  // ── 운(랜덤) — 같은 재료라도 매번 다른 수치 ──────────────
+  const r = () => Math.random();
 
-  const effectiveMul = tierMul * profMul;
+  const base = 3 + Math.floor(r() * 12 * effectiveMul);
+  const durabilityMax = Math.min(999, Math.max(28, Math.round(30 + r() * 60 * effectiveMul)));
 
-  let state = (seed ^ 0x9e3779b9) >>> 0;
-  function next() {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 4294967296;
-  }
-
-  const base = 3 + Math.floor(next() * 8) * effectiveMul;
-  const durabilityMax = Math.max(28, Math.round(48 + next() * 85 * effectiveMul));
   return {
-    attackBonus:  Math.round(base + next() * 6 * effectiveMul),
-    defenseBonus: Math.round(base * 0.6 + next() * 5 * effectiveMul),
-    speedBonus:   Number((0.02 + next() * 0.06 * effectiveMul).toFixed(3)),
+    attackBonus:  Math.max(1, Math.round(base + r() * 8 * effectiveMul)),
+    defenseBonus: Math.max(0, Math.round(base * 0.6 + r() * 7 * effectiveMul)),
+    speedBonus:   Math.min(0.5, Number((0.015 + r() * 0.05 * effectiveMul).toFixed(3))),
     durabilityMax,
     durability: durabilityMax,
   };
@@ -114,4 +160,7 @@ module.exports = {
   proficiencyLevelFromCount,
   tierFromCatches,
   tierFromMaterials,
+  strengthFromTier,
+  avgMaterialStrength,
+  strengthGradeLabel,
 };

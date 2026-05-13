@@ -7,6 +7,8 @@ const {
   rollEquipmentStats,
   proficiencyLevelFromCount,
   tierFromMaterials,
+  avgMaterialStrength,
+  strengthGradeLabel,
 } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { proceduralSmeltForgeName } = require('../lib/forgeSmeltProceduralName');
@@ -203,6 +205,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         size: r.size,
         tier: r.rarity,
       }));
+      // 재료 강도 등급 계산 (약함/보통/강함/최강) — 응답에 포함
+      const materialAvgStr = avgMaterialStrength(rollSlots);
+      const materialStrengthLabel = strengthGradeLabel(materialAvgStr);
       const stats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
       const desc = `기초 재료 ${materials.length}종을 제련했습니다.`.slice(0, 400);
 
@@ -236,7 +241,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           pixelArt: null,
         },
       });
-      return { equipment: created };
+      return { equipment: created, materialStrengthLabel };
     });
 
     if (outcome.err === 'NOT_FOUND_OR_SOLD') {
@@ -265,6 +270,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     }
 
     const createdRow = outcome.equipment;
+    const materialStrengthLabel = outcome.materialStrengthLabel || '보통';
     const cacheKey = sharedForgeEquipCacheKey(createdRow.name, createdRow.tier);
 
     // ── 이미지 캐시 확인 (같은 이름+티어 → 같은 이미지) ──────
@@ -288,6 +294,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         return res.status(201).json({
           equipment: toPublicEquipment(freshCached || createdRow),
           nameSource: 'smelt_procedural',
+          materialStrengthLabel,
           smithingProficiency: newProficiency,
           proficiencyLevelInfo: newProfInfo,
         });
@@ -340,6 +347,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     res.status(201).json({
       equipment: toPublicEquipment(fresh || createdRow),
       nameSource: 'smelt_procedural',
+      materialStrengthLabel,
       smithingProficiency: newProficiency,
       proficiencyLevelInfo: newProfInfo,
     });
