@@ -171,17 +171,66 @@ function craftHarmonyMul(slots) {
   return Math.max(0.10, avgMul + divBonus + spreadBonus);
 }
 
+// ─── 시너지 규칙 ──────────────────────────────────────────────
+/**
+ * 특정 재료 조합에서 발생하는 시너지 보너스.
+ * requires 배열의 모든 productId가 재료에 포함되면 발동.
+ * bonusMul 은 craftHarmonyMul 에 더해짐 (합산 최대 +1.0).
+ *
+ * @type {{ id: string, name: string, requires: string[], bonusMul: number }[]}
+ */
+const SYNERGY_RULES = [
+  // ── 금속 합금 ─────────────────────────────────────────────
+  { id: 'steel',       name: '강철 합성',    requires: ['iron', 'carbon'],              bonusMul: 0.35 },
+  { id: 'stainless',   name: '스테인리스',   requires: ['iron', 'chromium'],            bonusMul: 0.25 },
+  { id: 'superalloy',  name: '초경합금',     requires: ['tungsten', 'cobalt'],          bonusMul: 0.40 },
+  { id: 'lightweight', name: '경량초강도',   requires: ['titanium', 'graphene'],        bonusMul: 0.45 },
+  { id: 'nicromel',    name: '니크롬합금',   requires: ['nickel', 'chromium'],          bonusMul: 0.28 },
+  { id: 'bronze',      name: '청동 합성',    requires: ['copper', 'tin'],               bonusMul: 0.18 },
+  { id: 'brass',       name: '황동 합성',    requires: ['copper', 'zinc'],              bonusMul: 0.18 },
+  { id: 'noble',       name: '귀금속 융합',  requires: ['platinum', 'palladium'],       bonusMul: 0.40 },
+  { id: 'mangsteel',   name: '망간강',       requires: ['iron', 'manganese'],           bonusMul: 0.22 },
+  // ── 전자/에너지 ───────────────────────────────────────────
+  { id: 'electronic',  name: '전자 융합',    requires: ['circuit', 'battery'],          bonusMul: 0.28 },
+  { id: 'energy',      name: '에너지 폭발',  requires: ['plasma', 'battery'],           bonusMul: 0.35 },
+  { id: 'magneto',     name: '자기전자',     requires: ['neodymium', 'circuit'],        bonusMul: 0.32 },
+  { id: 'nanoelec',    name: '나노전자',     requires: ['graphene', 'circuit'],         bonusMul: 0.42 },
+  // ── 보석/탄소 ─────────────────────────────────────────────
+  { id: 'ultrahard',   name: '초경도 결합',  requires: ['diamond', 'graphene'],         bonusMul: 0.50 },
+  { id: 'gemforge',    name: '삼보석 융합',  requires: ['ruby', 'sapphire', 'emerald'], bonusMul: 0.45 },
+  { id: 'divtitan',    name: '신성합금',     requires: ['diamond', 'titanium'],         bonusMul: 0.55 },
+  { id: 'carboniso',   name: '탄소동소체',   requires: ['carbon', 'graphene'],          bonusMul: 0.30 },
+  // ── 화학/특수 ─────────────────────────────────────────────
+  { id: 'inferno',     name: '초고온 단조',  requires: ['plasma', 'magma'],             bonusMul: 0.38 },
+  { id: 'cryohard',    name: '냉각강화',     requires: ['cryo', 'glass'],               bonusMul: 0.28 },
+  { id: 'ballistic',   name: '방탄섬유',     requires: ['kevlar', 'carbonfiber'],       bonusMul: 0.38 },
+  { id: 'thermoshock', name: '냉온충격',     requires: ['plasma', 'cryo'],              bonusMul: 0.45 },
+  { id: 'volcanic',    name: '화산냉각',     requires: ['magma', 'cryo'],               bonusMul: 0.35 },
+  { id: 'quench',      name: '담금질',       requires: ['iron', 'cryo'],                bonusMul: 0.25 },
+  { id: 'bio',         name: '생체활성',     requires: ['protein', 'enzyme'],           bonusMul: 0.22 },
+];
+
+/**
+ * 재료 슬롯에서 발동되는 시너지 목록 반환.
+ * @param {{ id: string }[]} slots
+ * @returns {{ id: string, name: string, requires: string[], bonusMul: number }[]}
+ */
+function detectSynergies(slots) {
+  const arr = Array.isArray(slots) ? slots : [];
+  const productIds = new Set(arr.map((s) => String(s.id || '').toLowerCase()));
+  return SYNERGY_RULES.filter((rule) =>
+    rule.requires.every((r) => productIds.has(r)),
+  );
+}
+
 /**
  * 재료 슬롯 + 숙련도 배율로 랜덤 능력치 산출.
  *
  * ● 이미지는 이름+티어로 캐시 — 결정론적 (변경 없음)
  * ● 능력치는 매번 다름: 재료 강도(약함~최강) × 숙련도 × 운(Math.random)
+ * ● 시너지 발동 시 craftHarmonyMul 에 bonusMul 합산 (최대 +1.0)
  *
- * 강도 배율 매핑:
- *   약함(avg 1) → ×0.50   보통(avg 2) → ×1.17
- *   강함(avg 3) → ×1.83   최강(avg 4) → ×2.50
- *
- * 종합 배율 = 강도배율 × 숙련도배율 (최소 0.1, 최대 약 5.0)
+ * 종합 배율 = (장인배율 + 시너지보너스) × 숙련도배율 (최소 0.1)
  *
  * @param {string} _tier — 현재 미사용 (이미지 캐시에서만 쓰임), 호환성 유지
  * @param {{ kind: string, id: string, size?: number|null, tier?: string, rarity?: string }[]} materialSlots
@@ -191,8 +240,15 @@ function rollEquipmentStats(_tier, materialSlots, proficiencyMul) {
   const slots = Array.isArray(materialSlots) ? materialSlots : [];
 
   // ── 장인 배율: 다양성 + 균형으로 계산 ────────────────────
-  // 같은 등급만 써도 최강 아님 — 약~최강 골고루 섞을 때 최고
-  const strengthMul = craftHarmonyMul(slots);
+  const craftMul = craftHarmonyMul(slots);
+
+  // ── 시너지 보너스 (최대 +1.0) ─────────────────────────────
+  const activeSynergies = detectSynergies(slots);
+  const synergyBonus = Math.min(
+    1.0,
+    activeSynergies.reduce((sum, r) => sum + r.bonusMul, 0),
+  );
+  const strengthMul = craftMul + synergyBonus;
 
   // ── 숙련도 배율 ───────────────────────────────────────────
   const profMul = (typeof proficiencyMul === 'number' && Number.isFinite(proficiencyMul) && proficiencyMul > 0)
@@ -257,4 +313,6 @@ module.exports = {
   strengthGradeLabel,
   harmonyLabel,
   craftHarmonyMul,
+  SYNERGY_RULES,
+  detectSynergies,
 };

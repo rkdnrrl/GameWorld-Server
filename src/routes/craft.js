@@ -12,6 +12,7 @@ const {
   avgMaterialStrength,
   strengthGradeLabel,
   harmonyLabel,
+  detectSynergies,
 } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { proceduralSmeltForgeName } = require('../lib/forgeSmeltProceduralName');
@@ -219,6 +220,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       const materialStrengthLabel = strengthGradeLabel(materialAvgStr);
       const uniqueTierCount = new Set(rollSlots.map((s) => s.tier || 'common')).size;
       const materialHarmonyLabel = harmonyLabel(uniqueTierCount);
+      const activeSynergies = detectSynergies(rollSlots); // 발동된 시너지 목록
 
       // 3. 성공/실패 판정 (성공률은 평균 강도 기반 — 강한 재료일수록 다루기 어려움)
       const successRate = calcSuccessRate(currentProficiency, materialAvgStr);
@@ -259,6 +261,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           materialStrengthLabel,
           materialHarmonyLabel,
           uniqueTierCount,
+          activeSynergies,
           successRate,
           returnedMaterials,
         };
@@ -287,6 +290,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         materialStrengthLabel,
         materialHarmonyLabel,
         uniqueTierCount,
+        activeSynergies,
         successRate,
       };
     });
@@ -318,8 +322,10 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       console.warn('[craft/equipment] proficiency increment failed (non-fatal):', e?.message);
     }
 
-    const { materialStrengthLabel, materialHarmonyLabel, uniqueTierCount, successRate } = outcome;
+    const { materialStrengthLabel, materialHarmonyLabel, uniqueTierCount, activeSynergies, successRate } = outcome;
     const successRatePct = Math.round(successRate * 100);
+    // activeSynergies: 클라이언트에 보낼 경량 형식 (id, name, bonusMul)
+    const synergiesOut = (activeSynergies || []).map(({ id, name, bonusMul }) => ({ id, name, bonusMul }));
 
     // ── 실패 응답 ─────────────────────────────────────────────
     if (!outcome.success) {
@@ -334,6 +340,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         materialStrengthLabel,
         materialHarmonyLabel,
         uniqueTierCount,
+        activeSynergies: synergiesOut,
         returnedMaterials: returnedList,
         smithingProficiency: newProficiency,
         proficiencyLevelInfo: newProfInfo,
@@ -367,6 +374,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           materialStrengthLabel,
           materialHarmonyLabel,
           uniqueTierCount,
+          activeSynergies: synergiesOut,
           smithingProficiency: newProficiency,
           proficiencyLevelInfo: newProfInfo,
           proficiencyGain: Number(profGain.toFixed(6)),
@@ -424,6 +432,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       materialStrengthLabel,
       materialHarmonyLabel,
       uniqueTierCount,
+      activeSynergies: synergiesOut,
       smithingProficiency: newProficiency,
       proficiencyLevelInfo: newProfInfo,
       proficiencyGain: Number(profGain.toFixed(6)),
