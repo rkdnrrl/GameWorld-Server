@@ -28,21 +28,15 @@ const MIN_SMELT_MATERIALS_FOR_FORGE = 1;
 const FAIL_RETURN_RATE_MIN = 0.25;
 const FAIL_RETURN_RATE_MAX = 0.60;
 
-// 9-슬롯 그리드 위치별 스탯 배율 (1.0=기준, >1.0=증가, <1.0=감소)
-// 상단행: 공격·속도 특화 — 방어·HP 손실
-// 중단행: 방어 특화 — 공격·속도 손실
-// 하단행: HP·내구 특화 — 공격 손실
-const GRID_POSITION_WEIGHTS = [
-  { atk: 1.8, def: 0.4, spd: 1.2, hp: 0.3, durScale: 0.7 }, // 0: 상단 좌 — 공격↑  방어·HP↓
-  { atk: 0.8, def: 0.5, spd: 2.0, hp: 0.4, durScale: 0.8 }, // 1: 상단 중 — 속도↑  방어·HP↓
-  { atk: 1.8, def: 0.4, spd: 1.2, hp: 0.3, durScale: 0.7 }, // 2: 상단 우 — 공격↑  방어·HP↓
-  { atk: 0.4, def: 1.8, spd: 0.5, hp: 1.0, durScale: 1.1 }, // 3: 중단 좌 — 방어↑  공격·속도↓
-  { atk: 1.0, def: 1.0, spd: 1.0, hp: 1.0, durScale: 1.3 }, // 4: 중앙   — 균형    내구↑
-  { atk: 0.4, def: 1.8, spd: 0.5, hp: 1.0, durScale: 1.1 }, // 5: 중단 우 — 방어↑  공격·속도↓
-  { atk: 0.3, def: 0.8, spd: 0.6, hp: 2.0, durScale: 0.8 }, // 6: 하단 좌 — HP↑   공격·속도↓
-  { atk: 0.5, def: 0.9, spd: 0.7, hp: 1.5, durScale: 1.5 }, // 7: 하단 중 — HP↑내구↑  공격↓
-  { atk: 0.3, def: 0.8, spd: 0.6, hp: 2.0, durScale: 0.8 }, // 8: 하단 우 — HP↑   공격·속도↓
-];
+/** 산출물 ID → 선호 슬롯 인덱스 (0~8). 해시로 결정되므로 재료마다 고유. */
+function preferredSlotFromId(id) {
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % 9;
+}
+/** 재료가 선호 슬롯에 있으면 FIT_BONUS, 아니면 FIT_PENALTY 배율 적용 */
+const FIT_BONUS   = 2.0;
+const FIT_PENALTY = 0.4;
 
 // ─── 헬퍼 ────────────────────────────────────────────────────
 
@@ -163,19 +157,13 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const body = req.body || {};
     let materials = materialsFromBody(body);
 
-    // 그리드 위치 기반 스탯 가중치 계산
-    const _acc = { atk: 0, def: 0, spd: 0, hp: 0, durScale: 0 };
-    for (const m of materials) {
-      const gw = GRID_POSITION_WEIGHTS[m.slotIndex] || GRID_POSITION_WEIGHTS[0];
-      _acc.atk += gw.atk; _acc.def += gw.def; _acc.spd += gw.spd;
-      _acc.hp += gw.hp; _acc.durScale += gw.durScale;
-    }
-    const _cnt = materials.length || 1;
-    const gridW = { atk: _acc.atk / _cnt, def: _acc.def / _cnt, spd: _acc.spd / _cnt, hp: _acc.hp / _cnt, durScale: _acc.durScale / _cnt };
-    const _SLOT_EMOJIS = { atk: '⚔️', def: '🛡️', spd: '👟', hp: '❤️', durScale: '🔩' };
-    const dominantKey = Object.keys(gridW).sort((a, b) => gridW[b] - gridW[a])[0];
-    const itemEmoji = _SLOT_EMOJIS[dominantKey] || '⚒️';
-    const slot = { atk: 'weapon', def: 'chest', spd: 'boots', hp: 'head', durScale: 'accessory' }[dominantKey] || 'weapon';
+    // 재료별 선호 슬롯 적합도 계산
+    const correctCount = materials.filter((m) => preferredSlotFromId(m.id) === m.slotIndex).length;
+    const fitnessMul = materials.length > 0
+      ? (correctCount * FIT_BONUS + (materials.length - correctCount) * FIT_PENALTY) / materials.length
+      : 1.0;
+    const itemEmoji = '⚒️';
+    const slot = 'weapon';
 
     // smelt 아닌 재료 거부
     const nonSmelt = materials.filter((m) => m.kind !== 'smelt');
@@ -284,16 +272,16 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
         };
       }
 
-      // 5b. 성공 처리 — 장비 생성
+      // 5b. 성공 처리 — 장비 생성 (선호 슬롯 적합도로 스탯 배율 결정)
       const rawStats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
-      const w = gridW;
+      const f = fitnessMul;
       const stats = {
         equipSlot: slot,
-        attackBonus:  w.atk > 0 ? Math.max(1, Math.round(rawStats.attackBonus  * w.atk)) : 0,
-        defenseBonus: w.def > 0 ? Math.max(1, Math.round(rawStats.defenseBonus * w.def)) : 0,
-        speedBonus:   w.spd > 0 ? Number(Math.max(0.01, Math.min(0.5, rawStats.speedBonus * w.spd)).toFixed(3)) : 0,
-        durabilityMax: w.durScale > 0 ? Math.max(15, Math.round(rawStats.durabilityMax * w.durScale)) : 0,
-        hpBonus: w.hp > 0 ? Math.max(5, Math.round((rawStats.defenseBonus * 3 + rawStats.attackBonus * 0.5) * w.hp)) : 0,
+        attackBonus:  Math.max(0, Math.round(rawStats.attackBonus  * f)),
+        defenseBonus: Math.max(0, Math.round(rawStats.defenseBonus * f)),
+        speedBonus:   Number(Math.max(0, Math.min(0.5, rawStats.speedBonus * f)).toFixed(3)),
+        durabilityMax: Math.max(5, Math.round(rawStats.durabilityMax * f)),
+        hpBonus: Math.max(0, Math.round((rawStats.defenseBonus * 3 + rawStats.attackBonus * 0.5) * f)),
       };
       const desc = `기초 재료 ${materials.length}종을 제련했습니다.`.slice(0, 400);
       const sourceStored = materials.map((m) => ({ kind: m.kind, id: m.id }));
@@ -313,6 +301,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       return {
         success: true,
         equipment: created,
+        fitScore: { correct: correctCount, total: materials.length },
         materialStrengthLabel,
         materialHarmonyLabel,
         uniqueTierCount,
@@ -388,6 +377,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       successRatePct,
       equipment: toPublicEquipment(createdRow),
       nameSource: 'grid',
+      fitScore: outcome.fitScore,
       materialStrengthLabel,
       materialHarmonyLabel,
       uniqueTierCount,
