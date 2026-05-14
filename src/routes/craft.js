@@ -409,6 +409,15 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           },
         });
         const freshCached = await prisma.craftedEquipment.findUnique({ where: { id: createdRow.id } });
+        logActivity(req.user, 'forge_craft', {
+          name: createdRow.name,
+          tier: createdRow.tier,
+          slot,
+          itemEmoji: createdRow.itemEmoji,
+          nameSource: 'smelt_procedural',
+          firstDiscovery,
+          materialCount: materials.length,
+        });
         return res.status(201).json({
           success: true,
           successRatePct,
