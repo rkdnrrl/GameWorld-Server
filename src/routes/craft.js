@@ -28,17 +28,20 @@ const MIN_SMELT_MATERIALS_FOR_FORGE = 1;
 const FAIL_RETURN_RATE_MIN = 0.25;
 const FAIL_RETURN_RATE_MAX = 0.60;
 
-// 9-슬롯 그리드 위치 → 스탯 가중치 (행: 공격/방어/HP, 열: 비율 조절)
+// 9-슬롯 그리드 위치별 스탯 배율 (1.0=기준, >1.0=증가, <1.0=감소)
+// 상단행: 공격·속도 특화 — 방어·HP 손실
+// 중단행: 방어 특화 — 공격·속도 손실
+// 하단행: HP·내구 특화 — 공격 손실
 const GRID_POSITION_WEIGHTS = [
-  { atk: 1.5, def: 0.0, spd: 0.3, hp: 0.0, durScale: 0.5 }, // 0: 상단 좌 — 공격
-  { atk: 0.3, def: 0.0, spd: 1.5, hp: 0.0, durScale: 0.5 }, // 1: 상단 중 — 속도
-  { atk: 1.5, def: 0.0, spd: 0.3, hp: 0.0, durScale: 0.5 }, // 2: 상단 우 — 공격
-  { atk: 0.0, def: 1.5, spd: 0.0, hp: 0.3, durScale: 0.7 }, // 3: 중단 좌 — 방어
-  { atk: 0.5, def: 0.5, spd: 0.5, hp: 0.5, durScale: 1.5 }, // 4: 중앙   — 내구도
-  { atk: 0.0, def: 1.5, spd: 0.0, hp: 0.3, durScale: 0.7 }, // 5: 중단 우 — 방어
-  { atk: 0.0, def: 0.3, spd: 0.0, hp: 1.5, durScale: 0.5 }, // 6: 하단 좌 — HP
-  { atk: 0.0, def: 0.3, spd: 0.0, hp: 1.5, durScale: 0.5 }, // 7: 하단 중 — HP
-  { atk: 0.0, def: 0.3, spd: 0.0, hp: 1.5, durScale: 0.5 }, // 8: 하단 우 — HP
+  { atk: 1.8, def: 0.4, spd: 1.2, hp: 0.3, durScale: 0.7 }, // 0: 상단 좌 — 공격↑  방어·HP↓
+  { atk: 0.8, def: 0.5, spd: 2.0, hp: 0.4, durScale: 0.8 }, // 1: 상단 중 — 속도↑  방어·HP↓
+  { atk: 1.8, def: 0.4, spd: 1.2, hp: 0.3, durScale: 0.7 }, // 2: 상단 우 — 공격↑  방어·HP↓
+  { atk: 0.4, def: 1.8, spd: 0.5, hp: 1.0, durScale: 1.1 }, // 3: 중단 좌 — 방어↑  공격·속도↓
+  { atk: 1.0, def: 1.0, spd: 1.0, hp: 1.0, durScale: 1.3 }, // 4: 중앙   — 균형    내구↑
+  { atk: 0.4, def: 1.8, spd: 0.5, hp: 1.0, durScale: 1.1 }, // 5: 중단 우 — 방어↑  공격·속도↓
+  { atk: 0.3, def: 0.8, spd: 0.6, hp: 2.0, durScale: 0.8 }, // 6: 하단 좌 — HP↑   공격·속도↓
+  { atk: 0.5, def: 0.9, spd: 0.7, hp: 1.5, durScale: 1.5 }, // 7: 하단 중 — HP↑내구↑  공격↓
+  { atk: 0.3, def: 0.8, spd: 0.6, hp: 2.0, durScale: 0.8 }, // 8: 하단 우 — HP↑   공격·속도↓
 ];
 
 // ─── 헬퍼 ────────────────────────────────────────────────────
