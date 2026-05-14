@@ -4,7 +4,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
-const { ALLOWED_IDS, metaForProductId } = require('../lib/smeltProduct');
+const { ALLOWED_IDS, metaForProductId, SMELT_CATALOG } = require('../lib/smeltProduct');
 
 const router = Router();
 
@@ -156,6 +156,15 @@ router.delete('/shared-pixel-arts/one', requireAuth, requireOperator, async (req
     }
     next(err);
   }
+});
+
+/**
+ * GET /api/operator/smelt-stock/catalog — 기초 재료 전체 목록
+ */
+router.get('/smelt-stock/catalog', requireAuth, requireOperator, (req, res) => {
+  const items = SMELT_CATALOG.map((e) => ({ id: e.id, name: e.name, emoji: e.emoji }));
+  items.push({ id: 'slag', name: '슬래그', emoji: '🪨' });
+  res.json({ items });
 });
 
 /**
