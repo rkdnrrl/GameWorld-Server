@@ -6,6 +6,7 @@ const {
   generateCatchPixelArtFromFields,
   resolveCatchRowPixelArt,
 } = require('../lib/catchPixelArt');
+const { logActivity } = require('../lib/activityLog');
 
 const router = Router();
 
@@ -121,6 +122,13 @@ router.post('/', requireAuth, async (req, res, next) => {
       return { catchRecord: created, lifetimeCatchTotal: u.lifetimeCatchCount };
     });
 
+    logActivity(req.user, 'fish_catch', {
+      itemName: catchRecord.itemName,
+      itemEmoji: catchRecord.itemEmoji,
+      rarity: catchRecord.rarity,
+      itemType: catchRecord.itemType,
+      coinValue: catchRecord.coinValue,
+    });
     res.json({ catch: catchRecord, lifetimeCatchTotal });
   } catch (err) {
     next(err);

@@ -159,6 +159,40 @@ router.delete('/shared-pixel-arts/one', requireAuth, requireOperator, async (req
 });
 
 /**
+ * GET /api/operator/activity-logs
+ * 쿼리: action(all|fish_catch|smelt_melt|forge_craft), nickname, page, limit
+ */
+router.get('/activity-logs', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const page  = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const skip  = (page - 1) * limit;
+    const action   = typeof req.query.action   === 'string' && req.query.action   !== 'all' ? req.query.action.trim()   : undefined;
+    const nickname = typeof req.query.nickname === 'string' && req.query.nickname.trim()    ? req.query.nickname.trim()  : undefined;
+
+    const where = {
+      ...(action   ? { action }                                      : {}),
+      ...(nickname ? { nickname: { contains: nickname, mode: 'insensitive' } } : {}),
+    };
+
+    const [rows, total] = await prisma.$transaction([
+      prisma.activityLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: { id: true, userId: true, nickname: true, action: true, detail: true, createdAt: true },
+      }),
+      prisma.activityLog.count({ where }),
+    ]);
+
+    res.json({ items: rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * GET /api/operator/smelt-stock/catalog — 기초 재료 전체 목록
  */
 router.get('/smelt-stock/catalog', requireAuth, requireOperator, (req, res) => {

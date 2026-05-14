@@ -9,6 +9,7 @@ const {
   ALLOWED_IDS,
 } = require('../lib/smeltProduct');
 const { inferSmeltProductsFromEquipmentNames } = require('../lib/geminiSmeltInference');
+const { logActivity } = require('../lib/activityLog');
 
 const router = Router();
 const MAX_MELT_PER_REQUEST = 40;
@@ -220,7 +221,16 @@ router.post('/melt', requireAuth, async (req, res, next) => {
         .filter(([, c]) => c > 0)
         .map(([pid, count]) => { const meta = metaForProductId(pid); return { id: pid, name: meta.name, emoji: meta.emoji, count }; });
 
-    res.json({ stock: out.stock, recovered: toList(out.recovered), lost: toList(out.lost) });
+    const gained = toList(out.recovered);
+    const lost = toList(out.lost);
+    logActivity(req.user, 'smelt_melt', {
+      meltCount: total,
+      catchCount: catchIds.length,
+      equipmentCount: equipmentIds.length,
+      gained,
+      lost,
+    });
+    res.json({ stock: out.stock, recovered: gained, lost });
   } catch (err) {
     next(err);
   }

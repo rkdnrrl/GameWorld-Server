@@ -29,6 +29,7 @@ model User {
   smeltStock            SmeltStock[]
   alchemyElementStocks  AlchemyElementStock[]
   dungeonSave           DungeonSave?
+  activityLogs          ActivityLog[]
 
   @@map("users")
 }
@@ -156,6 +157,22 @@ model DungeonSave {
   savedAt DateTime @updatedAt
 
   @@map("dungeon_saves")
+}
+
+/// 활동 로그 — 낚시·용광로·제련 이벤트 기록
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname  String   @db.VarChar(64)
+  action    String   @db.VarChar(32)   // fish_catch | smelt_melt | forge_craft
+  detail    Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@map("activity_logs")
 }
 
 /// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)

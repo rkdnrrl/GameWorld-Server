@@ -18,6 +18,7 @@ const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { proceduralSmeltForgeName } = require('../lib/forgeSmeltProceduralName');
 const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentArt');
 const { metaForProductId } = require('../lib/smeltProduct');
+const { logActivity } = require('../lib/activityLog');
 
 const router = Router();
 
@@ -467,6 +468,15 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     }
 
     const fresh = await prisma.craftedEquipment.findUnique({ where: { id: createdRow.id } });
+    logActivity(req.user, 'forge_craft', {
+      name: createdRow.name,
+      tier: createdRow.tier,
+      slot,
+      itemEmoji: createdRow.itemEmoji,
+      nameSource: 'smelt_procedural',
+      firstDiscovery,
+      materialCount: materials.length,
+    });
     res.status(201).json({
       success: true,
       successRatePct,
