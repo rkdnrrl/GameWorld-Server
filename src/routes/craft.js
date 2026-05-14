@@ -439,17 +439,18 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
     const durCur = stats.durability != null ? Number(stats.durability) : durMax;
 
     if (durMax <= 0) return res.status(400).json({ error: { message: '내구도가 없는 장비입니다.' } });
-    if (durCur >= durMax) return res.status(400).json({ error: { message: '이미 완전한 상태입니다.' } });
 
-    const requestedAmount = req.body?.amount != null ? Number(req.body.amount) : null;
-    const repairAmount = (requestedAmount != null && Number.isFinite(requestedAmount))
-      ? Math.min(Math.max(1, Math.round(requestedAmount)), durMax - durCur)
-      : durMax - durCur;
-    const newDur = Math.min(durMax, durCur + repairAmount);
+    // 미니게임: 클라이언트가 최종 내구도와 실제 소모 코인을 전송
+    const { finalDur: rawFinalDur, totalCost: rawTotalCost } = req.body || {};
+    if (rawFinalDur == null || rawTotalCost == null) {
+      return res.status(400).json({ error: { message: 'finalDur, totalCost 필요' } });
+    }
+    const newDur  = Math.max(0, Math.min(durMax, Math.round(Number(rawFinalDur))));
+    const cost    = Math.max(0, Math.round(Number(rawTotalCost)));
 
-    const tier = String(equip.tier || 'common').toLowerCase();
-    const costPerDur = REPAIR_COST_PER_DUR[tier] ?? REPAIR_COST_PER_DUR.common;
-    const cost = Math.max(1, Math.ceil(repairAmount * costPerDur));
+    if (newDur === durCur && cost === 0) {
+      return res.status(400).json({ error: { message: '변경 사항이 없습니다.' } });
+    }
 
     const newStats = { ...stats, durability: newDur };
 
@@ -457,7 +458,9 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       const user = await tx.user.findUnique({ where: { id: req.user.id }, select: { coins: true } });
       if ((user?.coins ?? 0) < cost) throw Object.assign(new Error('COINS'), { status: 402 });
 
-      await tx.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } });
+      if (cost > 0) {
+        await tx.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } });
+      }
       return tx.craftedEquipment.update({ where: { id }, data: { stats: newStats } });
     });
 

@@ -204,21 +204,19 @@ router.post('/:id/repair', requireAuth, async (req, res, next) => {
     if (mod.equippedTo) {
       return res.status(400).json({ error: { message: '수리하려면 먼저 모듈을 장비에서 분리하세요' } });
     }
-    if (mod.durability >= mod.durabilityMax) {
-      return res.status(400).json({ error: { message: '이미 최대 내구도입니다' } });
+
+    // 미니게임: 클라이언트가 최종 내구도와 실제 소모 코인을 전송
+    const { finalDur: rawFinalDur, totalCost: rawTotalCost } = req.body || {};
+    if (rawFinalDur == null || rawTotalCost == null) {
+      return res.status(400).json({ error: { message: 'finalDur, totalCost 필요' } });
+    }
+    const newDur = Math.max(0, Math.min(mod.durabilityMax, Math.round(Number(rawFinalDur))));
+    const cost   = Math.max(0, Math.round(Number(rawTotalCost)));
+
+    if (newDur === mod.durability && cost === 0) {
+      return res.status(400).json({ error: { message: '변경 사항이 없습니다.' } });
     }
 
-    const costPerDur = REPAIR_COST_PER_DUR[mod.tier] || REPAIR_COST_PER_DUR.common;
-    const missing = mod.durabilityMax - mod.durability;
-
-    // amount: 미니게임에서 실제 수리한 내구도 (없으면 전체)
-    const rawAmount = req.body?.amount;
-    const repairAmount = (rawAmount != null && Number.isFinite(Number(rawAmount)))
-      ? Math.min(missing, Math.max(1, Math.round(Number(rawAmount))))
-      : missing;
-    const cost = Math.ceil(repairAmount * costPerDur);
-
-    // Check coins
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { coins: true },
@@ -227,17 +225,13 @@ router.post('/:id/repair', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: `코인 부족 (필요 ${cost}, 보유 ${user?.coins || 0})` } });
     }
 
-    const newDur = mod.durability + repairAmount;
-    const [updated] = await prisma.$transaction([
-      prisma.module.update({
-        where: { id: mod.id },
-        data: { durability: newDur },
-      }),
-      prisma.user.update({
-        where: { id: req.user.id },
-        data: { coins: { decrement: cost } },
-      }),
-    ]);
+    const ops = [
+      prisma.module.update({ where: { id: mod.id }, data: { durability: newDur } }),
+    ];
+    if (cost > 0) {
+      ops.push(prisma.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } }));
+    }
+    const [updated] = await prisma.$transaction(ops);
 
     res.json({ module: updated, costPaid: cost });
   } catch (err) {
