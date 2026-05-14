@@ -3,15 +3,87 @@ const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 
 const router = Router();
+const MOVE_BASE_MS = 220;
 
 router.get('/save', requireAuth, async (req, res, next) => {
   try {
     const row = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
-    res.json({ save: row ? row.data : null });
+    if (!row || !row.data) return res.json({ save: null });
+    const cleaned = await stripDeletedEquipment(req.user.id, row.data);
+    res.json({ save: cleaned });
   } catch (err) {
     next(err);
   }
 });
+
+async function stripDeletedEquipment(userId, saveData) {
+  const p = saveData?.player;
+  if (!p) return saveData;
+
+  const ids = new Set();
+  if (p.equipment?.id != null) ids.add(String(p.equipment.id));
+  for (const wrapper of Object.values(p.equippedSlots || {})) {
+    const id = wrapper?.equip?.id ?? wrapper?.id;
+    if (id != null) ids.add(String(id));
+  }
+  for (const item of (p.inventory || [])) {
+    if (item?.equip?.id != null) ids.add(String(item.equip.id));
+  }
+  if (ids.size === 0) return saveData;
+
+  const existing = await prisma.craftedEquipment.findMany({
+    where: { id: { in: [...ids] }, userId },
+    select: { id: true },
+  });
+  const existingSet = new Set(existing.map((e) => String(e.id)));
+  if (existingSet.size === ids.size) return saveData;
+
+  const data = JSON.parse(JSON.stringify(saveData));
+  const pl = data.player;
+
+  if (pl.equipment?.id != null && !existingSet.has(String(pl.equipment.id))) {
+    pl.equipment = null;
+    pl.durability = 0;
+    pl.durabilityMax = 0;
+    pl.durBroken = false;
+  }
+  for (const slotId of Object.keys(pl.equippedSlots || {})) {
+    const wrapper = pl.equippedSlots[slotId];
+    const id = wrapper?.equip?.id ?? wrapper?.id;
+    if (id != null && !existingSet.has(String(id))) delete pl.equippedSlots[slotId];
+  }
+  if (Array.isArray(pl.inventory)) {
+    pl.inventory = pl.inventory.filter((item) =>
+      item?.equip?.id == null || existingSet.has(String(item.equip.id)),
+    );
+  }
+
+  // 제거된 장비 반영해 스탯 재계산
+  let atkSum = 0, defSum = 0, spdSum = 0, hpSum = 0;
+  for (const wrapper of Object.values(pl.equippedSlots || {})) {
+    if ((wrapper?.curDur ?? 1) <= 0) continue;
+    const s = (wrapper?.equip || wrapper)?.stats || {};
+    atkSum += s.attackBonus  || 0;
+    defSum += s.defenseBonus || 0;
+    spdSum += s.speedBonus   || 0;
+    hpSum  += s.hpBonus      || 0;
+  }
+  if (pl.equipment) {
+    const ws = pl.equipment.stats || {};
+    const broken = !!pl.durBroken;
+    pl.baseAtk   = 5 + atkSum + (broken ? 0 : (ws.attackBonus  || 0));
+    pl.baseDef   = defSum +     (broken ? Math.floor((ws.defenseBonus || 0) / 2) : (ws.defenseBonus || 0));
+    pl.moveDelay = Math.round(MOVE_BASE_MS * (1 - Math.min(0.5, spdSum + (ws.speedBonus || 0))));
+  } else {
+    pl.baseAtk   = 5 + atkSum;
+    pl.baseDef   = defSum;
+    pl.moveDelay = Math.round(MOVE_BASE_MS * (1 - Math.min(0.5, spdSum)));
+  }
+  pl.maxHp = Math.max(50, 100 + pl.baseDef * 5 + hpSum);
+  pl.hp    = Math.min(pl.hp, pl.maxHp);
+
+  return data;
+}
 
 router.post('/save', requireAuth, async (req, res, next) => {
   try {
