@@ -35,17 +35,33 @@ router.post('/save', requireAuth, async (req, res, next) => {
 });
 
 async function syncEquipmentDurability(userId, saveData) {
-  const slots = saveData?.player?.equippedSlots;
-  if (!slots || typeof slots !== 'object') return;
+  const playerData = saveData?.player;
+  if (!playerData) return;
 
   const updates = [];
-  for (const slotData of Object.values(slots)) {
-    if (!slotData || typeof slotData !== 'object') continue;
-    const equipId = slotData.equip?.id;
-    const curDur = slotData.curDur;
-    if (!equipId || curDur == null || !Number.isFinite(Number(curDur))) continue;
-    updates.push({ id: String(equipId), durability: Math.max(0, Math.round(Number(curDur))) });
+
+  // 방어구: equippedSlots[slotId] = { equip, curDur, maxDur }
+  const slots = playerData.equippedSlots;
+  if (slots && typeof slots === 'object') {
+    for (const slotData of Object.values(slots)) {
+      if (!slotData || typeof slotData !== 'object') continue;
+      const equipId = slotData.equip?.id;
+      const curDur = slotData.curDur;
+      if (!equipId || curDur == null || !Number.isFinite(Number(curDur))) continue;
+      updates.push({ id: String(equipId), durability: Math.max(0, Math.round(Number(curDur))) });
+    }
   }
+
+  // 무기: player.equipment.id + player.durability (equippedSlots와 별도 관리)
+  const weaponId = playerData.equipment?.id;
+  const weaponDur = playerData.durability;
+  if (weaponId && weaponDur != null && Number.isFinite(Number(weaponDur))) {
+    const wid = String(weaponId);
+    if (!updates.find((u) => u.id === wid)) {
+      updates.push({ id: wid, durability: Math.max(0, Math.round(Number(weaponDur))) });
+    }
+  }
+
   if (updates.length === 0) return;
 
   const ids = updates.map((u) => u.id);
