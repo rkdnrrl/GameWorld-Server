@@ -1024,9 +1024,12 @@ router.get('/floaters', async (req, res) => {
       select: { name: true, imageData: true },
       orderBy: { createdAt: 'desc' },
     });
-    const pool = includeScrapyard
-      ? arts.slice()
-      : arts.filter((a) => !String(a.name || '').startsWith(SHARED_SCRAPYARD_CACHE_PREFIX));
+    const pool = arts.filter((a) => {
+      const name = String(a.name || '');
+      if (name.startsWith('shared:forge-equip:')) return false;
+      if (!includeScrapyard && name.startsWith(SHARED_SCRAPYARD_CACHE_PREFIX)) return false;
+      return true;
+    });
     const stripPrefix = (name) => {
       const s = String(name || '');
       return s.startsWith(SHARED_SCRAPYARD_CACHE_PREFIX)
