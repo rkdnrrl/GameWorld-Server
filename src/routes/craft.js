@@ -546,12 +546,17 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
     if (durMax <= 0) return res.status(400).json({ error: { message: '내구도가 없는 장비입니다.' } });
     if (durCur >= durMax) return res.status(400).json({ error: { message: '이미 완전한 상태입니다.' } });
 
-    const damage = durMax - durCur;
+    const requestedAmount = req.body?.amount != null ? Number(req.body.amount) : null;
+    const repairAmount = (requestedAmount != null && Number.isFinite(requestedAmount))
+      ? Math.min(Math.max(1, Math.round(requestedAmount)), durMax - durCur)
+      : durMax - durCur;
+    const newDur = Math.min(durMax, durCur + repairAmount);
+
     const tier = String(equip.tier || 'common').toLowerCase();
     const costPerDur = REPAIR_COST_PER_DUR[tier] ?? REPAIR_COST_PER_DUR.common;
-    const cost = Math.max(1, Math.ceil(damage * costPerDur));
+    const cost = Math.max(1, Math.ceil(repairAmount * costPerDur));
 
-    const newStats = { ...stats, durability: durMax };
+    const newStats = { ...stats, durability: newDur };
 
     const updated = await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: req.user.id }, select: { coins: true } });
