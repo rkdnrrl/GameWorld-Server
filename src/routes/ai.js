@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
-const { generateFishingScrapNameBundle } = require('../lib/geminiFishingScrap');
+const { pickFishingItem } = require('../lib/fishingItemPicker');
 
 const router = Router();
 
@@ -739,74 +739,20 @@ async function generatePixelLabImage(name, rarity, type, visualEn) {
 }
 
 /* ── POST /api/ai/catch ─────────────────────────────────────
-   에픽·전설용: Claude + PixelLab (shared_pixel_arts 에는 절대 저장하지 않음 — 유저 catches 만)
+   에픽·전설용: JSON 고정 목록에서 선택 + PixelLab 이미지 생성
    body: { rarity: 'epic' | 'legendary' }
    response: { name, type, emoji, imageUrl? }
 ──────────────────────────────────────────────────────────── */
 router.post('/catch', requireAuth, async (req, res) => {
   const { rarity = 'epic' } = req.body;
-  const rarityLabel = RARITY_SCRAP_YARD_KO[rarity] || RARITY_KO[rarity] || '에픽(값나는 편)';
+  const tier = (rarity === 'legendary') ? 'legendary' : 'epic';
 
-  // ── 1. Claude로 이름/타입/이모지 생성 ──
-  let Anthropic;
-  try {
-    Anthropic = require('@anthropic-ai/sdk');
-  } catch {
-    return res.status(503).json({ error: 'AI module not available' });
-  }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(503).json({ error: 'ANTHROPIC_API_KEY not set' });
-  }
+  const item = pickFishingItem(tier);
+  const name = item.name;
+  const type = 'scrap';
+  const emoji = item.emoji;
+  const visualEn = item.visualEn || '';
 
-  const anthropic = new Anthropic();
-
-  const namePrompt = `우주 잔해·폐품 수거 게임에서 등급 "${rarityLabel}"인 **아이템**(금속 파츠·설비 잔재·값나는 부품 등)을 방금 집었습니다.
-(이름은 **산업·재활용·설비 잔해** 느낌을 살되, "그냥 쇳덩이" 한 마디로 끝나지 않게 구체적으로.)
-
-아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
-
-{
-  "name": "이름 (한국어, 20자 이내, 야드·설비·금속 가공 용어를 섞어 독특하게)",
-  "type": "scrap",
-  "emoji": "이 물건·파츠를 표현하는 이모지 1개 (🔩⚙️🪨 등, 생물·물고기 이모지 금지)",
-  "visualEn": "English only, max 22 words: concrete prop for pixel sprite (materials shapes only), no people no fish"
-}
-
-규칙:
-- type은 반드시 문자열 "scrap" 만 (다른 값 금지).
-- visualEn: PixelLab용 — 녹·용접·톱니·코일·I빔 등 **보이는 형태**만 영어로. 인물·문장·한국어 금지.
-- 이름에 후라이팬·프라이팬·냄비·웍·주전자·밥솥 등 **조리 도구**가 들어가면, visualEn은 반드시 그 도구의 **실제 실루엣**(예: 후라이팬=원형 팬+긴 손잡이, 정육면체 금지)을 영어로 구체적으로 쓸 것.
-- 에픽·전설: 무겁고 값나는 재료·설비 잔해·희귀 부품 느낌.
-- 일반·희귀: 현실적인 야적·회수장에서 나올 법한 이름.
-- 절대 반복되지 않도록 창의적으로`;
-
-  let name, type, emoji, visualEn = '';
-  try {
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 220,
-      messages: [{ role: 'user', content: namePrompt }],
-    });
-
-    const text = (message.content[0]?.text || '').trim();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-
-    name  = typeof parsed.name  === 'string' ? parsed.name.slice(0, 30)  : null;
-    type  = VALID_TYPES.includes(parsed.type) ? parsed.type : 'scrap';
-    emoji = typeof parsed.emoji === 'string' ? parsed.emoji.slice(0, 8) : '🔩';
-    visualEn =
-      typeof parsed.visualEn === 'string' && parsed.visualEn.trim()
-        ? parsed.visualEn.trim().slice(0, 220)
-        : '';
-
-    if (!name) return res.status(500).json({ error: 'AI returned empty name' });
-  } catch (err) {
-    console.error('[AI /catch] Claude error:', err.message || err);
-    return res.status(500).json({ error: 'AI name generation failed' });
-  }
-
-  // ── 2. PixelLab 이미지 생성 (에픽·전설은 캐시 없이 항상 새로 생성) ──
   const imageUrl = await generatePixelLabImage(name, rarity, type, visualEn);
 
   res.json({ name, type, emoji, imageUrl });
@@ -859,32 +805,18 @@ router.post('/fishing-scan-bonus', requireAuth, async (req, res) => {
   }
 });
 
-const GEMINI_FISHING_TIMEOUT_MS = 14_000;
-
 /**
  * POST /api/ai/fishing-common
- * Singleplay-Game3 일반 스크랩: Gemini로 이름·이모지·visualEn 생성 후,
- * shared_pixel_arts(이름 키)에 이미지가 있으면 DB에서만 반환(PixelLab 생략), 없으면 생성·저장.
- * response: { name, type, emoji, imageUrl?, cached, nameSource?, bonusCoins: 0, coins: null } — 코인 보너스는 /fishing-scan-bonus
+ * 일반 스크랩: JSON 고정 목록에서 선택 후 shared_pixel_arts 캐시 확인 → PixelLab 생성·저장.
+ * response: { name, type, emoji, imageUrl?, cached, nameSource, bonusCoins: 0, coins: null }
  */
 router.post('/fishing-common', requireAuth, async (req, res) => {
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), GEMINI_FISHING_TIMEOUT_MS);
   try {
-    const bundle = await generateFishingScrapNameBundle({ signal: ac.signal });
-    if (!bundle || !bundle.name) {
-      return res.status(503).json({ error: { message: '이름 생성 AI(Gemini)를 사용할 수 없습니다.' } });
-    }
-    const cleanName = String(bundle.name)
-      .trim()
-      .replace(/\s+/g, ' ')
-      .slice(0, 100);
-    if (!cleanName) {
-      return res.status(503).json({ error: { message: '이름 생성에 실패했습니다.' } });
-    }
+    const item = pickFishingItem('common');
+    const cleanName = item.name;
     const rarity = 'common';
     const type = 'scrap';
-    const emoji = typeof bundle.emoji === 'string' && bundle.emoji.trim() ? bundle.emoji.trim().slice(0, 8) : '🔩';
+    const emoji = item.emoji;
     const cacheKey = sharedScrapyardCacheKey(cleanName);
 
     try {
@@ -895,33 +827,22 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
       if (cached?.imageData) {
         console.log(`[AI /fishing-common] cache hit: "${cacheKey}"`);
         return res.json({
-          name: cleanName,
-          type,
-          emoji,
+          name: cleanName, type, emoji,
           imageUrl: cached.imageData,
-          cached: true,
-          nameSource: 'gemini',
-          bonusCoins: 0,
-          coins: null,
+          cached: true, nameSource: 'json',
+          bonusCoins: 0, coins: null,
         });
       }
     } catch (dbErr) {
       console.warn('[AI /fishing-common] cache lookup skipped:', dbErr.message);
     }
 
-    const imageUrl = await generatePixelLabImage(cleanName, rarity, type, bundle.visualEn);
+    const imageUrl = await generatePixelLabImage(cleanName, rarity, type, item.visualEn || '');
     if (!imageUrl) {
-      console.warn(`[AI /fishing-common] PixelLab null for "${cleanName}"`);
       return res.json({
-        name: cleanName,
-        type,
-        emoji,
-        imageUrl: null,
-        cached: false,
-        pixelLabFailed: true,
-        nameSource: 'gemini',
-        bonusCoins: 0,
-        coins: null,
+        name: cleanName, type, emoji,
+        imageUrl: null, cached: false, pixelLabFailed: true, nameSource: 'json',
+        bonusCoins: 0, coins: null,
       });
     }
 
@@ -931,26 +852,18 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
         create: { name: cacheKey, imageData: imageUrl, rarity, type },
         update: { imageData: imageUrl, rarity, type },
       });
-      console.log(`[AI /fishing-common] saved: "${cacheKey}"`);
     } catch (dbErr) {
       console.warn('[AI /fishing-common] cache save skipped:', dbErr.message);
     }
 
     return res.json({
-      name: cleanName,
-      type,
-      emoji,
-      imageUrl,
-      cached: false,
-      nameSource: 'gemini',
-      bonusCoins: 0,
-      coins: null,
+      name: cleanName, type, emoji,
+      imageUrl, cached: false, nameSource: 'json',
+      bonusCoins: 0, coins: null,
     });
   } catch (err) {
     console.error('[AI /fishing-common]', err.message || err);
     return res.status(500).json({ error: { message: '요청 처리 중 오류가 발생했습니다.' } });
-  } finally {
-    clearTimeout(timer);
   }
 });
 
