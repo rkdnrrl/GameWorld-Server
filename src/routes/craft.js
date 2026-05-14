@@ -15,8 +15,6 @@ const {
   detectSynergies,
 } = require('../lib/forgeRollStats');
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
-const { proceduralSmeltForgeName } = require('../lib/forgeSmeltProceduralName');
-const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentArt');
 const { metaForProductId } = require('../lib/smeltProduct');
 const { logActivity } = require('../lib/activityLog');
 
@@ -25,13 +23,23 @@ const router = Router();
 const DYNAMIC_RECIPE_ID = 'dynamic';
 const MAX_DYNAMIC_MATERIALS = 12;
 /** 모루에서 산출물만으로 제련 시 최소 개수 */
-const MIN_SMELT_MATERIALS_FOR_FORGE = 2;
-/** PixelLab 장비 스프라이트 타임아웃 */
-const PIXELLAB_FORGE_MS = 110_000;
-const SHARED_FORGE_EQUIP_PREFIX = 'shared:forge-equip:';
+const MIN_SMELT_MATERIALS_FOR_FORGE = 1;
 /** 실패 시 재료 반환 비율 (25~60%) */
 const FAIL_RETURN_RATE_MIN = 0.25;
 const FAIL_RETURN_RATE_MAX = 0.60;
+
+// 9-슬롯 그리드 위치 → 스탯 가중치 (행: 공격/방어/HP, 열: 비율 조절)
+const GRID_POSITION_WEIGHTS = [
+  { atk: 1.5, def: 0.0, spd: 0.3, hp: 0.0, durScale: 0.5 }, // 0: 상단 좌 — 공격
+  { atk: 0.3, def: 0.0, spd: 1.5, hp: 0.0, durScale: 0.5 }, // 1: 상단 중 — 속도
+  { atk: 1.5, def: 0.0, spd: 0.3, hp: 0.0, durScale: 0.5 }, // 2: 상단 우 — 공격
+  { atk: 0.0, def: 1.5, spd: 0.0, hp: 0.3, durScale: 0.7 }, // 3: 중단 좌 — 방어
+  { atk: 0.5, def: 0.5, spd: 0.5, hp: 0.5, durScale: 1.5 }, // 4: 중앙   — 내구도
+  { atk: 0.0, def: 1.5, spd: 0.0, hp: 0.3, durScale: 0.7 }, // 5: 중단 우 — 방어
+  { atk: 0.0, def: 0.3, spd: 0.0, hp: 1.5, durScale: 0.5 }, // 6: 하단 좌 — HP
+  { atk: 0.0, def: 0.3, spd: 0.0, hp: 1.5, durScale: 0.5 }, // 7: 하단 중 — HP
+  { atk: 0.0, def: 0.3, spd: 0.0, hp: 1.5, durScale: 0.5 }, // 8: 하단 우 — HP
+];
 
 // ─── 헬퍼 ────────────────────────────────────────────────────
 
@@ -72,17 +80,8 @@ function normSourceMaterials(raw) {
   return out;
 }
 
-function sharedForgeEquipCacheKey(name, tier, slot) {
-  const s = String(slot || 'weapon').trim().toLowerCase().slice(0, 10) || 'weapon';
-  const t = String(tier || 'common').trim().toLowerCase().slice(0, 20) || 'common';
-  const n = String(name || '').trim();
-  const base = `${SHARED_FORGE_EQUIP_PREFIX}${s}:${t}:`;
-  const maxLen = Math.max(1, 100 - base.length);
-  return `${base}${n.slice(0, maxLen)}`;
-}
-
 /**
- * 요청 본문에서 { kind, id }[] 정규화.
+ * 요청 본문에서 { kind, id, slotIndex }[] 정규화.
  */
 function materialsFromBody(body) {
   const b = body || {};
@@ -93,20 +92,19 @@ function materialsFromBody(body) {
       const id = x.id != null ? String(x.id).trim() : '';
       if (!id || id === 'undefined' || id === 'null') continue;
       const k = String(x.kind || x.type || '').toLowerCase();
-      if (k === 'smelt' || k === 'stock' || k === 's') out.push({ kind: 'smelt', id });
-      // catch/equipment는 서버에서 거부하지만 파싱은 허용 (오류 메시지용)
-      else if (k === 'catch' || k === 'fish' || k === 'c') out.push({ kind: 'catch', id });
-      else if (k === 'equipment' || k === 'equip' || k === 'e') out.push({ kind: 'equipment', id });
+      const slotIndex = Number.isInteger(x.slotIndex) ? Math.max(0, Math.min(8, x.slotIndex)) : 0;
+      if (k === 'smelt' || k === 'stock' || k === 's') out.push({ kind: 'smelt', id, slotIndex });
+      else if (k === 'catch' || k === 'fish' || k === 'c') out.push({ kind: 'catch', id, slotIndex });
+      else if (k === 'equipment' || k === 'equip' || k === 'e') out.push({ kind: 'equipment', id, slotIndex });
     }
     return out;
   }
-  // 레거시: catchIds 배열
   const catchIdsIn = b.catchIds;
   if (!Array.isArray(catchIdsIn)) return [];
   return catchIdsIn
     .map((x) => String(x).trim())
     .filter((id) => id && id !== 'undefined' && id !== 'null')
-    .map((id) => ({ kind: 'catch', id }));
+    .map((id, i) => ({ kind: 'catch', id, slotIndex: i }));
 }
 
 // ─── 라우트 ──────────────────────────────────────────────────
@@ -162,22 +160,19 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     const body = req.body || {};
     let materials = materialsFromBody(body);
 
-    const SLOT_EMOJIS = {
-      weapon: '⚔️', head: '🪖', chest: '🧥', pants: '👖',
-      gloves: '🧤', boots: '👢', accessory: '💍',
-    };
-    const SLOT_WEIGHTS = {
-      weapon:    { atk: 1.0, def: 0.3, spd: 0.6, hp: 0.0, durScale: 1.0 },
-      head:      { atk: 0.0, def: 0.9, spd: 0.0, hp: 0.7, durScale: 0.7 },
-      chest:     { atk: 0.0, def: 1.3, spd: 0.0, hp: 1.2, durScale: 0.9 },
-      pants:     { atk: 0.0, def: 0.7, spd: 0.9, hp: 0.4, durScale: 0.6 },
-      gloves:    { atk: 0.8, def: 0.2, spd: 0.6, hp: 0.0, durScale: 0.5 },
-      boots:     { atk: 0.0, def: 0.3, spd: 1.4, hp: 0.0, durScale: 0.5 },
-      accessory: { atk: 0.5, def: 0.5, spd: 0.5, hp: 0.6, durScale: 0.4 },
-    };
-    const slot = Object.prototype.hasOwnProperty.call(SLOT_EMOJIS, String(body.slot || ''))
-      ? String(body.slot) : 'weapon';
-    const itemEmoji = SLOT_EMOJIS[slot];
+    // 그리드 위치 기반 스탯 가중치 계산
+    const _acc = { atk: 0, def: 0, spd: 0, hp: 0, durScale: 0 };
+    for (const m of materials) {
+      const gw = GRID_POSITION_WEIGHTS[m.slotIndex] || GRID_POSITION_WEIGHTS[0];
+      _acc.atk += gw.atk; _acc.def += gw.def; _acc.spd += gw.spd;
+      _acc.hp += gw.hp; _acc.durScale += gw.durScale;
+    }
+    const _cnt = materials.length || 1;
+    const gridW = { atk: _acc.atk / _cnt, def: _acc.def / _cnt, spd: _acc.spd / _cnt, hp: _acc.hp / _cnt, durScale: _acc.durScale / _cnt };
+    const _SLOT_EMOJIS = { atk: '⚔️', def: '🛡️', spd: '👟', hp: '❤️', durScale: '🔩' };
+    const dominantKey = Object.keys(gridW).sort((a, b) => gridW[b] - gridW[a])[0];
+    const itemEmoji = _SLOT_EMOJIS[dominantKey] || '⚒️';
+    const slot = { atk: 'weapon', def: 'chest', spd: 'boots', hp: 'head', durScale: 'accessory' }[dominantKey] || 'weapon';
 
     // smelt 아닌 재료 거부
     const nonSmelt = materials.filter((m) => m.kind !== 'smelt');
@@ -227,7 +222,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       const { resolved } = load;
 
       // 2. 메타 계산
-      const finalName = proceduralSmeltForgeName(resolved, slot);
+      const finalName = '미정';
       const tier = tierFromMaterials(resolved);
       const rollSlots = resolved.map((r) => ({
         kind: r.kind,
@@ -288,7 +283,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
 
       // 5b. 성공 처리 — 장비 생성
       const rawStats = rollEquipmentStats(tier, rollSlots, profInfo.mul);
-      const w = SLOT_WEIGHTS[slot];
+      const w = gridW;
       const stats = {
         equipSlot: slot,
         attackBonus:  w.atk > 0 ? Math.max(1, Math.round(rawStats.attackBonus  * w.atk)) : 0,
@@ -376,122 +371,20 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       });
     }
 
-    // ── 첫 조합 감지 (정렬된 재료 ID + 슬롯 해시) ──────────────
-    let firstDiscovery = false;
-    try {
-      const recipeKey = `recipe:${slot}:${materials.map((m) => m.id).sort().join('|')}`;
-      const existing = await prisma.sharedPixelArt.findUnique({ where: { name: recipeKey } });
-      if (!existing) {
-        firstDiscovery = true;
-        await prisma.sharedPixelArt.create({
-          data: { name: recipeKey, imageData: 'registry', rarity: outcome.equipment.tier, type: 'recipe_registry' },
-        });
-      }
-    } catch (e) {
-      console.warn('[craft/equipment] recipe registry skipped:', e?.message);
-    }
-
-    // ── 성공: 이미지 처리 ────────────────────────────────────
     const createdRow = outcome.equipment;
-    const cacheKey = sharedForgeEquipCacheKey(createdRow.name, createdRow.tier, slot);
-
-    // 이미지 캐시 확인 (같은 이름+티어 → 같은 이미지)
-    try {
-      const cached = await prisma.sharedPixelArt.findUnique({
-        where: { name: cacheKey },
-        select: { imageData: true },
-      });
-      if (cached && cached.imageData) {
-        await prisma.craftedEquipment.update({
-          where: { id: createdRow.id, userId: req.user.id },
-          data: {
-            pixelArt: { source: 'shared_cache', cacheKey, imageDataUrl: cached.imageData },
-          },
-        });
-        const freshCached = await prisma.craftedEquipment.findUnique({ where: { id: createdRow.id } });
-        logActivity(req.user, 'forge_craft', {
-          name: createdRow.name,
-          tier: createdRow.tier,
-          slot,
-          itemEmoji: createdRow.itemEmoji,
-          nameSource: 'smelt_procedural',
-          firstDiscovery,
-          materialCount: materials.length,
-        });
-        return res.status(201).json({
-          success: true,
-          successRatePct,
-          equipment: toPublicEquipment(freshCached || createdRow),
-          nameSource: 'smelt_procedural',
-          materialStrengthLabel,
-          materialHarmonyLabel,
-          uniqueTierCount,
-          activeSynergies: synergiesOut,
-          smithingProficiency: newProficiency,
-          proficiencyLevelInfo: newProfInfo,
-          proficiencyGain: Number(profGain.toFixed(6)),
-        });
-      }
-    } catch (e) {
-      console.warn('[craft/equipment] cache lookup skipped:', e?.message);
-    }
-
-    // PixelLab 새 이미지 생성
-    const pixelAc = new AbortController();
-    const pixelTimer = setTimeout(() => pixelAc.abort(), PIXELLAB_FORGE_MS);
-    try {
-      const png = await generateCraftedEquipmentPixelArt(
-        createdRow.name,
-        createdRow.tier,
-        pixelAc.signal,
-        null,
-        slot,
-      );
-      if (png) {
-        await prisma.craftedEquipment.update({
-          where: { id: createdRow.id, userId: req.user.id },
-          data: { pixelArt: { source: 'pixellab', imageDataUrl: png } },
-        });
-        try {
-          await prisma.sharedPixelArt.upsert({
-            where: { name: cacheKey },
-            create: {
-              name: cacheKey,
-              imageData: png,
-              rarity: String(createdRow.tier || 'common').slice(0, 20),
-              type: 'forge_equipment',
-            },
-            update: {
-              imageData: png,
-              rarity: String(createdRow.tier || 'common').slice(0, 20),
-            },
-          });
-        } catch (e) {
-          console.warn('[craft/equipment] cache save skipped:', e?.message);
-        }
-      }
-    } catch (e) {
-      console.warn('[craft/equipment] PixelLab skipped:', e?.message);
-    } finally {
-      clearTimeout(pixelTimer);
-    }
-
-    const fresh = await prisma.craftedEquipment.findUnique({ where: { id: createdRow.id } });
     logActivity(req.user, 'forge_craft', {
       name: createdRow.name,
       tier: createdRow.tier,
       slot,
       itemEmoji: createdRow.itemEmoji,
-      nameSource: 'smelt_procedural',
-      firstDiscovery,
+      nameSource: 'grid',
       materialCount: materials.length,
     });
     res.status(201).json({
       success: true,
       successRatePct,
-      equipment: toPublicEquipment(fresh || createdRow),
-      nameSource: 'smelt_procedural',
-      firstDiscovery,
+      equipment: toPublicEquipment(createdRow),
+      nameSource: 'grid',
       materialStrengthLabel,
       materialHarmonyLabel,
       uniqueTierCount,
