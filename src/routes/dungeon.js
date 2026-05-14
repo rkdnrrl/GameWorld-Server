@@ -9,7 +9,8 @@ router.get('/save', requireAuth, async (req, res, next) => {
   try {
     const row = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
     if (!row || !row.data) return res.json({ save: null });
-    const cleaned = await stripDeletedEquipment(req.user.id, row.data);
+    let cleaned = row.data;
+    try { cleaned = await stripDeletedEquipment(req.user.id, row.data); } catch (e) { console.error('[stripDeletedEquipment]', e); }
     res.json({ save: cleaned });
   } catch (err) {
     next(err);
