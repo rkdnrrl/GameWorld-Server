@@ -156,6 +156,10 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
   try {
     const body = req.body || {};
     let materials = materialsFromBody(body);
+    const customName = body.customName && typeof body.customName === 'string'
+      ? body.customName.trim().slice(0, 24) : null;
+    const pixelArtData = Array.isArray(body.pixelArtData) && body.pixelArtData.length === 1024
+      ? body.pixelArtData : null;
 
     // 재료별 선호 슬롯 적합도 계산
     const correctCount = materials.filter((m) => preferredSlotFromId(m.id) === m.slotIndex).length;
@@ -213,7 +217,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       const { resolved } = load;
 
       // 2. 메타 계산
-      const finalName = '미정';
+      const finalName = customName || '미정';
       const tier = tierFromMaterials(resolved);
       const rollSlots = resolved.map((r) => ({
         kind: r.kind,
@@ -295,7 +299,7 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           desc,
           stats,
           sourceCatchIds: sourceStored,
-          pixelArt: null,
+          pixelArt: pixelArtData ? pixelArtData : null,
         },
       });
       return {
