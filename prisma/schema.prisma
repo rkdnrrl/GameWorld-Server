@@ -30,6 +30,7 @@ model User {
   alchemyElementStocks  AlchemyElementStock[]
   dungeonSave           DungeonSave?
   activityLogs          ActivityLog[]
+  enhancementStocks     EnhancementStock[]
 
   @@map("users")
 }
@@ -173,6 +174,20 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt(sort: Desc)])
   @@map("activity_logs")
+}
+
+/// 던전에서 획득한 강화 아이템 재고 (유저별·아이템 타입별 집계)
+model EnhancementStock {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// stone_common | stone_rare | crystal_magic | shard_legend
+  itemType  String   @db.VarChar(32)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, itemType])
+  @@index([userId])
+  @@map("enhancement_stock")
 }
 
 /// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)

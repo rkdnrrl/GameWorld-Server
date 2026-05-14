@@ -505,14 +505,17 @@ router.post('/generate-pixel-art', requireAuth, async (req, res, next) => {
 
     const cacheKey = `equip-art:${name}`.slice(0, 100);
 
-    // 캐시 조회
+    // 캐시 조회 (캐시 히트는 보상 없음)
     const cached = await prisma.sharedPixelArt.findUnique({ where: { name: cacheKey } });
-    if (cached) return res.json({ imageDataUrl: cached.imageData, cached: true });
+    if (cached) return res.json({ imageDataUrl: cached.imageData, cached: true, coinReward: 0 });
 
-    // PixelLab 생성
+    // PixelLab 생성 — 실제 대기시간 측정
+    const genStart = Date.now();
     const imageDataUrl = await generateCraftedEquipmentPixelArt(
       name, tier, undefined, null, _slotFromName(name),
     );
+    const elapsedSec = Math.round((Date.now() - genStart) / 1000);
+
     if (!imageDataUrl) {
       return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
     }
@@ -528,8 +531,104 @@ router.post('/generate-pixel-art', requireAuth, async (req, res, next) => {
       console.warn('[generate-pixel-art] cache save failed (non-fatal):', e?.message);
     }
 
-    res.json({ imageDataUrl, cached: false });
+    // 대기 보상: 실제 생성 시간 기준 코인 지급 (최소 2, 최대 50)
+    const coinReward = Math.min(50, Math.max(2, Math.ceil(elapsedSec * 1.5)));
+    try {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { coins: { increment: coinReward } },
+      });
+    } catch (e) {
+      console.warn('[generate-pixel-art] coin reward failed (non-fatal):', e?.message);
+    }
+
+    res.json({ imageDataUrl, cached: false, coinReward, elapsedSec });
   } catch (err) {
+    next(err);
+  }
+});
+
+// ─── 강화 시스템 ──────────────────────────────────────────────
+
+const ENHANCE_ITEM_META = {
+  stone_common:  { name: '일반 강화석', emoji: '🪨', successRate: 0.60, mode: 'random_primary', amount: 1 },
+  stone_rare:    { name: '희귀 강화석', emoji: '💎', successRate: 0.70, mode: 'random_primary', amount: 2 },
+  crystal_magic: { name: '마법 수정',   emoji: '🔮', successRate: 0.80, mode: 'all',
+                   bonuses: { atk: 1, def: 1, spd: 0.02, hp: 5 } },
+  shard_legend:  { name: '전설 파편',   emoji: '✨', successRate: 0.85, mode: 'all',
+                   bonuses: { atk: 3, def: 3, spd: 0.05, hp: 10 } },
+};
+
+/**
+ * GET /api/craft/enhancement-stock
+ * 현재 유저의 강화 아이템 재고 조회
+ */
+router.get('/enhancement-stock', requireAuth, async (req, res, next) => {
+  try {
+    const rows = await prisma.enhancementStock.findMany({ where: { userId: req.user.id } });
+    const stock = {};
+    for (const r of rows) stock[r.itemType] = r.count;
+    res.json({ stock });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/craft/equipment/:id/enhance
+ * 강화 아이템 1개 소모 → 장비 스탯 강화
+ * body: { itemType: 'stone_common' | 'stone_rare' | 'crystal_magic' | 'shard_legend' }
+ */
+router.post('/equipment/:id/enhance', requireAuth, async (req, res, next) => {
+  try {
+    const id       = String(req.params.id || '').trim();
+    const itemType = String(req.body?.itemType || '').trim();
+    const meta     = ENHANCE_ITEM_META[itemType];
+    if (!id || !meta) return res.status(400).json({ error: { message: '잘못된 요청입니다.' } });
+
+    const [equip, stockRow] = await Promise.all([
+      prisma.craftedEquipment.findUnique({ where: { id } }),
+      prisma.enhancementStock.findUnique({
+        where: { userId_itemType: { userId: req.user.id, itemType } },
+      }),
+    ]);
+    if (!equip || equip.userId !== req.user.id)
+      return res.status(404).json({ error: { message: '장비를 찾을 수 없습니다.' } });
+    if (!stockRow || stockRow.count < 1)
+      return res.status(400).json({ error: { message: '강화 아이템이 부족합니다.' } });
+
+    const success = Math.random() < meta.successRate;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 아이템 1개 소모
+      const upd = await tx.enhancementStock.updateMany({
+        where: { userId: req.user.id, itemType, count: { gte: 1 } },
+        data:  { count: { decrement: 1 } },
+      });
+      if (upd.count !== 1) throw Object.assign(new Error('STOCK_GONE'), {});
+
+      if (!success) return { success: false };
+
+      const stats = { ...(equip.stats || {}) };
+      if (meta.mode === 'random_primary') {
+        // 공격 or 방어 중 랜덤 하나에 amount 추가
+        if (Math.random() < 0.5) stats.attackBonus  = (stats.attackBonus  || 0) + meta.amount;
+        else                     stats.defenseBonus = (stats.defenseBonus || 0) + meta.amount;
+      } else {
+        const b = meta.bonuses;
+        if (b.atk) stats.attackBonus  = (stats.attackBonus  || 0) + b.atk;
+        if (b.def) stats.defenseBonus = (stats.defenseBonus || 0) + b.def;
+        if (b.spd) stats.speedBonus   = Number(Math.min(0.5, (stats.speedBonus || 0) + b.spd).toFixed(3));
+        if (b.hp)  stats.hpBonus      = (stats.hpBonus      || 0) + b.hp;
+      }
+      const newEquip = await tx.craftedEquipment.update({ where: { id }, data: { stats } });
+      return { success: true, stats: newEquip.stats };
+    });
+
+    res.json({ ok: true, success: result.success, stats: result.stats || null });
+  } catch (err) {
+    if (err.message === 'STOCK_GONE')
+      return res.status(400).json({ error: { message: '강화 아이템이 부족합니다.' } });
     next(err);
   }
 });

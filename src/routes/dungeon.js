@@ -154,6 +154,13 @@ router.post('/save', requireAuth, async (req, res, next) => {
   try {
     const { data } = req.body;
     if (!data) return res.status(400).json({ error: { message: 'data required' } });
+
+    // 강화 아이템 드롭 판정을 위해 기존 세이브의 킬 수 조회
+    const existing = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
+    const prevKills = existing?.data?.player?.kills ?? 0;
+    const newKills  = data?.player?.kills ?? 0;
+    const killDiff  = Math.max(0, Math.floor(newKills) - Math.floor(prevKills));
+
     const row = await prisma.dungeonSave.upsert({
       where:  { userId: req.user.id },
       update: { data },
@@ -163,7 +170,27 @@ router.post('/save', requireAuth, async (req, res, next) => {
     // 장착 장비의 현재 내구도를 CraftedEquipment에 동기화
     await syncEquipmentDurability(req.user.id, data);
 
-    res.json({ ok: true, savedAt: row.savedAt });
+    // 킬 당 강화 아이템 드롭 판정 (누적 드롭 후 일괄 upsert)
+    const drops = {};
+    for (let i = 0; i < killDiff; i++) {
+      const r = Math.random();
+      if      (r < 0.002) drops.shard_legend   = (drops.shard_legend   || 0) + 1;
+      else if (r < 0.012) drops.crystal_magic  = (drops.crystal_magic  || 0) + 1;
+      else if (r < 0.052) drops.stone_rare     = (drops.stone_rare     || 0) + 1;
+      else if (r < 0.252) drops.stone_common   = (drops.stone_common   || 0) + 1;
+    }
+    const dropEntries = Object.entries(drops);
+    if (dropEntries.length > 0) {
+      await Promise.all(dropEntries.map(([itemType, count]) =>
+        prisma.enhancementStock.upsert({
+          where:  { userId_itemType: { userId: req.user.id, itemType } },
+          create: { userId: req.user.id, itemType, count },
+          update: { count: { increment: count } },
+        }),
+      ));
+    }
+
+    res.json({ ok: true, savedAt: row.savedAt, enhancementDrops: drops });
   } catch (err) {
     next(err);
   }
