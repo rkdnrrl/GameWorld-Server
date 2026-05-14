@@ -163,7 +163,7 @@ router.delete('/shared-pixel-arts/one', requireAuth, requireOperator, async (req
  */
 router.get('/smelt-stock/catalog', requireAuth, requireOperator, (req, res) => {
   const items = SMELT_CATALOG.map((e) => ({ id: e.id, name: e.name, emoji: e.emoji }));
-  items.push({ id: 'slag', name: '슬래그', emoji: '🪨' });
+  items.push({ id: 'slag', name: '고철', emoji: '🔩' });
   res.json({ items });
 });
 
