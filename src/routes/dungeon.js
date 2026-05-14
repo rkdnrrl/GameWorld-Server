@@ -78,6 +78,45 @@ async function syncEquipmentDurability(userId, saveData) {
   );
 }
 
+// 장비 내구도 직접 동기화 (휴식층 진입 시 호출)
+router.post('/sync-durability', requireAuth, async (req, res, next) => {
+  try {
+    const { weapon, armor } = req.body || {};
+    const updates = [];
+
+    if (weapon?.id && weapon.durability != null && Number.isFinite(Number(weapon.durability))) {
+      updates.push({ id: String(weapon.id), durability: Math.max(0, Math.round(Number(weapon.durability))) });
+    }
+    if (Array.isArray(armor)) {
+      for (const a of armor) {
+        if (!a?.id || a.durability == null || !Number.isFinite(Number(a.durability))) continue;
+        if (!updates.find((u) => u.id === String(a.id))) {
+          updates.push({ id: String(a.id), durability: Math.max(0, Math.round(Number(a.durability))) });
+        }
+      }
+    }
+
+    if (updates.length === 0) return res.json({ ok: true, synced: 0 });
+
+    const ids = updates.map((u) => u.id);
+    const rows = await prisma.craftedEquipment.findMany({
+      where: { id: { in: ids }, userId: req.user.id },
+      select: { id: true, stats: true },
+    });
+
+    await Promise.all(rows.map((eq) => {
+      const upd = updates.find((u) => u.id === eq.id);
+      if (!upd) return;
+      const newStats = { ...(eq.stats || {}), durability: upd.durability };
+      return prisma.craftedEquipment.update({ where: { id: eq.id }, data: { stats: newStats } });
+    }));
+
+    res.json({ ok: true, synced: rows.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 던전 종료: 내구도 동기화 + 세이브 삭제를 원자적으로 처리
 router.post('/exit', requireAuth, async (req, res, next) => {
   try {
