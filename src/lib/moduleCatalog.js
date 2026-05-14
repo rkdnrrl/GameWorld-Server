@@ -5,19 +5,21 @@ const TIER_DUR = { common: 25, rare: 40, epic: 60, legendary: 100 };
 
 // Module slot definitions per equipment type
 const EQUIP_MODULE_SLOTS = {
-  weapon:    ['barrel', 'scope', 'grip', 'muzzle'],
-  head:      ['padding', 'visor'],
-  chest:     ['padding', 'reinforcement', 'lining'],
-  pants:     ['padding'],
-  gloves:    ['grip', 'padding'],
-  boots:     ['sole', 'padding'],
-  accessory: ['gem', 'enchant'],
+  weapon:    ['barrel', 'scope', 'grip', 'muzzle', 'buffer'],
+  head:      ['padding', 'visor', 'buffer'],
+  chest:     ['padding', 'reinforcement', 'lining', 'buffer'],
+  pants:     ['padding', 'buffer'],
+  gloves:    ['grip', 'padding', 'buffer'],
+  boots:     ['sole', 'padding', 'buffer'],
+  accessory: ['gem', 'enchant', 'buffer'],
 };
 
 // Offensive modules (durability decreases on player attack)
 const OFFENSIVE_TYPES = new Set(['barrel', 'scope', 'grip', 'muzzle', 'gem']);
 // Defensive modules (durability decreases on player damage taken)
 const DEFENSIVE_TYPES = new Set(['padding', 'reinforcement', 'visor', 'lining', 'sole', 'enchant']);
+// Buffer modules (durability decreases instead of the parent equipment)
+const BUFFER_TYPES = new Set(['buffer']);
 
 const MODULE_CATALOG = {
   barrel: {
@@ -127,6 +129,18 @@ const MODULE_CATALOG = {
       { name: '강화 각인', keywords: ['강화'], stats: { attackBonus: 1, defenseBonus: 2 } },
     ],
   },
+  buffer: {
+    label: '완충재', emoji: '🛡️', equipSlots: ['weapon', 'head', 'chest', 'pants', 'gloves', 'boots', 'accessory'],
+    variants: [
+      { name: '철제 완충재',   keywords: ['방어'], stats: { defenseBonus: 1 } },
+      { name: '강철 완충재',   keywords: ['강화'], stats: { defenseBonus: 1, attackBonus: 1 } },
+      { name: '신성 완충재',   keywords: ['신성'], stats: { defenseBonus: 1, hpBonus: 5 } },
+      { name: '암흑 완충재',   keywords: ['암흑'], stats: { defenseBonus: 2, hpBonus: -3 } },
+      { name: '치유 완충재',   keywords: ['치유'], stats: { defenseBonus: 1, hpBonus: 8 } },
+      { name: '기민 완충재',   keywords: ['기민'], stats: { defenseBonus: 1, speedBonus: 0.03 } },
+      { name: '마법 완충재',   keywords: ['강화', '치유'], stats: { defenseBonus: 2, hpBonus: 5 } },
+    ],
+  },
 };
 
 /**
@@ -161,6 +175,7 @@ module.exports = {
   EQUIP_MODULE_SLOTS,
   OFFENSIVE_TYPES,
   DEFENSIVE_TYPES,
+  BUFFER_TYPES,
   TIER_MUL,
   TIER_DUR,
   applyTierToStats,
