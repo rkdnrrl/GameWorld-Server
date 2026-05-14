@@ -23,10 +23,8 @@ router.post('/save', requireAuth, async (req, res, next) => {
       create: { userId: req.user.id, data },
     });
 
-    // 장착 장비의 현재 내구도를 CraftedEquipment에 동기화 (fire-and-forget)
-    syncEquipmentDurability(req.user.id, data).catch((e) =>
-      console.warn('[dungeon/save] 내구도 동기화 실패:', e?.message),
-    );
+    // 장착 장비의 현재 내구도를 CraftedEquipment에 동기화
+    await syncEquipmentDurability(req.user.id, data);
 
     res.json({ ok: true, savedAt: row.savedAt });
   } catch (err) {
@@ -80,8 +78,31 @@ async function syncEquipmentDurability(userId, saveData) {
   );
 }
 
+// 던전 종료: 내구도 동기화 + 세이브 삭제를 원자적으로 처리
+router.post('/exit', requireAuth, async (req, res, next) => {
+  try {
+    const { data } = req.body;
+    if (data) {
+      await syncEquipmentDurability(req.user.id, data);
+    } else {
+      // data 없으면 마지막 저장된 세이브에서 동기화
+      const existing = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
+      if (existing?.data) await syncEquipmentDurability(req.user.id, existing.data);
+    }
+    await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/save', requireAuth, async (req, res, next) => {
   try {
+    // 삭제 전 마지막 저장 데이터로 내구도 동기화
+    const existing = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
+    if (existing?.data) {
+      await syncEquipmentDurability(req.user.id, existing.data);
+    }
     await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
     res.json({ ok: true });
   } catch (err) {
