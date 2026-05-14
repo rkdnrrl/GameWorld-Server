@@ -490,6 +490,23 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
  * DELETE /api/craft/equipment/:id
  * — 내구도 0으로 파괴된 장비를 DB에서 삭제.
  */
+/**
+ * GET /api/craft/recipe-check?slot=weapon&ids=id1,id2,...
+ * 해당 조합이 도감에 존재하는지 확인 (생성 없음).
+ */
+router.get('/recipe-check', requireAuth, async (req, res, next) => {
+  try {
+    const slot = String(req.query.slot || 'weapon').trim();
+    const ids = String(req.query.ids || '').split(',').map((s) => s.trim()).filter(Boolean).sort();
+    if (ids.length === 0) return res.json({ isNew: false });
+    const recipeKey = `recipe:${slot}:${ids.join('|')}`;
+    const existing = await prisma.sharedPixelArt.findUnique({ where: { name: recipeKey } });
+    res.json({ isNew: !existing });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/equipment/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '').trim();
