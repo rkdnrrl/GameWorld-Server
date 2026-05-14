@@ -210,7 +210,13 @@ router.post('/:id/repair', requireAuth, async (req, res, next) => {
 
     const costPerDur = REPAIR_COST_PER_DUR[mod.tier] || REPAIR_COST_PER_DUR.common;
     const missing = mod.durabilityMax - mod.durability;
-    const cost = Math.ceil(missing * costPerDur);
+
+    // amount: 미니게임에서 실제 수리한 내구도 (없으면 전체)
+    const rawAmount = req.body?.amount;
+    const repairAmount = (rawAmount != null && Number.isFinite(Number(rawAmount)))
+      ? Math.min(missing, Math.max(1, Math.round(Number(rawAmount))))
+      : missing;
+    const cost = Math.ceil(repairAmount * costPerDur);
 
     // Check coins
     const user = await prisma.user.findUnique({
@@ -221,10 +227,11 @@ router.post('/:id/repair', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: `코인 부족 (필요 ${cost}, 보유 ${user?.coins || 0})` } });
     }
 
+    const newDur = mod.durability + repairAmount;
     const [updated] = await prisma.$transaction([
       prisma.module.update({
         where: { id: mod.id },
-        data: { durability: mod.durabilityMax },
+        data: { durability: newDur },
       }),
       prisma.user.update({
         where: { id: req.user.id },
@@ -232,7 +239,7 @@ router.post('/:id/repair', requireAuth, async (req, res, next) => {
       }),
     ]);
 
-    res.json({ module: updated, cost });
+    res.json({ module: updated, costPaid: cost });
   } catch (err) {
     next(err);
   }
