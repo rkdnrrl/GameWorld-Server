@@ -4,6 +4,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
+const { ALLOWED_IDS, metaForProductId } = require('../lib/smeltProduct');
 
 const router = Router();
 
@@ -153,6 +154,58 @@ router.delete('/shared-pixel-arts/one', requireAuth, requireOperator, async (req
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { message: '항목을 찾을 수 없습니다.' } });
     }
+    next(err);
+  }
+});
+
+/**
+ * POST /api/operator/smelt-stock/grant
+ * 특정 유저에게 기초 재료를 지급합니다.
+ * body: { targetNickname: string, items: [{ productId: string, count: number }] }
+ */
+router.post('/smelt-stock/grant', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const targetNickname = typeof body.targetNickname === 'string' ? body.targetNickname.trim() : '';
+    if (!targetNickname) {
+      return res.status(400).json({ error: { message: 'targetNickname이 필요합니다.' } });
+    }
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) {
+      return res.status(400).json({ error: { message: 'items가 비었습니다.' } });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { nickname: targetNickname },
+      select: { id: true, nickname: true },
+    });
+    if (!targetUser) {
+      return res.status(404).json({ error: { message: `유저 "${targetNickname}"를 찾을 수 없습니다.` } });
+    }
+
+    const granted = [];
+    const errors = [];
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const productId = typeof item.productId === 'string' ? item.productId.trim() : '';
+        const count = Math.max(1, Math.floor(Number(item.count) || 0));
+        if (!productId || !ALLOWED_IDS.has(productId)) {
+          errors.push(`알 수 없는 productId: ${productId}`);
+          continue;
+        }
+        if (count <= 0) continue;
+        await tx.smeltStock.upsert({
+          where: { userId_productId: { userId: targetUser.id, productId } },
+          update: { count: { increment: count } },
+          create: { userId: targetUser.id, productId, count },
+        });
+        const meta = metaForProductId(productId);
+        granted.push({ productId, name: meta.name, emoji: meta.emoji, count });
+      }
+    });
+
+    res.json({ ok: true, targetNickname: targetUser.nickname, granted, errors });
+  } catch (err) {
     next(err);
   }
 });
