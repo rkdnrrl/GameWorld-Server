@@ -17,6 +17,7 @@ const {
 const { resolveCraftMaterials } = require('../lib/craftResolveMaterials');
 const { metaForProductId } = require('../lib/smeltProduct');
 const { logActivity } = require('../lib/activityLog');
+const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentArt');
 
 const router = Router();
 
@@ -160,6 +161,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       ? body.customName.trim().slice(0, 24) : null;
     const pixelArtData = Array.isArray(body.pixelArtData) && body.pixelArtData.length === 1024
       ? body.pixelArtData : null;
+    const pixelArtUrl = typeof body.pixelArtUrl === 'string' && body.pixelArtUrl.startsWith('data:image/')
+      ? body.pixelArtUrl : null;
 
     // 재료별 선호 슬롯 적합도 계산
     const correctCount = materials.filter((m) => preferredSlotFromId(m.id) === m.slotIndex).length;
@@ -299,7 +302,9 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
           desc,
           stats,
           sourceCatchIds: sourceStored,
-          pixelArt: pixelArtData ? pixelArtData : null,
+          pixelArt: pixelArtUrl
+            ? { imageDataUrl: pixelArtUrl, source: 'pixellab' }
+            : (pixelArtData || null),
         },
       });
       return {
@@ -471,6 +476,59 @@ router.delete('/equipment/:id', requireAuth, async (req, res, next) => {
       where: { id, userId: req.user.id },
     });
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** 한국어 이름에서 장비 슬롯 추출 */
+function _slotFromName(name) {
+  const n = String(name || '');
+  if (n.includes('투구')) return 'head';
+  if (n.includes('갑옷') || n.includes('흉갑')) return 'chest';
+  if (n.includes('장화') || n.includes('부츠')) return 'boots';
+  if (n.includes('장갑')) return 'gloves';
+  if (n.includes('반지') || n.includes('목걸이') || n.includes('망토') || n.includes('벨트')) return 'accessory';
+  return 'weapon';
+}
+
+/**
+ * POST /api/craft/generate-pixel-art
+ * 이름·티어 기반 PixelLab 이미지 생성. SharedPixelArt 테이블에 캐시.
+ * 같은 이름으로 재요청하면 캐시에서 즉시 반환.
+ */
+router.post('/generate-pixel-art', requireAuth, async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim().slice(0, 40);
+    const tier = String(req.body?.tier || 'common').toLowerCase();
+    if (!name) return res.status(400).json({ error: { message: 'name 필요' } });
+
+    const cacheKey = `equip-art:${name}`.slice(0, 100);
+
+    // 캐시 조회
+    const cached = await prisma.sharedPixelArt.findUnique({ where: { name: cacheKey } });
+    if (cached) return res.json({ imageDataUrl: cached.imageData, cached: true });
+
+    // PixelLab 생성
+    const imageDataUrl = await generateCraftedEquipmentPixelArt(
+      name, tier, undefined, null, _slotFromName(name),
+    );
+    if (!imageDataUrl) {
+      return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
+    }
+
+    // 캐시 저장
+    try {
+      await prisma.sharedPixelArt.upsert({
+        where: { name: cacheKey },
+        create: { name: cacheKey, imageData: imageDataUrl, rarity: tier, type: 'equipment' },
+        update: { imageData: imageDataUrl, rarity: tier },
+      });
+    } catch (e) {
+      console.warn('[generate-pixel-art] cache save failed (non-fatal):', e?.message);
+    }
+
+    res.json({ imageDataUrl, cached: false });
   } catch (err) {
     next(err);
   }
