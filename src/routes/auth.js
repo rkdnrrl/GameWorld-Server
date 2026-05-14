@@ -54,6 +54,42 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ user: { ...req.user, operatorAccess: userIsOperator(req.user) } });
 });
 
+// 닉네임 변경
+const patchMeSchema = z.object({
+  nickname: z
+    .string()
+    .min(2, '닉네임은 2자 이상이어야 합니다.')
+    .max(20, '닉네임은 20자 이하여야 합니다.'),
+});
+
+router.patch('/me', requireAuth, async (req, res, next) => {
+  try {
+    const { nickname } = patchMeSchema.parse(req.body);
+
+    const duplicate = await prisma.user.findFirst({
+      where: { nickname, NOT: { id: req.user.id } },
+      select: { id: true },
+    });
+    if (duplicate) {
+      return res.status(409).json({ error: { message: '이미 사용 중인 닉네임입니다.' } });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { nickname },
+      select: { id: true, email: true, nickname: true, coins: true, createdAt: true, isOperator: true },
+    });
+
+    res.json({ user: { ...updated, operatorAccess: userIsOperator(updated) } });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      const message = err.issues?.[0]?.message || '입력값이 올바르지 않습니다.';
+      return res.status(400).json({ error: { message } });
+    }
+    next(err);
+  }
+});
+
 // 회원 탈퇴
 router.delete('/me', requireAuth, async (req, res, next) => {
   try {

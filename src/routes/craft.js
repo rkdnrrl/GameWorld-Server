@@ -526,6 +526,48 @@ router.get('/recipe-check', requireAuth, async (req, res, next) => {
   }
 });
 
+// 티어별 내구도 1당 수리 비용 (코인)
+const REPAIR_COST_PER_DUR = { common: 5, rare: 12, epic: 30, legendary: 70 };
+
+router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ error: { message: 'id 필요' } });
+
+    const equip = await prisma.craftedEquipment.findUnique({ where: { id } });
+    if (!equip || equip.userId !== req.user.id) {
+      return res.status(404).json({ error: { message: '장비를 찾을 수 없습니다.' } });
+    }
+
+    const stats = equip.stats || {};
+    const durMax = Number(stats.durabilityMax || 0);
+    const durCur = stats.durability != null ? Number(stats.durability) : durMax;
+
+    if (durMax <= 0) return res.status(400).json({ error: { message: '내구도가 없는 장비입니다.' } });
+    if (durCur >= durMax) return res.status(400).json({ error: { message: '이미 완전한 상태입니다.' } });
+
+    const damage = durMax - durCur;
+    const tier = String(equip.tier || 'common').toLowerCase();
+    const costPerDur = REPAIR_COST_PER_DUR[tier] ?? REPAIR_COST_PER_DUR.common;
+    const cost = Math.max(1, Math.ceil(damage * costPerDur));
+
+    const newStats = { ...stats, durability: durMax };
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: req.user.id }, select: { coins: true } });
+      if ((user?.coins ?? 0) < cost) throw Object.assign(new Error('COINS'), { status: 402 });
+
+      await tx.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } });
+      return tx.craftedEquipment.update({ where: { id }, data: { stats: newStats } });
+    });
+
+    res.json({ ok: true, costPaid: cost, equipment: toPublicEquipment(updated) });
+  } catch (err) {
+    if (err.status === 402) return res.status(402).json({ error: { message: '코인이 부족합니다.' } });
+    next(err);
+  }
+});
+
 router.delete('/equipment/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '').trim();
