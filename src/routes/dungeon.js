@@ -11,6 +11,7 @@ router.get('/save', requireAuth, async (req, res, next) => {
     if (!row || !row.data) return res.json({ save: null });
     let cleaned = row.data;
     try { cleaned = await stripDeletedEquipment(req.user.id, row.data); } catch (e) { console.error('[stripDeletedEquipment]', e); }
+    try { cleaned = await refreshEquipmentDurability(req.user.id, cleaned); } catch (e) { console.error('[refreshEquipmentDurability]', e); }
     res.json({ save: cleaned });
   } catch (err) {
     next(err);
@@ -82,6 +83,69 @@ async function stripDeletedEquipment(userId, saveData) {
   }
   pl.maxHp = Math.max(50, 100 + pl.baseDef * 5 + hpSum);
   pl.hp    = Math.min(pl.hp, pl.maxHp);
+
+  return data;
+}
+
+// 로드 시 DB의 최신 내구도로 세이브 데이터 갱신 (대장간 수리 반영)
+async function refreshEquipmentDurability(userId, saveData) {
+  const p = saveData?.player;
+  if (!p) return saveData;
+
+  const ids = new Set();
+  if (p.equipment?.id != null) ids.add(String(p.equipment.id));
+  for (const wrapper of Object.values(p.equippedSlots || {})) {
+    const id = wrapper?.equip?.id ?? wrapper?.id;
+    if (id != null) ids.add(String(id));
+  }
+  if (ids.size === 0) return saveData;
+
+  const rows = await prisma.craftedEquipment.findMany({
+    where: { id: { in: [...ids] }, userId },
+    select: { id: true, stats: true },
+  });
+  if (rows.length === 0) return saveData;
+
+  const statMap = new Map(rows.map((r) => [String(r.id), r.stats || {}]));
+  const data = JSON.parse(JSON.stringify(saveData));
+  const pl = data.player;
+
+  // 무기 내구도 갱신
+  if (pl.equipment?.id != null) {
+    const s = statMap.get(String(pl.equipment.id));
+    if (s) {
+      const dbDur = s.durability != null ? Number(s.durability) : null;
+      const dbMax = s.durabilityMax != null ? Number(s.durabilityMax) : null;
+      if (dbDur != null) {
+        pl.durability = dbDur;
+        if (pl.equipment.stats) pl.equipment.stats.durability = dbDur;
+      }
+      if (dbMax != null) {
+        pl.durabilityMax = dbMax;
+        if (pl.equipment.stats) pl.equipment.stats.durabilityMax = dbMax;
+      }
+      if (dbDur != null && dbDur > 0) pl.durBroken = false;
+    }
+  }
+
+  // 방어구 슬롯 내구도 갱신
+  for (const slotId of Object.keys(pl.equippedSlots || {})) {
+    const wrapper = pl.equippedSlots[slotId];
+    const equipId = wrapper?.equip?.id ?? wrapper?.id;
+    if (equipId == null) continue;
+    const s = statMap.get(String(equipId));
+    if (!s) continue;
+    const dbDur = s.durability != null ? Number(s.durability) : null;
+    const dbMax = s.durabilityMax != null ? Number(s.durabilityMax) : null;
+    if (dbDur != null) {
+      wrapper.curDur = dbDur;
+      if (wrapper.equip?.stats) wrapper.equip.stats.durability = dbDur;
+    }
+    if (dbMax != null) {
+      wrapper.maxDur = dbMax;
+      if (wrapper.equip?.stats) wrapper.equip.stats.durabilityMax = dbMax;
+    }
+  }
 
   return data;
 }
