@@ -170,6 +170,9 @@ router.post('/save', requireAuth, async (req, res, next) => {
     // 장착 장비의 현재 내구도를 CraftedEquipment에 동기화
     await syncEquipmentDurability(req.user.id, data);
 
+    // 모듈 내구도 동기화
+    await syncModuleDurability(req.user.id, data);
+
     // 킬 당 강화 아이템 드롭 판정 (누적 드롭 후 일괄 upsert)
     const drops = {};
     for (let i = 0; i < killDiff; i++) {
@@ -242,6 +245,37 @@ async function syncEquipmentDurability(userId, saveData) {
   );
 }
 
+async function syncModuleDurability(userId, saveData) {
+  const playerData = saveData?.player;
+  if (!playerData) return;
+
+  const modDurs = playerData.moduleDurabilities;
+  if (!modDurs || typeof modDurs !== 'object') return;
+
+  const entries = Object.entries(modDurs).filter(([, v]) =>
+    v != null && Number.isFinite(Number(v)),
+  );
+  if (entries.length === 0) return;
+
+  const ids = entries.map(([id]) => id);
+  const rows = await prisma.module.findMany({
+    where: { id: { in: ids }, userId },
+    select: { id: true },
+  });
+  const validIds = new Set(rows.map(r => r.id));
+
+  await Promise.all(
+    entries
+      .filter(([id]) => validIds.has(id))
+      .map(([id, val]) =>
+        prisma.module.update({
+          where: { id },
+          data: { durability: Math.max(0, Math.round(Number(val))) },
+        }),
+      ),
+  );
+}
+
 // 장비 내구도 직접 동기화 (휴식층 진입 시 호출)
 router.post('/sync-durability', requireAuth, async (req, res, next) => {
   try {
@@ -287,10 +321,14 @@ router.post('/exit', requireAuth, async (req, res, next) => {
     const { data } = req.body;
     if (data) {
       await syncEquipmentDurability(req.user.id, data);
+      await syncModuleDurability(req.user.id, data);
     } else {
       // data 없으면 마지막 저장된 세이브에서 동기화
       const existing = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
-      if (existing?.data) await syncEquipmentDurability(req.user.id, existing.data);
+      if (existing?.data) {
+        await syncEquipmentDurability(req.user.id, existing.data);
+        await syncModuleDurability(req.user.id, existing.data);
+      }
     }
     await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
     res.json({ ok: true });
@@ -305,6 +343,7 @@ router.delete('/save', requireAuth, async (req, res, next) => {
     const existing = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
     if (existing?.data) {
       await syncEquipmentDurability(req.user.id, existing.data);
+      await syncModuleDurability(req.user.id, existing.data);
     }
     await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
     res.json({ ok: true });

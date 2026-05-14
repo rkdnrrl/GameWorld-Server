@@ -31,6 +31,7 @@ model User {
   dungeonSave           DungeonSave?
   activityLogs          ActivityLog[]
   enhancementStocks     EnhancementStock[]
+  modules               Module[]
 
   @@map("users")
 }
@@ -188,6 +189,27 @@ model EnhancementStock {
   @@id([userId, itemType])
   @@index([userId])
   @@map("enhancement_stock")
+}
+
+/// 장비 개조 모듈 (대장간에서 제작, 장비 슬롯에 장착)
+model Module {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String   @db.VarChar(80)
+  moduleType    String   @db.VarChar(32)
+  tier          String   @default("common") @db.VarChar(20)
+  keywords      Json
+  stats         Json
+  durability    Int      @default(25)
+  durabilityMax Int      @default(25)
+  equippedTo    String?  @db.VarChar(50)
+  equippedSlot  String?  @db.VarChar(32)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([equippedTo])
+  @@map("modules")
 }
 
 /// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)

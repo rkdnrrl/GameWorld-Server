@@ -18,5 +18,6 @@ router.use('/voxels', require('./voxels'));
 router.use('/ai', require('./ai'));
 router.use('/operator', require('./operator'));
 router.use('/dungeon', require('./dungeon'));
+router.use('/modules', require('./modules'));
 
 module.exports = router;
