@@ -7,6 +7,8 @@ const { prisma } = require('../db');
 const { ALLOWED_IDS, metaForProductId, SMELT_CATALOG } = require('../lib/smeltProduct');
 const baseNouns = require('../data/baseNouns.json');
 const FISHING_CACHE_PREFIX = 'shared:scrapyard:';
+const equipNouns = require('../data/equipNouns.json');
+const EQUIP_CACHE_PREFIX = 'equip-art:';
 
 const router = Router();
 
@@ -285,6 +287,31 @@ router.get('/fishing-items/status', requireAuth, requireOperator, async (req, re
 
     const cachedCount = items.filter((i) => i.hasCache).length;
     res.json({ total: items.length, cached: cachedCount, missing: items.length - cachedCount, items });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/operator/equip-art/status
+ * equipNouns.json 63개 명사 기준으로 DB 캐시 존재 여부 반환.
+ */
+router.get('/equip-art/status', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const allKeys = equipNouns.map((n) => `${EQUIP_CACHE_PREFIX}${n.noun}`);
+    const cachedRows = await prisma.sharedPixelArt.findMany({
+      where: { name: { in: allKeys } },
+      select: { name: true },
+    });
+    const cachedSet = new Set(cachedRows.map((r) => r.name));
+
+    const items = equipNouns.map((n) => ({
+      noun: n.noun,
+      slot: n.slot,
+      hasCache: cachedSet.has(`${EQUIP_CACHE_PREFIX}${n.noun}`),
+    }));
+
+    res.json({ total: items.length, cached: cachedSet.size, missing: items.length - cachedSet.size, items });
   } catch (err) {
     next(err);
   }

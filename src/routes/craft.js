@@ -2,7 +2,9 @@
 
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
+const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
+const equipNouns = require('../data/equipNouns.json');
 const {
   rollEquipmentStats,
   proficiencyLevelFromCount,
@@ -522,69 +524,67 @@ function _slotFromName(name) {
 }
 
 /**
- * POST /api/craft/generate-pixel-art
- * 이름·티어 기반 PixelLab 이미지 생성. SharedPixelArt 테이블에 캐시.
- * 같은 이름으로 재요청하면 캐시에서 즉시 반환.
+ * POST /api/craft/equip-pixel-art
+ * 장비 명사 기반 DB 캐시 조회 전용. AI 생성 없음.
+ * 이미지가 없으면 { imageDataUrl: null } 반환.
+ * body: { noun: string }
  */
-router.post('/generate-pixel-art', requireAuth, async (req, res, next) => {
+router.post('/equip-pixel-art', requireAuth, async (req, res, next) => {
   try {
-    const name = String(req.body?.name || '').trim().slice(0, 40);
-    const tier = String(req.body?.tier || 'common').toLowerCase();
-    if (!name) return res.status(400).json({ error: { message: 'name 필요' } });
+    const noun = String(req.body?.noun || '').trim().slice(0, 40);
+    if (!noun) return res.json({ imageDataUrl: null });
+    const cacheKey = `equip-art:${noun}`;
+    const cached = await prisma.sharedPixelArt.findUnique({ where: { name: cacheKey }, select: { imageData: true } });
+    res.json({ imageDataUrl: cached?.imageData || null });
+  } catch (err) {
+    next(err);
+  }
+});
 
-    const cacheKey = `equip-art:${name}`.slice(0, 100);
+/**
+ * POST /api/craft/equip-art/generate-one
+ * 운영자 전용: equipNouns.json의 명사 하나에 대해 이미지 생성·캐시.
+ * body: { noun: string }
+ */
+router.post('/equip-art/generate-one', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const noun = String(req.body?.noun || '').trim();
+    if (!noun) return res.status(400).json({ error: { message: 'noun 필요' } });
 
-    // 캐시 조회 (캐시 히트는 보상 없음)
-    const cached = await prisma.sharedPixelArt.findUnique({ where: { name: cacheKey } });
-    if (cached) return res.json({ imageDataUrl: cached.imageData, cached: true, coinReward: 0 });
+    const nounMeta = equipNouns.find((n) => n.noun === noun);
+    if (!nounMeta) return res.status(404).json({ error: { message: '알고리즘 목록에 없는 명사입니다.' } });
 
-    // 동일 키 in-flight 중복 방지: 이미 요청 중이면 같은 Promise를 공유
+    const cacheKey = `equip-art:${noun}`;
+
+    // 동시 요청 제한 (기존 in-flight/semaphore 재사용)
     if (_pixelLabInFlight.has(cacheKey)) {
-      const { imageDataUrl, elapsedSec } = await _pixelLabInFlight.get(cacheKey);
-      return res.json({ imageDataUrl, cached: false, coinReward: 0, elapsedSec });
+      const { imageDataUrl } = await _pixelLabInFlight.get(cacheKey);
+      return res.json({ ok: true, noun, imageDataUrl });
     }
 
-    // PixelLab 생성 — 동시 실행 제한 + in-flight 등록
-    const genStart = Date.now();
     const genPromise = _pixelLabEnqueue(() =>
-      generateCraftedEquipmentPixelArt(name, tier, undefined, null, _slotFromName(name)),
-    ).then((imageDataUrl) => ({ imageDataUrl, elapsedSec: Math.round((Date.now() - genStart) / 1000) }));
+      generateCraftedEquipmentPixelArt(noun, 'epic', undefined, null, nounMeta.slot),
+    ).then((imageDataUrl) => ({ imageDataUrl }));
 
     _pixelLabInFlight.set(cacheKey, genPromise);
-    let imageDataUrl, elapsedSec;
+    let imageDataUrl;
     try {
-      ({ imageDataUrl, elapsedSec } = await genPromise);
+      ({ imageDataUrl } = await genPromise);
     } finally {
       _pixelLabInFlight.delete(cacheKey);
     }
 
     if (!imageDataUrl) {
-      return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
+      return res.status(503).json({ error: { message: 'PixelLab 생성 실패' } });
     }
 
-    // 캐시 저장
-    try {
-      await prisma.sharedPixelArt.upsert({
-        where: { name: cacheKey },
-        create: { name: cacheKey, imageData: imageDataUrl, rarity: tier, type: 'equipment' },
-        update: { imageData: imageDataUrl, rarity: tier },
-      });
-    } catch (e) {
-      console.warn('[generate-pixel-art] cache save failed (non-fatal):', e?.message);
-    }
+    await prisma.sharedPixelArt.upsert({
+      where: { name: cacheKey },
+      create: { name: cacheKey, imageData: imageDataUrl, rarity: 'epic', type: 'equipment' },
+      update: { imageData: imageDataUrl },
+    });
 
-    // 대기 보상: AI 대기 공통 공식 (20초당 100원, 최대 200원)
-    const coinReward = Math.min(200, Math.round((elapsedSec / 20) * 100));
-    try {
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: { coins: { increment: coinReward } },
-      });
-    } catch (e) {
-      console.warn('[generate-pixel-art] coin reward failed (non-fatal):', e?.message);
-    }
-
-    res.json({ imageDataUrl, cached: false, coinReward, elapsedSec });
+    res.json({ ok: true, noun, imageDataUrl });
   } catch (err) {
     next(err);
   }
