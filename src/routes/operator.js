@@ -270,14 +270,10 @@ router.get('/fishing-items/status', requireAuth, requireOperator, async (req, re
       select: { name: true },
     });
 
-    // 각 캐시 항목에서 명사 부분 추출 (형식: "shared:scrapyard:{형용사} {명사}")
-    const cachedNounSet = new Set();
-    for (const row of cachedRows) {
-      const itemName = row.name.slice(FISHING_CACHE_PREFIX.length);
-      if (itemName.includes(' ')) {
-        cachedNounSet.add(itemName.slice(itemName.indexOf(' ') + 1));
-      }
-    }
+    // 캐시 키 형식: "shared:scrapyard:{명사}" — 명사 이름 그대로 Set에 추가
+    const cachedNounSet = new Set(
+      cachedRows.map((row) => row.name.slice(FISHING_CACHE_PREFIX.length))
+    );
 
     const items = baseNouns.map((noun) => ({
       name: noun.name,

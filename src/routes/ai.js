@@ -813,6 +813,8 @@ router.post('/fishing-scan-bonus', requireAuth, async (req, res) => {
  * DB에 캐시된 스크랩야드 아이템(shared:scrapyard: 접두사) 중 랜덤 반환.
  * 운영 페이지에서 미리 생성해 두어야 낚시에서 나올 수 있음.
  */
+const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
+
 router.post('/fishing-common', requireAuth, async (req, res) => {
   try {
     const cachedRows = await prisma.sharedPixelArt.findMany({
@@ -825,14 +827,18 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
     }
 
     const picked = cachedRows[Math.floor(Math.random() * cachedRows.length)];
-    const itemName = picked.name.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length);
-
-    // 명사 추출: "형용사 명사" 형식에서 첫 단어 뒤가 명사
-    const nounName = itemName.includes(' ') ? itemName.slice(itemName.indexOf(' ') + 1) : itemName;
+    const nounName = picked.name.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length);
     const noun = baseNouns.find((n) => n.name === nounName) || {};
+
+    // 클라이언트가 결정한 등급으로 형용사 선택 (없으면 common)
+    const rarity = VALID_RARITIES.includes(req.body?.rarity) ? req.body.rarity : 'common';
+    const adjPool = adjectives[rarity] || adjectives.common || [];
+    const adj = adjPool[Math.floor(Math.random() * adjPool.length)] || '낡은';
+    const itemName = `${adj} ${nounName}`;
 
     return res.json({
       name: itemName,
+      rarity,
       type: 'scrap',
       emoji: noun.emoji || '📦',
       imageUrl: picked.imageData,
@@ -860,12 +866,10 @@ router.post('/fishing-items/generate-one', requireAuth, requireOperator, async (
     const noun = baseNouns.find((n) => n.name === nounName);
     if (!noun) return res.status(404).json({ error: { message: '알고리즘 명사 목록에 없습니다.' } });
 
-    const adjPool = adjectives.common || [];
-    const adj = adjPool[Math.floor(Math.random() * adjPool.length)] || '낡은';
-    const itemName = `${adj} ${noun.name}`;
-    const cacheKey = sharedScrapyardCacheKey(itemName);
+    // 명사 자체로 이미지 생성·캐시 (형용사는 낚시 시점에 랜덤으로 붙임)
+    const cacheKey = sharedScrapyardCacheKey(noun.name);
 
-    const imageUrl = await generatePixelLabImage(itemName, 'common', 'scrap', noun.visualEn || '');
+    const imageUrl = await generatePixelLabImage(noun.name, 'common', 'scrap', noun.visualEn || '');
     if (!imageUrl) {
       return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
     }
@@ -876,7 +880,7 @@ router.post('/fishing-items/generate-one', requireAuth, requireOperator, async (
       update: { imageData: imageUrl },
     });
 
-    return res.json({ ok: true, nounName: noun.name, name: itemName, emoji: noun.emoji, imageUrl });
+    return res.json({ ok: true, nounName: noun.name, name: noun.name, emoji: noun.emoji, imageUrl });
   } catch (err) {
     console.error('[AI /fishing-items/generate-one]', err.message || err);
     return res.status(500).json({ error: { message: '오류가 발생했습니다.' } });
