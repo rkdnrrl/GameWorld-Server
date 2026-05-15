@@ -505,7 +505,7 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       updated = await prisma.$transaction([
         prisma.craftedEquipment.update({ where: { id }, data: { stats: newStats } }),
         ...(cost > 0
-          ? [prisma.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } })]
+          ? [prisma.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } }, select: { id: true, coins: true } })]
           : []),
       ]);
     } catch (txErr) {
