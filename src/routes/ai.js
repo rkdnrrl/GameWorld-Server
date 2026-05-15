@@ -765,12 +765,13 @@ router.post('/catch', requireAuth, async (req, res) => {
    response: { imageUrl, cached, bonusCoins: 0, coins: null } — 스캔 보너스는 POST /api/ai/fishing-scan-bonus 에서만 지급
 ──────────────────────────────────────────────────────────── */
 
-/** 20초당 100원: 경과 ms가 20초의 몇 배인지에 비례 (예: 20s→100, 40s→200). 최대 180초 반영. */
+/** AI 대기 보상 공통 공식: 20초당 100원, 최대 200원 (40초 이상이면 최대값) */
 const SCAN_BONUS_MS_PER_100 = 20_000;
+const SCAN_BONUS_MAX = 200;
 
 function computeFishingScanBonusFromElapsedMs(rawMs) {
-  const ms = Math.min(180_000, Math.max(0, Math.floor(Number(rawMs) || 0)));
-  return Math.min(999_999, Math.round((ms / SCAN_BONUS_MS_PER_100) * 100));
+  const ms = Math.max(0, Math.floor(Number(rawMs) || 0));
+  return Math.min(SCAN_BONUS_MAX, Math.round((ms / SCAN_BONUS_MS_PER_100) * 100));
 }
 
 async function grantFishingScanBonusCoins(userId, amount) {

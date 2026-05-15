@@ -534,8 +534,8 @@ router.post('/generate-pixel-art', requireAuth, async (req, res, next) => {
       console.warn('[generate-pixel-art] cache save failed (non-fatal):', e?.message);
     }
 
-    // 대기 보상: 실제 생성 시간 기준 코인 지급 (최소 2, 최대 50)
-    const coinReward = Math.min(50, Math.max(2, Math.ceil(elapsedSec * 1.5)));
+    // 대기 보상: AI 대기 공통 공식 (20초당 100원, 최대 200원)
+    const coinReward = Math.min(200, Math.round((elapsedSec / 20) * 100));
     try {
       await prisma.user.update({
         where: { id: req.user.id },
