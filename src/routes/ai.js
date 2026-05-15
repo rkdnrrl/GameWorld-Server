@@ -892,13 +892,15 @@ router.post('/fishing-items/generate-one', requireAuth, requireOperator, async (
       return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
     }
 
+    const nounTier = VALID_RARITIES.includes(noun.tier) ? noun.tier : 'common';
+
     await prisma.sharedPixelArt.upsert({
       where: { name: cacheKey },
-      create: { name: cacheKey, imageData: imageUrl, rarity: 'common', type: 'scrap' },
-      update: { imageData: imageUrl },
+      create: { name: cacheKey, imageData: imageUrl, rarity: nounTier, type: 'scrap' },
+      update: { imageData: imageUrl, rarity: nounTier },
     });
 
-    return res.json({ ok: true, nounName: noun.name, name: noun.name, emoji: noun.emoji, imageUrl });
+    return res.json({ ok: true, nounName: noun.name, name: noun.name, emoji: noun.emoji, imageUrl, tier: nounTier });
   } catch (err) {
     console.error('[AI /fishing-items/generate-one]', err.message || err);
     return res.status(500).json({ error: { message: '오류가 발생했습니다.' } });
