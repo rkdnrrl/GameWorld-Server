@@ -826,19 +826,37 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
       return res.status(503).json({ error: { message: '아직 낚시 아이템이 준비되지 않았습니다.' } });
     }
 
-    const picked = cachedRows[Math.floor(Math.random() * cachedRows.length)];
+    // 클라이언트가 결정한 형용사 등급으로 노운 필터링 (명사 tier <= 형용사 rarity)
+    const TIER_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 };
+    const adjRarity = VALID_RARITIES.includes(req.body?.rarity) ? req.body.rarity : 'common';
+    const adjLevel = TIER_ORDER[adjRarity];
+
+    // 형용사 등급 이하의 명사만 후보로 (등급이 높은 명사는 더 높은 형용사가 붙어야 등장)
+    const eligible = cachedRows.filter((row) => {
+      const nounName = row.name.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length);
+      const noun = baseNouns.find((n) => n.name === nounName);
+      const nounLevel = TIER_ORDER[noun?.tier || 'common'];
+      return nounLevel <= adjLevel;
+    });
+    const pool = eligible.length > 0 ? eligible : cachedRows;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
     const nounName = picked.name.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length);
     const noun = baseNouns.find((n) => n.name === nounName) || {};
 
-    // 클라이언트가 결정한 등급으로 형용사 선택 (없으면 common)
-    const rarity = VALID_RARITIES.includes(req.body?.rarity) ? req.body.rarity : 'common';
-    const adjPool = adjectives[rarity] || adjectives.common || [];
+    // 실제 난이도 = max(형용사 등급, 명사 tier)
+    const nounTier = VALID_RARITIES.includes(noun.tier) ? noun.tier : 'common';
+    const finalRarity = TIER_ORDER[nounTier] > adjLevel ? nounTier : adjRarity;
+
+    const adjPool = adjectives[adjRarity] || adjectives.common || [];
     const adj = adjPool[Math.floor(Math.random() * adjPool.length)] || '낡은';
     const itemName = `${adj} ${nounName}`;
 
     return res.json({
       name: itemName,
-      rarity,
+      rarity: finalRarity,   // 미니게임 난이도용 (형용사·명사 중 높은 것)
+      nounTier,              // 명사 자체 등급 (재료 품질 결정)
+      adjRarity,             // 형용사 등급 (재료 수량 결정)
+      smeltProducts: noun.smeltProducts || [],
       type: 'scrap',
       emoji: noun.emoji || '📦',
       imageUrl: picked.imageData,

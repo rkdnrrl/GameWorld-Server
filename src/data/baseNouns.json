@@ -1,615 +1,5422 @@
 [
-  { "name": "냄비", "emoji": "🫕", "smeltProducts": ["iron"], "visualEn": "cooking pot with two handles" },
-  { "name": "프라이팬", "emoji": "🍳", "smeltProducts": ["iron"], "visualEn": "frying pan with long handle" },
-  { "name": "주전자", "emoji": "🫖", "smeltProducts": ["iron"], "visualEn": "metal kettle with spout" },
-  { "name": "식칼", "emoji": "🔪", "smeltProducts": ["iron"], "visualEn": "kitchen knife with wide blade" },
-  { "name": "과도", "emoji": "🔪", "smeltProducts": ["iron"], "visualEn": "small paring knife" },
-  { "name": "가위", "emoji": "✂️", "smeltProducts": ["iron"], "visualEn": "metal scissors" },
-  { "name": "자물쇠", "emoji": "🔒", "smeltProducts": ["iron"], "visualEn": "padlock with shackle" },
-  { "name": "열쇠", "emoji": "🔑", "smeltProducts": ["iron"], "visualEn": "old metal key" },
-  { "name": "못", "emoji": "📌", "smeltProducts": ["iron"], "visualEn": "iron nail" },
-  { "name": "체인", "emoji": "⛓️", "smeltProducts": ["iron"], "visualEn": "metal chain links" },
-  { "name": "자석", "emoji": "🧲", "smeltProducts": ["iron"], "visualEn": "horseshoe magnet" },
-  { "name": "통조림", "emoji": "🥫", "smeltProducts": ["iron"], "visualEn": "tin can with label" },
-  { "name": "금고", "emoji": "🗄️", "smeltProducts": ["iron"], "visualEn": "small metal safe box" },
-  { "name": "스프링", "emoji": "🌀", "smeltProducts": ["iron"], "visualEn": "metal coil spring" },
-  { "name": "철망", "emoji": "🪤", "smeltProducts": ["iron"], "visualEn": "metal wire mesh" },
-  { "name": "낚싯바늘", "emoji": "🪝", "smeltProducts": ["iron"], "visualEn": "fishing hook" },
-  { "name": "낚시추", "emoji": "⚓", "smeltProducts": ["iron"], "visualEn": "fishing sinker weight" },
-  { "name": "볼트", "emoji": "🔩", "smeltProducts": ["iron"], "visualEn": "metal bolt and nut" },
-  { "name": "나이프", "emoji": "🗡️", "smeltProducts": ["iron"], "visualEn": "pocket knife" },
-  { "name": "포크", "emoji": "🍴", "smeltProducts": ["iron"], "visualEn": "metal fork" },
-  { "name": "삽", "emoji": "⛏️", "smeltProducts": ["iron"], "visualEn": "metal shovel" },
-  { "name": "도끼", "emoji": "🪓", "smeltProducts": ["iron"], "visualEn": "iron axe head" },
-  { "name": "망치", "emoji": "🔨", "smeltProducts": ["iron"], "visualEn": "metal hammer" },
-  { "name": "렌치", "emoji": "🔧", "smeltProducts": ["iron"], "visualEn": "metal wrench" },
-  { "name": "철봉", "emoji": "🏋️", "smeltProducts": ["iron"], "visualEn": "iron barbell rod" },
-  { "name": "덤벨", "emoji": "🏋️", "smeltProducts": ["iron"], "visualEn": "iron dumbbell" },
-  { "name": "쇠젓가락", "emoji": "🥢", "smeltProducts": ["iron"], "visualEn": "metal chopsticks" },
-  { "name": "국자", "emoji": "🥄", "smeltProducts": ["iron"], "visualEn": "metal soup ladle" },
-  { "name": "석쇠", "emoji": "🍖", "smeltProducts": ["iron"], "visualEn": "metal grill grate" },
-  { "name": "와인오프너", "emoji": "🍷", "smeltProducts": ["iron"], "visualEn": "corkscrew wine opener" },
-  { "name": "병따개", "emoji": "🍺", "smeltProducts": ["iron"], "visualEn": "metal bottle opener" },
-  { "name": "캔따개", "emoji": "🥫", "smeltProducts": ["iron"], "visualEn": "manual can opener" },
-  { "name": "거품기", "emoji": "🍳", "smeltProducts": ["iron"], "visualEn": "metal whisk" },
-  { "name": "집게", "emoji": "🦀", "smeltProducts": ["iron"], "visualEn": "metal kitchen tongs" },
-  { "name": "압력솥", "emoji": "🫕", "smeltProducts": ["iron", "rubber"], "visualEn": "pressure cooker with safety valve" },
-  { "name": "밥솥뚜껑", "emoji": "🫕", "smeltProducts": ["iron", "glass"], "visualEn": "pot lid with glass window" },
-  { "name": "작살", "emoji": "🔱", "smeltProducts": ["iron"], "visualEn": "metal spear" },
-  { "name": "검", "emoji": "⚔️", "smeltProducts": ["iron"], "visualEn": "iron sword" },
-  { "name": "창", "emoji": "🏹", "smeltProducts": ["iron", "resin"], "visualEn": "iron-tipped spear" },
-  { "name": "방패", "emoji": "🛡️", "smeltProducts": ["iron"], "visualEn": "iron shield" },
-  { "name": "화살촉", "emoji": "🏹", "smeltProducts": ["iron"], "visualEn": "iron arrowhead" },
-  { "name": "총알", "emoji": "🔫", "smeltProducts": ["iron", "lead"], "visualEn": "metal bullet" },
-  { "name": "드라이버", "emoji": "🔧", "smeltProducts": ["iron", "resin"], "visualEn": "screwdriver" },
-  { "name": "플라이어", "emoji": "🔧", "smeltProducts": ["iron"], "visualEn": "metal pliers" },
-  { "name": "줄자", "emoji": "📏", "smeltProducts": ["iron"], "visualEn": "metal tape measure" },
-  { "name": "톱", "emoji": "🪚", "smeltProducts": ["iron", "resin"], "visualEn": "hand saw" },
-  { "name": "손전등", "emoji": "🔦", "smeltProducts": ["iron", "glass"], "visualEn": "metal flashlight" },
-  { "name": "자전거자물쇠", "emoji": "🔒", "smeltProducts": ["iron"], "visualEn": "bicycle U-lock" },
-  { "name": "열쇠고리", "emoji": "🔑", "smeltProducts": ["iron"], "visualEn": "metal key ring with keys" },
-  { "name": "호미", "emoji": "⛏️", "smeltProducts": ["iron", "resin"], "visualEn": "garden hoe" },
-
-  { "name": "동전", "emoji": "🪙", "smeltProducts": ["copper", "nickel"], "visualEn": "old coin" },
-  { "name": "구리배관", "emoji": "🔌", "smeltProducts": ["copper"], "visualEn": "copper pipe section" },
-  { "name": "놋그릇", "emoji": "🥣", "smeltProducts": ["copper", "zinc"], "visualEn": "brass bowl" },
-  { "name": "전선", "emoji": "〰️", "smeltProducts": ["copper"], "visualEn": "bundle of copper wire" },
-  { "name": "구리냄비", "emoji": "🫕", "smeltProducts": ["copper"], "visualEn": "copper cooking pot" },
-  { "name": "트럼펫", "emoji": "🎺", "smeltProducts": ["copper", "zinc"], "visualEn": "brass trumpet" },
-  { "name": "색소폰", "emoji": "🎷", "smeltProducts": ["copper", "zinc"], "visualEn": "brass saxophone" },
-  { "name": "나팔", "emoji": "📯", "smeltProducts": ["copper"], "visualEn": "copper horn" },
-  { "name": "구리동상조각", "emoji": "🗿", "smeltProducts": ["copper"], "visualEn": "copper statue fragment" },
-
-  { "name": "금반지", "emoji": "💍", "smeltProducts": ["gold"], "visualEn": "gold ring" },
-  { "name": "금목걸이", "emoji": "📿", "smeltProducts": ["gold"], "visualEn": "gold necklace chain" },
-  { "name": "금팔찌", "emoji": "💛", "smeltProducts": ["gold"], "visualEn": "gold bracelet" },
-  { "name": "금귀걸이", "emoji": "🟡", "smeltProducts": ["gold"], "visualEn": "gold earring" },
-  { "name": "금시계", "emoji": "⌚", "smeltProducts": ["gold", "circuit"], "visualEn": "gold wristwatch" },
-  { "name": "금화", "emoji": "🪙", "smeltProducts": ["gold"], "visualEn": "gold coin" },
-  { "name": "금도금접시", "emoji": "🍽️", "smeltProducts": ["gold", "iron"], "visualEn": "gold plated plate" },
-  { "name": "금왕관", "emoji": "👑", "smeltProducts": ["gold"], "visualEn": "gold crown" },
-
-  { "name": "은수저", "emoji": "🥄", "smeltProducts": ["silver"], "visualEn": "silver spoon" },
-  { "name": "은반지", "emoji": "💍", "smeltProducts": ["silver"], "visualEn": "silver ring" },
-  { "name": "은목걸이", "emoji": "📿", "smeltProducts": ["silver"], "visualEn": "silver necklace" },
-  { "name": "은팔찌", "emoji": "⚪", "smeltProducts": ["silver"], "visualEn": "silver bracelet" },
-  { "name": "은화", "emoji": "🪙", "smeltProducts": ["silver"], "visualEn": "silver coin" },
-  { "name": "은귀걸이", "emoji": "⚪", "smeltProducts": ["silver"], "visualEn": "silver earring" },
-  { "name": "은촛대", "emoji": "🕯️", "smeltProducts": ["silver"], "visualEn": "silver candlestick" },
-
-  { "name": "알루미늄캔", "emoji": "🥤", "smeltProducts": ["aluminum"], "visualEn": "aluminum soda can" },
-  { "name": "알루미늄호일", "emoji": "🌯", "smeltProducts": ["aluminum"], "visualEn": "crumpled aluminum foil" },
-  { "name": "알루미늄창틀", "emoji": "🪟", "smeltProducts": ["aluminum"], "visualEn": "aluminum window frame" },
-  { "name": "알루미늄냄비", "emoji": "🫕", "smeltProducts": ["aluminum"], "visualEn": "aluminum pot" },
-  { "name": "사다리", "emoji": "🪜", "smeltProducts": ["aluminum"], "visualEn": "aluminum ladder" },
-  { "name": "야구배트", "emoji": "⚾", "smeltProducts": ["aluminum"], "visualEn": "aluminum baseball bat" },
-
-  { "name": "스마트폰", "emoji": "📱", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "cracked smartphone" },
-  { "name": "휴대폰", "emoji": "📱", "smeltProducts": ["circuit", "plastic"], "visualEn": "old mobile phone" },
-  { "name": "노트북", "emoji": "💻", "smeltProducts": ["circuit", "aluminum", "plastic"], "visualEn": "laptop computer" },
-  { "name": "태블릿", "emoji": "📲", "smeltProducts": ["circuit", "glass"], "visualEn": "tablet device" },
-  { "name": "게임패드", "emoji": "🎮", "smeltProducts": ["circuit", "plastic"], "visualEn": "game controller" },
-  { "name": "키보드", "emoji": "⌨️", "smeltProducts": ["circuit", "plastic"], "visualEn": "computer keyboard" },
-  { "name": "마우스", "emoji": "🖱️", "smeltProducts": ["circuit", "plastic"], "visualEn": "computer mouse" },
-  { "name": "헤드셋", "emoji": "🎧", "smeltProducts": ["circuit", "plastic"], "visualEn": "gaming headset" },
-  { "name": "모니터", "emoji": "🖥️", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "computer monitor" },
-  { "name": "그래픽카드", "emoji": "🖥️", "smeltProducts": ["circuit", "silicon"], "visualEn": "graphics card with fans" },
-  { "name": "충전기", "emoji": "🔌", "smeltProducts": ["circuit", "rubber"], "visualEn": "phone charger" },
-  { "name": "웹캠", "emoji": "📷", "smeltProducts": ["circuit", "plastic", "glass"], "visualEn": "webcam" },
-  { "name": "이어폰", "emoji": "🎧", "smeltProducts": ["circuit", "rubber"], "visualEn": "earphones" },
-  { "name": "스피커", "emoji": "🔊", "smeltProducts": ["circuit", "plastic"], "visualEn": "portable speaker" },
-  { "name": "마이크", "emoji": "🎤", "smeltProducts": ["circuit", "iron"], "visualEn": "microphone" },
-  { "name": "손목시계", "emoji": "⌚", "smeltProducts": ["circuit", "glass"], "visualEn": "digital wristwatch" },
-  { "name": "전자계산기", "emoji": "🖩", "smeltProducts": ["circuit", "plastic"], "visualEn": "pocket calculator" },
-  { "name": "리모컨", "emoji": "📺", "smeltProducts": ["circuit", "plastic"], "visualEn": "TV remote control" },
-  { "name": "배터리팩", "emoji": "🔋", "smeltProducts": ["battery", "lithium"], "visualEn": "portable battery pack" },
-  { "name": "보조배터리", "emoji": "🔋", "smeltProducts": ["battery", "lithium"], "visualEn": "power bank" },
-  { "name": "드론", "emoji": "🚁", "smeltProducts": ["circuit", "plastic", "aluminum"], "visualEn": "small quad-rotor drone" },
-  { "name": "전동칫솔", "emoji": "🪥", "smeltProducts": ["circuit", "plastic"], "visualEn": "electric toothbrush" },
-  { "name": "면도기", "emoji": "🪒", "smeltProducts": ["circuit", "iron"], "visualEn": "electric razor" },
-  { "name": "카메라", "emoji": "📷", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "digital camera" },
-  { "name": "USB드라이브", "emoji": "💾", "smeltProducts": ["circuit", "plastic"], "visualEn": "USB flash drive" },
-  { "name": "MP3플레이어", "emoji": "🎵", "smeltProducts": ["circuit", "plastic"], "visualEn": "portable MP3 player" },
-  { "name": "포터블게임기", "emoji": "🎮", "smeltProducts": ["circuit", "plastic", "glass"], "visualEn": "handheld game console" },
-  { "name": "스마트워치", "emoji": "⌚", "smeltProducts": ["circuit", "glass"], "visualEn": "smartwatch" },
-  { "name": "블루투스스피커", "emoji": "🔊", "smeltProducts": ["circuit", "plastic"], "visualEn": "bluetooth speaker" },
-  { "name": "전자책리더", "emoji": "📖", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "e-book reader" },
-  { "name": "공유기", "emoji": "📡", "smeltProducts": ["circuit", "plastic"], "visualEn": "WiFi router" },
-  { "name": "CCTV카메라", "emoji": "📷", "smeltProducts": ["circuit", "glass", "iron"], "visualEn": "security camera" },
-  { "name": "도어락", "emoji": "🔒", "smeltProducts": ["circuit", "iron"], "visualEn": "electronic door lock" },
-  { "name": "전자저울", "emoji": "⚖️", "smeltProducts": ["circuit", "iron"], "visualEn": "digital kitchen scale" },
-  { "name": "초음파세척기", "emoji": "🫧", "smeltProducts": ["circuit", "plastic", "iron"], "visualEn": "ultrasonic cleaner" },
-  { "name": "레이저포인터", "emoji": "🔴", "smeltProducts": ["circuit", "plastic"], "visualEn": "laser pointer" },
-
-  { "name": "유리병", "emoji": "🍶", "smeltProducts": ["glass"], "visualEn": "glass bottle" },
-  { "name": "안경", "emoji": "👓", "smeltProducts": ["glass", "iron"], "visualEn": "eyeglasses" },
-  { "name": "선글라스", "emoji": "🕶️", "smeltProducts": ["glass", "plastic"], "visualEn": "sunglasses" },
-  { "name": "거울", "emoji": "🪞", "smeltProducts": ["glass"], "visualEn": "hand mirror" },
-  { "name": "유리컵", "emoji": "🥃", "smeltProducts": ["glass"], "visualEn": "glass tumbler" },
-  { "name": "어항", "emoji": "🐠", "smeltProducts": ["glass"], "visualEn": "small fish tank" },
-  { "name": "고글", "emoji": "🥽", "smeltProducts": ["glass", "rubber"], "visualEn": "protective goggles" },
-  { "name": "망원경", "emoji": "🔭", "smeltProducts": ["glass", "iron"], "visualEn": "telescope" },
-  { "name": "현미경", "emoji": "🔬", "smeltProducts": ["glass", "iron"], "visualEn": "microscope" },
-  { "name": "나침반", "emoji": "🧭", "smeltProducts": ["glass", "iron"], "visualEn": "compass" },
-  { "name": "와인잔", "emoji": "🍷", "smeltProducts": ["glass"], "visualEn": "wine glass" },
-  { "name": "맥주잔", "emoji": "🍺", "smeltProducts": ["glass"], "visualEn": "beer mug" },
-  { "name": "샴페인잔", "emoji": "🥂", "smeltProducts": ["glass"], "visualEn": "champagne flute" },
-  { "name": "유리액자", "emoji": "🖼️", "smeltProducts": ["glass", "resin"], "visualEn": "glass picture frame" },
-  { "name": "돋보기", "emoji": "🔍", "smeltProducts": ["glass", "iron"], "visualEn": "magnifying glass" },
-  { "name": "쌍안경", "emoji": "🔭", "smeltProducts": ["glass", "iron"], "visualEn": "binoculars" },
-  { "name": "수족관", "emoji": "🐟", "smeltProducts": ["glass"], "visualEn": "aquarium tank" },
-  { "name": "시험관", "emoji": "🧪", "smeltProducts": ["glass"], "visualEn": "test tube" },
-  { "name": "비커", "emoji": "🧪", "smeltProducts": ["glass"], "visualEn": "glass beaker" },
-  { "name": "플라스크", "emoji": "⚗️", "smeltProducts": ["glass"], "visualEn": "lab flask" },
-  { "name": "온도계", "emoji": "🌡️", "smeltProducts": ["glass", "iron"], "visualEn": "glass thermometer" },
-
-  { "name": "타이어", "emoji": "🛞", "smeltProducts": ["rubber"], "visualEn": "worn car tire" },
-  { "name": "고무장갑", "emoji": "🧤", "smeltProducts": ["rubber"], "visualEn": "rubber gloves" },
-  { "name": "고무오리", "emoji": "🦆", "smeltProducts": ["rubber"], "visualEn": "rubber duck toy" },
-  { "name": "풍선", "emoji": "🎈", "smeltProducts": ["rubber"], "visualEn": "deflated balloon" },
-  { "name": "지우개", "emoji": "✏️", "smeltProducts": ["rubber"], "visualEn": "rubber eraser" },
-  { "name": "고무밴드", "emoji": "🔴", "smeltProducts": ["rubber"], "visualEn": "rubber band" },
-  { "name": "고무장화", "emoji": "🥾", "smeltProducts": ["rubber"], "visualEn": "rubber rain boots" },
-  { "name": "고무호스", "emoji": "🌊", "smeltProducts": ["rubber"], "visualEn": "rubber garden hose" },
-  { "name": "스쿠버마스크", "emoji": "🤿", "smeltProducts": ["rubber", "glass"], "visualEn": "diving mask" },
-  { "name": "오리발", "emoji": "🤿", "smeltProducts": ["rubber"], "visualEn": "swimming fins" },
-  { "name": "고무인형", "emoji": "🎎", "smeltProducts": ["rubber"], "visualEn": "rubber toy figure" },
-  { "name": "라텍스장갑", "emoji": "🧤", "smeltProducts": ["rubber"], "visualEn": "latex gloves" },
-  { "name": "지압슬리퍼", "emoji": "🩴", "smeltProducts": ["rubber"], "visualEn": "rubber massage slippers" },
-  { "name": "수중마스크", "emoji": "🤿", "smeltProducts": ["rubber", "glass"], "visualEn": "underwater diving mask" },
-
-  { "name": "플라스틱병", "emoji": "🧴", "smeltProducts": ["plastic"], "visualEn": "plastic bottle" },
-  { "name": "도시락통", "emoji": "🍱", "smeltProducts": ["plastic"], "visualEn": "plastic lunch box" },
-  { "name": "컵라면", "emoji": "🍜", "smeltProducts": ["plastic"], "visualEn": "instant noodle cup" },
-  { "name": "페트병", "emoji": "🧃", "smeltProducts": ["plastic"], "visualEn": "PET plastic bottle" },
-  { "name": "바구니", "emoji": "🧺", "smeltProducts": ["plastic"], "visualEn": "plastic basket" },
-  { "name": "헬멧", "emoji": "⛑️", "smeltProducts": ["plastic"], "visualEn": "safety helmet" },
-  { "name": "마스크", "emoji": "😷", "smeltProducts": ["plastic"], "visualEn": "disposable face mask" },
-  { "name": "케이스", "emoji": "📦", "smeltProducts": ["plastic"], "visualEn": "plastic case" },
-  { "name": "호루라기", "emoji": "📣", "smeltProducts": ["plastic"], "visualEn": "plastic whistle" },
-  { "name": "빨대", "emoji": "🥤", "smeltProducts": ["plastic"], "visualEn": "bunch of plastic straws" },
-  { "name": "프리스비", "emoji": "🥏", "smeltProducts": ["plastic"], "visualEn": "flying disc toy" },
-  { "name": "레고블록", "emoji": "🧱", "smeltProducts": ["plastic"], "visualEn": "pile of plastic building blocks" },
-  { "name": "물통", "emoji": "🧴", "smeltProducts": ["plastic"], "visualEn": "plastic water bottle" },
-  { "name": "텀블러", "emoji": "☕", "smeltProducts": ["plastic", "iron"], "visualEn": "travel tumbler mug" },
-  { "name": "식기건조대", "emoji": "🍽️", "smeltProducts": ["plastic", "iron"], "visualEn": "dish drying rack" },
-  { "name": "장난감자동차", "emoji": "🚗", "smeltProducts": ["plastic", "rubber"], "visualEn": "toy car" },
-  { "name": "빨래집게", "emoji": "🪢", "smeltProducts": ["plastic"], "visualEn": "plastic laundry clip" },
-  { "name": "옷걸이", "emoji": "👔", "smeltProducts": ["plastic", "iron"], "visualEn": "clothes hanger" },
-  { "name": "칫솔", "emoji": "🪥", "smeltProducts": ["plastic"], "visualEn": "toothbrush" },
-  { "name": "빗", "emoji": "💇", "smeltProducts": ["plastic"], "visualEn": "hair comb" },
-  { "name": "샴푸통", "emoji": "🧴", "smeltProducts": ["plastic"], "visualEn": "shampoo bottle" },
-  { "name": "반찬통", "emoji": "🍱", "smeltProducts": ["plastic"], "visualEn": "plastic side dish container" },
-  { "name": "물총", "emoji": "🔫", "smeltProducts": ["plastic"], "visualEn": "toy water gun" },
-  { "name": "요요", "emoji": "🪀", "smeltProducts": ["plastic"], "visualEn": "yo-yo toy" },
-  { "name": "팽이", "emoji": "🌀", "smeltProducts": ["plastic"], "visualEn": "spinning top toy" },
-  { "name": "자", "emoji": "📏", "smeltProducts": ["plastic"], "visualEn": "plastic ruler" },
-  { "name": "부표", "emoji": "🔴", "smeltProducts": ["plastic", "rubber"], "visualEn": "buoy float" },
-  { "name": "낚시찌", "emoji": "🎣", "smeltProducts": ["plastic", "fiber"], "visualEn": "fishing float bobber" },
-  { "name": "헤어드라이기", "emoji": "💨", "smeltProducts": ["plastic", "circuit"], "visualEn": "hair dryer" },
-  { "name": "주사기", "emoji": "💉", "smeltProducts": ["plastic", "iron"], "visualEn": "syringe" },
-  { "name": "피펫", "emoji": "🧪", "smeltProducts": ["plastic", "glass"], "visualEn": "plastic pipette" },
-  { "name": "아이스박스", "emoji": "🧊", "smeltProducts": ["plastic"], "visualEn": "plastic ice chest cooler" },
-  { "name": "쓰레기통", "emoji": "🗑️", "smeltProducts": ["plastic"], "visualEn": "plastic trash bin" },
-  { "name": "화분", "emoji": "🪴", "smeltProducts": ["plastic"], "visualEn": "plastic flower pot" },
-  { "name": "볼링공", "emoji": "🎳", "smeltProducts": ["plastic", "rubber"], "visualEn": "bowling ball" },
-  { "name": "골프공", "emoji": "⛳", "smeltProducts": ["rubber", "plastic"], "visualEn": "golf ball" },
-
-  { "name": "가죽지갑", "emoji": "👛", "smeltProducts": ["leather"], "visualEn": "leather wallet" },
-  { "name": "가죽벨트", "emoji": "👔", "smeltProducts": ["leather"], "visualEn": "leather belt with buckle" },
-  { "name": "가죽장갑", "emoji": "🧤", "smeltProducts": ["leather"], "visualEn": "leather gloves" },
-  { "name": "운동화", "emoji": "👟", "smeltProducts": ["leather", "rubber"], "visualEn": "sneakers" },
-  { "name": "구두", "emoji": "👞", "smeltProducts": ["leather"], "visualEn": "leather dress shoes" },
-  { "name": "샌들", "emoji": "👡", "smeltProducts": ["leather", "rubber"], "visualEn": "sandals" },
-  { "name": "부츠", "emoji": "👢", "smeltProducts": ["leather"], "visualEn": "leather boots" },
-  { "name": "핸드백", "emoji": "👜", "smeltProducts": ["leather"], "visualEn": "leather handbag" },
-  { "name": "배낭", "emoji": "🎒", "smeltProducts": ["leather", "textile"], "visualEn": "backpack" },
-  { "name": "안장", "emoji": "🐴", "smeltProducts": ["leather"], "visualEn": "horse saddle" },
-  { "name": "가죽재킷", "emoji": "🧥", "smeltProducts": ["leather"], "visualEn": "leather jacket" },
-  { "name": "가죽소파조각", "emoji": "🛋️", "smeltProducts": ["leather"], "visualEn": "leather sofa cushion piece" },
-  { "name": "가죽책표지", "emoji": "📖", "smeltProducts": ["leather"], "visualEn": "leather book cover" },
-  { "name": "가죽케이스", "emoji": "📦", "smeltProducts": ["leather"], "visualEn": "leather carrying case" },
-  { "name": "발찌", "emoji": "✨", "smeltProducts": ["leather", "silver"], "visualEn": "leather ankle bracelet" },
-  { "name": "가죽모자", "emoji": "🎩", "smeltProducts": ["leather"], "visualEn": "leather cap" },
-
-  { "name": "티셔츠", "emoji": "👕", "smeltProducts": ["textile"], "visualEn": "cotton t-shirt" },
-  { "name": "청바지", "emoji": "👖", "smeltProducts": ["textile"], "visualEn": "denim jeans" },
-  { "name": "스웨터", "emoji": "🧶", "smeltProducts": ["textile"], "visualEn": "knit sweater" },
-  { "name": "패딩", "emoji": "🧥", "smeltProducts": ["textile"], "visualEn": "padded winter jacket" },
-  { "name": "수건", "emoji": "🏖️", "smeltProducts": ["textile"], "visualEn": "cotton towel" },
-  { "name": "담요", "emoji": "🛏️", "smeltProducts": ["textile"], "visualEn": "wool blanket" },
-  { "name": "이불", "emoji": "🛌", "smeltProducts": ["textile"], "visualEn": "bed comforter" },
-  { "name": "양말", "emoji": "🧦", "smeltProducts": ["textile"], "visualEn": "pair of socks" },
-  { "name": "목도리", "emoji": "🧣", "smeltProducts": ["textile"], "visualEn": "knit scarf" },
-  { "name": "장갑", "emoji": "🧤", "smeltProducts": ["textile"], "visualEn": "wool gloves" },
-  { "name": "비니", "emoji": "🎿", "smeltProducts": ["textile"], "visualEn": "knit beanie hat" },
-  { "name": "앞치마", "emoji": "🍳", "smeltProducts": ["textile"], "visualEn": "kitchen apron" },
-  { "name": "체육복", "emoji": "🏃", "smeltProducts": ["textile"], "visualEn": "athletic tracksuit" },
-  { "name": "교복", "emoji": "👨‍🎓", "smeltProducts": ["textile"], "visualEn": "school uniform" },
-  { "name": "수영복", "emoji": "🩱", "smeltProducts": ["textile"], "visualEn": "swimsuit" },
-  { "name": "요가매트", "emoji": "🧘", "smeltProducts": ["rubber", "textile"], "visualEn": "yoga mat rolled up" },
-  { "name": "베개", "emoji": "😴", "smeltProducts": ["textile"], "visualEn": "bed pillow" },
-  { "name": "쿠션", "emoji": "🛋️", "smeltProducts": ["textile"], "visualEn": "decorative cushion" },
-  { "name": "넥타이", "emoji": "👔", "smeltProducts": ["textile"], "visualEn": "silk necktie" },
-  { "name": "손수건", "emoji": "🤧", "smeltProducts": ["textile"], "visualEn": "handkerchief" },
-  { "name": "행주", "emoji": "🧹", "smeltProducts": ["textile"], "visualEn": "kitchen dishcloth" },
-  { "name": "침낭", "emoji": "🏕️", "smeltProducts": ["textile"], "visualEn": "sleeping bag" },
-  { "name": "커튼", "emoji": "🪟", "smeltProducts": ["textile"], "visualEn": "fabric curtain" },
-  { "name": "반다나", "emoji": "🎀", "smeltProducts": ["textile"], "visualEn": "bandana" },
-  { "name": "캔버스가방", "emoji": "👜", "smeltProducts": ["textile"], "visualEn": "canvas tote bag" },
-  { "name": "천마스크", "emoji": "😷", "smeltProducts": ["textile"], "visualEn": "cloth face mask" },
-  { "name": "셔츠", "emoji": "👕", "smeltProducts": ["textile"], "visualEn": "dress shirt" },
-  { "name": "바지", "emoji": "👖", "smeltProducts": ["textile"], "visualEn": "trousers" },
-  { "name": "원피스", "emoji": "👗", "smeltProducts": ["textile"], "visualEn": "dress" },
-  { "name": "침대시트", "emoji": "🛌", "smeltProducts": ["textile"], "visualEn": "bed sheet" },
-  { "name": "테이블보", "emoji": "🍽️", "smeltProducts": ["textile"], "visualEn": "tablecloth" },
-
-  { "name": "나무젓가락", "emoji": "🥢", "smeltProducts": ["resin"], "visualEn": "wooden chopsticks" },
-  { "name": "도마", "emoji": "🍖", "smeltProducts": ["resin"], "visualEn": "wooden cutting board" },
-  { "name": "야구방망이", "emoji": "⚾", "smeltProducts": ["resin"], "visualEn": "wooden baseball bat" },
-  { "name": "지팡이", "emoji": "🦯", "smeltProducts": ["resin"], "visualEn": "wooden walking cane" },
-  { "name": "낚싯대", "emoji": "🎣", "smeltProducts": ["resin", "fiber"], "visualEn": "fishing rod" },
-  { "name": "나무숟가락", "emoji": "🥄", "smeltProducts": ["resin"], "visualEn": "wooden spoon" },
-  { "name": "나무상자", "emoji": "📦", "smeltProducts": ["resin"], "visualEn": "wooden crate box" },
-  { "name": "빗자루", "emoji": "🧹", "smeltProducts": ["resin", "textile"], "visualEn": "wooden broom" },
-  { "name": "연필", "emoji": "✏️", "smeltProducts": ["resin", "graphite"], "visualEn": "wooden pencil" },
-  { "name": "나무인형", "emoji": "🪆", "smeltProducts": ["resin"], "visualEn": "wooden puppet toy" },
-  { "name": "코르크", "emoji": "🍾", "smeltProducts": ["resin"], "visualEn": "wine cork stopper" },
-  { "name": "장기말", "emoji": "♟️", "smeltProducts": ["resin"], "visualEn": "wooden chess piece" },
-  { "name": "주사위", "emoji": "🎲", "smeltProducts": ["resin"], "visualEn": "wooden dice" },
-  { "name": "나무도장", "emoji": "📮", "smeltProducts": ["resin"], "visualEn": "wooden stamp" },
-  { "name": "나무액자", "emoji": "🖼️", "smeltProducts": ["resin"], "visualEn": "wooden picture frame" },
-  { "name": "조각상", "emoji": "🗿", "smeltProducts": ["resin"], "visualEn": "wooden carved figurine" },
-  { "name": "절구", "emoji": "🫙", "smeltProducts": ["resin", "ceramic"], "visualEn": "wooden mortar and pestle" },
-  { "name": "드럼스틱", "emoji": "🥁", "smeltProducts": ["resin"], "visualEn": "wooden drumstick" },
-  { "name": "기타픽", "emoji": "🎸", "smeltProducts": ["resin"], "visualEn": "guitar pick" },
-  { "name": "나무의자", "emoji": "🪑", "smeltProducts": ["resin"], "visualEn": "wooden chair leg" },
-  { "name": "나무책상", "emoji": "🪑", "smeltProducts": ["resin"], "visualEn": "wooden desk fragment" },
-  { "name": "나무막대", "emoji": "🌲", "smeltProducts": ["resin"], "visualEn": "wooden stick" },
-  { "name": "나무통", "emoji": "🛢️", "smeltProducts": ["resin"], "visualEn": "wooden barrel" },
-  { "name": "활", "emoji": "🏹", "smeltProducts": ["resin", "fiber"], "visualEn": "wooden bow" },
-  { "name": "홀스틱", "emoji": "🏑", "smeltProducts": ["resin"], "visualEn": "wooden field hockey stick" },
-  { "name": "하키스틱", "emoji": "🏒", "smeltProducts": ["resin", "iron"], "visualEn": "ice hockey stick" },
-
-  { "name": "낚싯줄", "emoji": "🎣", "smeltProducts": ["fiber"], "visualEn": "tangled fishing line" },
-  { "name": "로프", "emoji": "🪢", "smeltProducts": ["fiber"], "visualEn": "coiled rope" },
-  { "name": "케이블", "emoji": "🔌", "smeltProducts": ["fiber", "copper"], "visualEn": "thick cable" },
-  { "name": "실타래", "emoji": "🧵", "smeltProducts": ["fiber", "textile"], "visualEn": "spool of thread" },
-  { "name": "그물", "emoji": "🥅", "smeltProducts": ["fiber"], "visualEn": "fishing net" },
-  { "name": "어망", "emoji": "🥅", "smeltProducts": ["fiber"], "visualEn": "fishing net mesh" },
-
-  { "name": "그릇", "emoji": "🥣", "smeltProducts": ["ceramic"], "visualEn": "ceramic bowl" },
-  { "name": "접시", "emoji": "🍽️", "smeltProducts": ["ceramic"], "visualEn": "ceramic plate" },
-  { "name": "도자기화분", "emoji": "🪴", "smeltProducts": ["ceramic"], "visualEn": "clay flower pot" },
-  { "name": "찻잔", "emoji": "🍵", "smeltProducts": ["ceramic"], "visualEn": "ceramic tea cup" },
-  { "name": "항아리", "emoji": "🏺", "smeltProducts": ["ceramic"], "visualEn": "clay jar" },
-  { "name": "도자기", "emoji": "🏺", "smeltProducts": ["ceramic"], "visualEn": "decorative pottery vase" },
-  { "name": "머그컵", "emoji": "☕", "smeltProducts": ["ceramic"], "visualEn": "ceramic mug" },
-  { "name": "타일", "emoji": "🧱", "smeltProducts": ["ceramic"], "visualEn": "broken ceramic tile" },
-  { "name": "도자기조각", "emoji": "🏺", "smeltProducts": ["ceramic"], "visualEn": "broken pottery shard" },
-
-  { "name": "연필심", "emoji": "✏️", "smeltProducts": ["graphite", "carbon"], "visualEn": "graphite pencil lead sticks" },
-  { "name": "숯덩어리", "emoji": "⬛", "smeltProducts": ["carbon"], "visualEn": "charcoal chunk" },
-
-  { "name": "물고기뼈", "emoji": "🐟", "smeltProducts": ["keratin", "protein"], "visualEn": "dried fish skeleton" },
-  { "name": "조개껍데기", "emoji": "🐚", "smeltProducts": ["keratin"], "visualEn": "seashell" },
-  { "name": "불가사리", "emoji": "⭐", "smeltProducts": ["keratin", "protein"], "visualEn": "dried starfish" },
-  { "name": "해파리", "emoji": "🪼", "smeltProducts": ["protein"], "visualEn": "jellyfish" },
-  { "name": "산호조각", "emoji": "🪸", "smeltProducts": ["keratin", "limestone"], "visualEn": "coral fragment" },
-  { "name": "거북이등껍데기", "emoji": "🐢", "smeltProducts": ["keratin"], "visualEn": "turtle shell piece" },
-  { "name": "소라껍데기", "emoji": "🐚", "smeltProducts": ["keratin"], "visualEn": "conch shell" },
-  { "name": "문어잔해", "emoji": "🐙", "smeltProducts": ["protein"], "visualEn": "dried octopus remains" },
-  { "name": "말린오징어", "emoji": "🦑", "smeltProducts": ["protein"], "visualEn": "dried squid" },
-  { "name": "해삼", "emoji": "🌊", "smeltProducts": ["protein"], "visualEn": "dried sea cucumber" },
-  { "name": "성게껍질", "emoji": "🦔", "smeltProducts": ["keratin"], "visualEn": "sea urchin shell" },
-
-  { "name": "게껍질", "emoji": "🦀", "smeltProducts": ["chitin"], "visualEn": "crab shell" },
-  { "name": "새우껍질", "emoji": "🦐", "smeltProducts": ["chitin"], "visualEn": "shrimp shell" },
-  { "name": "가재껍질", "emoji": "🦞", "smeltProducts": ["chitin"], "visualEn": "lobster shell" },
-  { "name": "매미껍질", "emoji": "🐝", "smeltProducts": ["chitin"], "visualEn": "cicada exoskeleton" },
-  { "name": "장수풍뎅이껍질", "emoji": "🪲", "smeltProducts": ["chitin"], "visualEn": "beetle carapace" },
-
-  { "name": "다이아몬드반지", "emoji": "💍", "smeltProducts": ["diamond", "gold"], "visualEn": "diamond ring" },
-  { "name": "루비반지", "emoji": "💍", "smeltProducts": ["ruby", "gold"], "visualEn": "ruby ring" },
-  { "name": "사파이어목걸이", "emoji": "📿", "smeltProducts": ["sapphire", "silver"], "visualEn": "sapphire necklace" },
-  { "name": "에메랄드팔찌", "emoji": "💚", "smeltProducts": ["emerald", "gold"], "visualEn": "emerald bracelet" },
-  { "name": "자수정목걸이", "emoji": "📿", "smeltProducts": ["amethyst", "silver"], "visualEn": "amethyst necklace" },
-  { "name": "진주목걸이", "emoji": "📿", "smeltProducts": ["pearl"], "visualEn": "pearl necklace" },
-  { "name": "오팔귀걸이", "emoji": "💎", "smeltProducts": ["opal", "silver"], "visualEn": "opal earring" },
-  { "name": "토파즈반지", "emoji": "💍", "smeltProducts": ["topaz", "gold"], "visualEn": "topaz ring" },
-  { "name": "가넷목걸이", "emoji": "📿", "smeltProducts": ["garnet", "silver"], "visualEn": "garnet necklace" },
-  { "name": "보석함", "emoji": "💎", "smeltProducts": ["gold", "iron"], "visualEn": "jewelry box" },
-  { "name": "브로치", "emoji": "✨", "smeltProducts": ["silver", "ruby"], "visualEn": "decorative brooch" },
-
-  { "name": "모래시계", "emoji": "⏳", "smeltProducts": ["sand", "glass"], "visualEn": "hourglass" },
-  { "name": "모래주머니", "emoji": "🏖️", "smeltProducts": ["sand"], "visualEn": "sandbag" },
-
-  { "name": "기타", "emoji": "🎸", "smeltProducts": ["resin", "iron"], "visualEn": "acoustic guitar" },
-  { "name": "바이올린", "emoji": "🎻", "smeltProducts": ["resin", "textile"], "visualEn": "violin" },
-  { "name": "피아노건반", "emoji": "🎹", "smeltProducts": ["resin", "iron"], "visualEn": "piano key fragment" },
-  { "name": "탬버린", "emoji": "🪘", "smeltProducts": ["iron", "textile"], "visualEn": "tambourine" },
-  { "name": "마라카스", "emoji": "🪇", "smeltProducts": ["resin"], "visualEn": "wooden maracas" },
-  { "name": "실로폰", "emoji": "🎵", "smeltProducts": ["iron", "resin"], "visualEn": "toy xylophone" },
-  { "name": "하모니카", "emoji": "🎵", "smeltProducts": ["iron", "plastic"], "visualEn": "harmonica" },
-  { "name": "플루트", "emoji": "🎵", "smeltProducts": ["silver", "iron"], "visualEn": "metal flute" },
-  { "name": "캐스터네츠", "emoji": "🪘", "smeltProducts": ["resin"], "visualEn": "wooden castanets" },
-  { "name": "우쿨렐레", "emoji": "🎸", "smeltProducts": ["resin", "textile"], "visualEn": "ukulele" },
-
-  { "name": "축구공", "emoji": "⚽", "smeltProducts": ["rubber", "textile"], "visualEn": "soccer ball" },
-  { "name": "농구공", "emoji": "🏀", "smeltProducts": ["rubber"], "visualEn": "basketball" },
-  { "name": "테니스공", "emoji": "🎾", "smeltProducts": ["rubber", "textile"], "visualEn": "tennis ball" },
-  { "name": "테니스라켓", "emoji": "🎾", "smeltProducts": ["resin", "textile", "iron"], "visualEn": "tennis racket" },
-  { "name": "배드민턴채", "emoji": "🏸", "smeltProducts": ["resin", "iron"], "visualEn": "badminton racket" },
-  { "name": "탁구공", "emoji": "🏓", "smeltProducts": ["plastic"], "visualEn": "ping pong ball" },
-  { "name": "탁구채", "emoji": "🏓", "smeltProducts": ["resin", "rubber"], "visualEn": "table tennis paddle" },
-  { "name": "골프채", "emoji": "⛳", "smeltProducts": ["iron", "resin"], "visualEn": "golf club" },
-  { "name": "수영모", "emoji": "🏊", "smeltProducts": ["rubber", "textile"], "visualEn": "swimming cap" },
-  { "name": "복싱글러브", "emoji": "🥊", "smeltProducts": ["leather", "rubber"], "visualEn": "boxing glove" },
-  { "name": "줄넘기", "emoji": "🪢", "smeltProducts": ["rubber", "resin"], "visualEn": "jump rope" },
-  { "name": "훌라후프", "emoji": "🌀", "smeltProducts": ["plastic"], "visualEn": "plastic hula hoop" },
-  { "name": "스키폴", "emoji": "⛷️", "smeltProducts": ["aluminum", "iron"], "visualEn": "ski pole" },
-  { "name": "럭비공", "emoji": "🏉", "smeltProducts": ["rubber", "leather"], "visualEn": "rugby ball" },
-  { "name": "배구공", "emoji": "🏐", "smeltProducts": ["rubber", "textile"], "visualEn": "volleyball" },
-  { "name": "스케이트보드", "emoji": "🛹", "smeltProducts": ["resin", "rubber", "aluminum"], "visualEn": "skateboard" },
-  { "name": "킥보드", "emoji": "🛴", "smeltProducts": ["aluminum", "rubber"], "visualEn": "kick scooter" },
-  { "name": "수경", "emoji": "🤿", "smeltProducts": ["glass", "rubber"], "visualEn": "swim goggles" },
-  { "name": "아령", "emoji": "🏋️", "smeltProducts": ["iron"], "visualEn": "iron dumbbell" },
-  { "name": "역기", "emoji": "🏋️", "smeltProducts": ["iron"], "visualEn": "barbell weight plate" },
-  { "name": "인라인스케이트", "emoji": "⛸️", "smeltProducts": ["plastic", "iron", "rubber"], "visualEn": "inline roller skates" },
-  { "name": "스노보드", "emoji": "🏂", "smeltProducts": ["resin", "aluminum"], "visualEn": "snowboard" },
-  { "name": "서핑보드", "emoji": "🏄", "smeltProducts": ["resin", "rubber"], "visualEn": "surfboard" },
-  { "name": "투구", "emoji": "🪖", "smeltProducts": ["iron"], "visualEn": "iron warrior helmet" },
-  { "name": "갑옷조각", "emoji": "⚔️", "smeltProducts": ["iron"], "visualEn": "piece of iron armor" },
-
-  { "name": "세탁기", "emoji": "🌀", "smeltProducts": ["iron", "plastic", "rubber"], "visualEn": "washing machine" },
-  { "name": "냉장고", "emoji": "🧊", "smeltProducts": ["iron", "plastic"], "visualEn": "refrigerator" },
-  { "name": "전자레인지", "emoji": "📦", "smeltProducts": ["iron", "circuit", "glass"], "visualEn": "microwave oven" },
-  { "name": "선풍기", "emoji": "💨", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "electric fan" },
-  { "name": "에어컨", "emoji": "❄️", "smeltProducts": ["iron", "circuit", "aluminum"], "visualEn": "air conditioner unit" },
-  { "name": "청소기", "emoji": "🧹", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "vacuum cleaner" },
-  { "name": "다리미", "emoji": "👔", "smeltProducts": ["iron", "circuit"], "visualEn": "clothes iron" },
-  { "name": "토스터", "emoji": "🍞", "smeltProducts": ["iron", "circuit"], "visualEn": "toaster" },
-  { "name": "믹서기", "emoji": "🥤", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "blender" },
-  { "name": "커피머신", "emoji": "☕", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "coffee maker" },
-  { "name": "전기밥솥", "emoji": "🍚", "smeltProducts": ["iron", "circuit", "plastic"], "visualEn": "electric rice cooker" },
-  { "name": "에어프라이어", "emoji": "🍟", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "air fryer" },
-  { "name": "인덕션", "emoji": "🍳", "smeltProducts": ["iron", "circuit", "glass"], "visualEn": "induction cooktop" },
-  { "name": "식기세척기", "emoji": "🍽️", "smeltProducts": ["iron", "plastic", "circuit"], "visualEn": "dishwasher" },
-  { "name": "고데기", "emoji": "💇", "smeltProducts": ["circuit", "iron"], "visualEn": "hair straightener iron" },
-  { "name": "제습기", "emoji": "💧", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "dehumidifier" },
-  { "name": "가습기", "emoji": "💨", "smeltProducts": ["plastic", "circuit"], "visualEn": "humidifier" },
-  { "name": "공기청정기", "emoji": "🌬️", "smeltProducts": ["plastic", "circuit", "textile"], "visualEn": "air purifier" },
-  { "name": "전기히터", "emoji": "🔥", "smeltProducts": ["iron", "circuit"], "visualEn": "electric heater" },
-  { "name": "주스기", "emoji": "🍊", "smeltProducts": ["plastic", "circuit"], "visualEn": "electric juicer" },
-  { "name": "전기드릴", "emoji": "🔧", "smeltProducts": ["iron", "circuit", "plastic"], "visualEn": "power drill" },
-  { "name": "전동드라이버", "emoji": "🔩", "smeltProducts": ["iron", "circuit", "plastic"], "visualEn": "electric screwdriver" },
-  { "name": "초인종", "emoji": "🔔", "smeltProducts": ["circuit", "plastic", "iron"], "visualEn": "doorbell" },
-  { "name": "냉풍기", "emoji": "❄️", "smeltProducts": ["plastic", "circuit"], "visualEn": "personal cooler fan" },
-  { "name": "전기포트", "emoji": "🫖", "smeltProducts": ["plastic", "circuit", "iron"], "visualEn": "electric kettle" },
-  { "name": "와플메이커", "emoji": "🧇", "smeltProducts": ["iron", "circuit"], "visualEn": "waffle iron maker" },
-
-  { "name": "자전거", "emoji": "🚲", "smeltProducts": ["iron", "rubber"], "visualEn": "bicycle frame and wheels" },
-  { "name": "자전거바퀴", "emoji": "🛞", "smeltProducts": ["iron", "rubber"], "visualEn": "bicycle wheel" },
-  { "name": "자전거핸들", "emoji": "🚲", "smeltProducts": ["iron"], "visualEn": "bicycle handlebar" },
-
-  { "name": "물뿌리개", "emoji": "🌿", "smeltProducts": ["plastic", "iron"], "visualEn": "watering can" },
-  { "name": "삽자루", "emoji": "🌱", "smeltProducts": ["resin", "iron"], "visualEn": "shovel with wooden handle" },
-  { "name": "전기톱", "emoji": "🪚", "smeltProducts": ["iron", "circuit", "plastic"], "visualEn": "electric chainsaw" },
-  { "name": "끌", "emoji": "🔧", "smeltProducts": ["iron", "resin"], "visualEn": "wood chisel" },
-  { "name": "대패", "emoji": "🔧", "smeltProducts": ["iron", "resin"], "visualEn": "hand plane tool" },
-  { "name": "바이스", "emoji": "🔩", "smeltProducts": ["iron"], "visualEn": "bench vise clamp" },
-  { "name": "수평계", "emoji": "📏", "smeltProducts": ["iron", "glass"], "visualEn": "spirit level" },
-
-  { "name": "책", "emoji": "📚", "smeltProducts": ["resin", "textile"], "visualEn": "stack of old books" },
-  { "name": "노트", "emoji": "📓", "smeltProducts": ["resin"], "visualEn": "spiral notebook" },
-  { "name": "볼펜", "emoji": "🖊️", "smeltProducts": ["plastic", "iron"], "visualEn": "ballpoint pen" },
-  { "name": "만년필", "emoji": "✒️", "smeltProducts": ["iron", "plastic"], "visualEn": "fountain pen" },
-  { "name": "스테이플러", "emoji": "📎", "smeltProducts": ["iron", "plastic"], "visualEn": "stapler" },
-  { "name": "클립", "emoji": "📎", "smeltProducts": ["iron"], "visualEn": "metal paper clip" },
-  { "name": "붓", "emoji": "🖌️", "smeltProducts": ["resin", "textile"], "visualEn": "paint brush" },
-  { "name": "팔레트", "emoji": "🎨", "smeltProducts": ["plastic", "resin"], "visualEn": "artist palette" },
-  { "name": "크레파스", "emoji": "🖍️", "smeltProducts": ["plastic"], "visualEn": "box of crayons" },
-  { "name": "색연필", "emoji": "✏️", "smeltProducts": ["resin", "graphite"], "visualEn": "colored pencils" },
-  { "name": "컴퍼스", "emoji": "✏️", "smeltProducts": ["iron"], "visualEn": "drawing compass" },
-  { "name": "삼각자", "emoji": "📐", "smeltProducts": ["plastic"], "visualEn": "plastic triangle ruler" },
-  { "name": "도장", "emoji": "📮", "smeltProducts": ["resin", "iron"], "visualEn": "rubber stamp" },
-  { "name": "풀건", "emoji": "🔫", "smeltProducts": ["plastic", "resin"], "visualEn": "glue gun" },
-  { "name": "사포", "emoji": "🟫", "smeltProducts": ["iron", "sand"], "visualEn": "sandpaper sheet" },
-
-  { "name": "통발", "emoji": "🧺", "smeltProducts": ["iron", "fiber"], "visualEn": "wire fish trap basket" },
-  { "name": "뜰채", "emoji": "🥅", "smeltProducts": ["iron", "fiber"], "visualEn": "fish landing net" },
-  { "name": "작살", "emoji": "🔱", "smeltProducts": ["iron"], "visualEn": "metal spear" },
-
-  { "name": "우산", "emoji": "☂️", "smeltProducts": ["iron", "textile"], "visualEn": "umbrella" },
-  { "name": "여행가방", "emoji": "🧳", "smeltProducts": ["plastic", "iron", "textile"], "visualEn": "rolling suitcase" },
-  { "name": "랜턴", "emoji": "🪔", "smeltProducts": ["glass", "iron"], "visualEn": "metal lantern" },
-  { "name": "양초", "emoji": "🕯️", "smeltProducts": ["petro", "textile"], "visualEn": "wax candle" },
-  { "name": "촛대", "emoji": "🕯️", "smeltProducts": ["iron"], "visualEn": "iron candlestick" },
-  { "name": "쌍안경", "emoji": "🔭", "smeltProducts": ["glass", "iron"], "visualEn": "binoculars" },
-  { "name": "나침반", "emoji": "🧭", "smeltProducts": ["glass", "iron"], "visualEn": "compass" },
-  { "name": "혈압계", "emoji": "💊", "smeltProducts": ["circuit", "rubber"], "visualEn": "blood pressure monitor" },
-  { "name": "청진기", "emoji": "🩺", "smeltProducts": ["iron", "rubber"], "visualEn": "stethoscope" },
-  { "name": "핀셋", "emoji": "🔬", "smeltProducts": ["iron"], "visualEn": "metal tweezers" },
-
-  { "name": "컴퓨터", "emoji": "🖥️", "smeltProducts": ["circuit", "iron", "plastic"], "visualEn": "desktop computer tower" },
-  { "name": "프린터", "emoji": "🖨️", "smeltProducts": ["circuit", "plastic", "iron"], "visualEn": "inkjet printer" },
-  { "name": "스캐너", "emoji": "📠", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "flatbed scanner" },
-  { "name": "빔프로젝터", "emoji": "📽️", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "projector" },
-  { "name": "TV", "emoji": "📺", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "flat screen television" },
-  { "name": "라디오", "emoji": "📻", "smeltProducts": ["circuit", "plastic"], "visualEn": "portable radio" },
-  { "name": "전화기", "emoji": "📞", "smeltProducts": ["circuit", "plastic"], "visualEn": "landline telephone" },
-  { "name": "팩스기", "emoji": "📠", "smeltProducts": ["circuit", "plastic", "iron"], "visualEn": "fax machine" },
-  { "name": "전자피아노", "emoji": "🎹", "smeltProducts": ["circuit", "plastic", "iron"], "visualEn": "electronic keyboard" },
-
-  { "name": "냄비뚜껑", "emoji": "🫕", "smeltProducts": ["iron", "glass"], "visualEn": "pot lid with glass window" },
-  { "name": "쇠솥", "emoji": "🫕", "smeltProducts": ["iron"], "visualEn": "heavy iron cauldron" },
-  { "name": "식기세트", "emoji": "🍽️", "smeltProducts": ["iron", "ceramic"], "visualEn": "metal cutlery set" },
-  { "name": "아이스픽", "emoji": "🧊", "smeltProducts": ["iron", "resin"], "visualEn": "ice pick tool" },
-  { "name": "고기집게", "emoji": "🍖", "smeltProducts": ["iron"], "visualEn": "barbecue tongs" },
-  { "name": "석쇠받침", "emoji": "🍳", "smeltProducts": ["iron"], "visualEn": "metal grill stand" },
-  { "name": "군용칼", "emoji": "🗡️", "smeltProducts": ["iron"], "visualEn": "military knife" },
-  { "name": "칼집", "emoji": "⚔️", "smeltProducts": ["leather", "iron"], "visualEn": "sword scabbard" },
-  { "name": "철제함", "emoji": "📦", "smeltProducts": ["iron"], "visualEn": "metal tin box" },
-  { "name": "닻", "emoji": "⚓", "smeltProducts": ["iron"], "visualEn": "ship anchor" },
-
-  { "name": "구리팔찌", "emoji": "🟠", "smeltProducts": ["copper"], "visualEn": "copper bracelet" },
-  { "name": "구리반지", "emoji": "💍", "smeltProducts": ["copper"], "visualEn": "copper ring" },
-  { "name": "놋쇠촛대", "emoji": "🕯️", "smeltProducts": ["copper", "zinc"], "visualEn": "brass candlestick" },
-
-  { "name": "금도금잔", "emoji": "🏆", "smeltProducts": ["gold", "iron"], "visualEn": "gold plated trophy cup" },
-  { "name": "은식기", "emoji": "🍴", "smeltProducts": ["silver"], "visualEn": "silver cutlery set" },
-
-  { "name": "선글라스케이스", "emoji": "🕶️", "smeltProducts": ["plastic", "leather"], "visualEn": "sunglasses case" },
-  { "name": "유리마블", "emoji": "🔮", "smeltProducts": ["glass"], "visualEn": "glass marble" },
-  { "name": "수정구슬", "emoji": "🔮", "smeltProducts": ["glass", "silica"], "visualEn": "crystal ball" },
-  { "name": "유리공예품", "emoji": "🫙", "smeltProducts": ["glass"], "visualEn": "decorative glass figurine" },
-
-  { "name": "바퀴달린슬리퍼", "emoji": "🩴", "smeltProducts": ["rubber", "plastic"], "visualEn": "roller slipper" },
-  { "name": "고무도장", "emoji": "📮", "smeltProducts": ["rubber"], "visualEn": "rubber stamp" },
-  { "name": "고무타이어튜브", "emoji": "🛞", "smeltProducts": ["rubber"], "visualEn": "inner tube" },
-
-  { "name": "점토", "emoji": "🟤", "smeltProducts": ["ceramic", "sand"], "visualEn": "lump of clay" },
-  { "name": "도자기조각", "emoji": "🏺", "smeltProducts": ["ceramic"], "visualEn": "broken pottery fragment" },
-  { "name": "벽돌", "emoji": "🧱", "smeltProducts": ["ceramic", "sand"], "visualEn": "fired clay brick" },
-  { "name": "화분받침", "emoji": "🪴", "smeltProducts": ["ceramic"], "visualEn": "ceramic pot saucer" },
-
-  { "name": "밀짚모자", "emoji": "👒", "smeltProducts": ["textile", "resin"], "visualEn": "straw hat" },
-  { "name": "가방끈", "emoji": "👜", "smeltProducts": ["textile", "leather"], "visualEn": "bag strap" },
-  { "name": "허리띠", "emoji": "👔", "smeltProducts": ["textile"], "visualEn": "cloth waist band" },
-  { "name": "머플러", "emoji": "🧣", "smeltProducts": ["textile"], "visualEn": "wool muffler scarf" },
-  { "name": "레깅스", "emoji": "🩳", "smeltProducts": ["textile", "rubber"], "visualEn": "athletic leggings" },
-  { "name": "조끼", "emoji": "🦺", "smeltProducts": ["textile"], "visualEn": "vest" },
-  { "name": "두건", "emoji": "🎀", "smeltProducts": ["textile"], "visualEn": "cloth hood" },
-
-  { "name": "대나무통", "emoji": "🎋", "smeltProducts": ["resin"], "visualEn": "bamboo container" },
-  { "name": "나무망치", "emoji": "🔨", "smeltProducts": ["resin"], "visualEn": "wooden mallet" },
-  { "name": "나무빨래판", "emoji": "🧺", "smeltProducts": ["resin"], "visualEn": "wooden washboard" },
-  { "name": "나무빗", "emoji": "💇", "smeltProducts": ["resin"], "visualEn": "wooden hair comb" },
-  { "name": "도르래", "emoji": "⚙️", "smeltProducts": ["resin", "iron"], "visualEn": "wooden pulley" },
-  { "name": "나무저금통", "emoji": "🐷", "smeltProducts": ["resin"], "visualEn": "wooden piggy bank" },
-  { "name": "나무피리", "emoji": "🎵", "smeltProducts": ["resin"], "visualEn": "wooden flute" },
-  { "name": "나무퍼즐", "emoji": "🧩", "smeltProducts": ["resin"], "visualEn": "wooden puzzle pieces" },
-  { "name": "코르크보드", "emoji": "📌", "smeltProducts": ["resin"], "visualEn": "cork bulletin board" },
-  { "name": "얼레", "emoji": "🎣", "smeltProducts": ["resin", "iron"], "visualEn": "fishing reel spool" },
-
-  { "name": "오징어뼈", "emoji": "🦑", "smeltProducts": ["keratin", "protein"], "visualEn": "dried cuttlefish bone" },
-  { "name": "홍합껍데기", "emoji": "🦪", "smeltProducts": ["keratin"], "visualEn": "mussel shell" },
-  { "name": "굴껍데기", "emoji": "🦪", "smeltProducts": ["keratin", "limestone"], "visualEn": "oyster shell" },
-  { "name": "말린해마", "emoji": "🌊", "smeltProducts": ["keratin", "protein"], "visualEn": "dried seahorse" },
-  { "name": "곤충표본", "emoji": "🦋", "smeltProducts": ["chitin"], "visualEn": "pinned insect specimen" },
-  { "name": "공룡화석조각", "emoji": "🦕", "smeltProducts": ["keratin", "limestone"], "visualEn": "dinosaur fossil fragment" },
-
-  { "name": "자동차열쇠", "emoji": "🔑", "smeltProducts": ["iron", "circuit"], "visualEn": "car key fob" },
-  { "name": "자동차번호판", "emoji": "🚗", "smeltProducts": ["aluminum", "iron"], "visualEn": "car license plate" },
-  { "name": "와이퍼", "emoji": "🚗", "smeltProducts": ["rubber", "iron"], "visualEn": "windshield wiper" },
-  { "name": "사이드미러", "emoji": "🚗", "smeltProducts": ["glass", "plastic", "iron"], "visualEn": "car side mirror" },
-  { "name": "자동차배터리", "emoji": "🔋", "smeltProducts": ["battery", "lead"], "visualEn": "car battery" },
-
-  { "name": "소화기", "emoji": "🧯", "smeltProducts": ["iron", "aluminum"], "visualEn": "fire extinguisher" },
-  { "name": "경광등", "emoji": "🚨", "smeltProducts": ["circuit", "glass", "plastic"], "visualEn": "emergency light" },
-  { "name": "안전벨트", "emoji": "🚗", "smeltProducts": ["textile", "iron"], "visualEn": "seatbelt" },
-  { "name": "경고삼각대", "emoji": "⚠️", "smeltProducts": ["plastic", "iron"], "visualEn": "road warning triangle" },
-
-  { "name": "행거", "emoji": "👔", "smeltProducts": ["iron", "plastic"], "visualEn": "metal clothes rack" },
-  { "name": "서랍손잡이", "emoji": "🚪", "smeltProducts": ["iron"], "visualEn": "metal drawer handle" },
-  { "name": "문고리", "emoji": "🚪", "smeltProducts": ["iron"], "visualEn": "door knob" },
-  { "name": "경첩", "emoji": "🚪", "smeltProducts": ["iron"], "visualEn": "metal door hinge" },
-  { "name": "네일아트도구", "emoji": "💅", "smeltProducts": ["iron", "plastic"], "visualEn": "nail art tool set" },
-  { "name": "면도칼", "emoji": "🪒", "smeltProducts": ["iron"], "visualEn": "straight razor blade" },
-  { "name": "손톱깎이", "emoji": "✂️", "smeltProducts": ["iron"], "visualEn": "nail clipper" },
-
-  { "name": "사냥덫", "emoji": "🪤", "smeltProducts": ["iron"], "visualEn": "metal animal trap" },
-  { "name": "새장", "emoji": "🐦", "smeltProducts": ["iron"], "visualEn": "metal bird cage" },
-  { "name": "목줄", "emoji": "🐕", "smeltProducts": ["leather", "iron"], "visualEn": "dog collar and leash" },
-  { "name": "말굽", "emoji": "🐴", "smeltProducts": ["iron"], "visualEn": "horseshoe" },
-  { "name": "물고기통조림", "emoji": "🐟", "smeltProducts": ["iron", "protein"], "visualEn": "canned fish tin" },
-
-  { "name": "바벨", "emoji": "🏋️", "smeltProducts": ["iron"], "visualEn": "heavy barbell" },
-  { "name": "철제선반", "emoji": "🗄️", "smeltProducts": ["iron"], "visualEn": "metal shelf rack" },
-  { "name": "가스통", "emoji": "🛢️", "smeltProducts": ["iron"], "visualEn": "metal gas canister" },
-  { "name": "낫", "emoji": "⚔️", "smeltProducts": ["iron", "resin"], "visualEn": "iron sickle" },
-  { "name": "동판화", "emoji": "🖼️", "smeltProducts": ["copper"], "visualEn": "copper etching plate" },
-  { "name": "알루미늄캡", "emoji": "🧢", "smeltProducts": ["aluminum"], "visualEn": "aluminum bottle cap" },
-  { "name": "유리구슬", "emoji": "🔮", "smeltProducts": ["glass"], "visualEn": "glass bead" },
-  { "name": "타이어튜브", "emoji": "🛞", "smeltProducts": ["rubber"], "visualEn": "rubber bicycle tube" },
-  { "name": "미니어처자동차", "emoji": "🚗", "smeltProducts": ["plastic", "iron"], "visualEn": "miniature die-cast car" },
-  { "name": "나무저울", "emoji": "⚖️", "smeltProducts": ["resin", "iron"], "visualEn": "wooden balance scale" },
-  { "name": "가죽안경집", "emoji": "👓", "smeltProducts": ["leather"], "visualEn": "leather glasses case" },
-  { "name": "목화솜", "emoji": "🌸", "smeltProducts": ["textile"], "visualEn": "raw cotton ball" },
-  { "name": "해골모형", "emoji": "💀", "smeltProducts": ["keratin", "plastic"], "visualEn": "plastic skull model" },
-  { "name": "곤충채집통", "emoji": "🪲", "smeltProducts": ["plastic", "chitin"], "visualEn": "insect collection jar" },
-  { "name": "방울", "emoji": "🔔", "smeltProducts": ["iron", "copper"], "visualEn": "small metal bell" },
-  { "name": "탁상시계", "emoji": "🕰️", "smeltProducts": ["iron", "glass", "circuit"], "visualEn": "desk clock" },
-
-  { "name": "백금반지", "emoji": "💍", "smeltProducts": ["platinum"], "visualEn": "platinum ring" },
-  { "name": "백금목걸이", "emoji": "📿", "smeltProducts": ["platinum"], "visualEn": "platinum necklace" },
-  { "name": "팔라듐촉매변환기", "emoji": "⚙️", "smeltProducts": ["palladium"], "visualEn": "catalytic converter fragment" },
-  { "name": "로듐도금귀걸이", "emoji": "💎", "smeltProducts": ["rhodium", "silver"], "visualEn": "rhodium plated earring" },
-  { "name": "이리듐만년필촉", "emoji": "✒️", "smeltProducts": ["iridium", "iron"], "visualEn": "iridium fountain pen nib" },
-  { "name": "텅스텐전구", "emoji": "💡", "smeltProducts": ["tungsten", "glass"], "visualEn": "incandescent light bulb with tungsten filament" },
-  { "name": "텅스텐반지", "emoji": "💍", "smeltProducts": ["tungsten"], "visualEn": "tungsten carbide ring" },
-  { "name": "티타늄안경테", "emoji": "👓", "smeltProducts": ["titanium"], "visualEn": "titanium eyeglass frame" },
-  { "name": "티타늄골프채", "emoji": "⛳", "smeltProducts": ["titanium", "iron"], "visualEn": "titanium golf club head" },
-  { "name": "몰리브덴낚싯대", "emoji": "🎣", "smeltProducts": ["molybdenum", "resin"], "visualEn": "molybdenum alloy fishing rod" },
-  { "name": "크롬도금손잡이", "emoji": "🚪", "smeltProducts": ["chromium", "iron"], "visualEn": "chrome plated door handle" },
-  { "name": "크롬수도꼭지", "emoji": "🚿", "smeltProducts": ["chromium", "iron"], "visualEn": "chrome bathroom faucet" },
-  { "name": "바나듐강철볼트", "emoji": "🔩", "smeltProducts": ["vanadium", "iron"], "visualEn": "vanadium alloy steel bolt" },
-  { "name": "니오븀피어싱", "emoji": "💎", "smeltProducts": ["niobium"], "visualEn": "niobium body piercing jewelry" },
-  { "name": "코발트파란안료", "emoji": "🔵", "smeltProducts": ["cobalt"], "visualEn": "cobalt blue pigment jar" },
-  { "name": "코발트자석", "emoji": "🧲", "smeltProducts": ["cobalt", "iron"], "visualEn": "cobalt alloy magnet" },
-  { "name": "망간건전지", "emoji": "🔋", "smeltProducts": ["manganese", "battery"], "visualEn": "manganese dry cell battery" },
-  { "name": "주석컵", "emoji": "🥃", "smeltProducts": ["tin"], "visualEn": "tin drinking cup" },
-  { "name": "양철통", "emoji": "🛢️", "smeltProducts": ["tin", "iron"], "visualEn": "tin metal can" },
-  { "name": "비스무트위장약", "emoji": "💊", "smeltProducts": ["bismuth"], "visualEn": "bismuth stomach medicine tablet" },
-  { "name": "안티모니도자기", "emoji": "🏺", "smeltProducts": ["antimony", "ceramic"], "visualEn": "antimony glazed pottery" },
-  { "name": "마그네슘불꽃봉", "emoji": "✨", "smeltProducts": ["magnesium"], "visualEn": "magnesium flare stick" },
-  { "name": "마그네슘합금노트북", "emoji": "💻", "smeltProducts": ["magnesium", "circuit"], "visualEn": "magnesium alloy laptop shell" },
-
-  { "name": "네오디뮴자석", "emoji": "🧲", "smeltProducts": ["neodymium"], "visualEn": "neodymium rare earth magnet" },
-  { "name": "희토류자석", "emoji": "🧲", "smeltProducts": ["rareearth"], "visualEn": "rare earth magnet block" },
-  { "name": "란타넘렌즈", "emoji": "🔭", "smeltProducts": ["lanthanum", "glass"], "visualEn": "lanthanum optical lens" },
-  { "name": "세륨연마제", "emoji": "🪞", "smeltProducts": ["cerium"], "visualEn": "cerium oxide polishing compound" },
-  { "name": "사마륨코발트자석", "emoji": "🧲", "smeltProducts": ["samarium", "cobalt"], "visualEn": "samarium cobalt magnet" },
-  { "name": "이트륨형광등", "emoji": "💡", "smeltProducts": ["yttrium", "glass"], "visualEn": "yttrium fluorescent lamp" },
-  { "name": "갈륨온도계", "emoji": "🌡️", "smeltProducts": ["gallium"], "visualEn": "gallium thermometer" },
-  { "name": "게르마늄팔찌", "emoji": "💚", "smeltProducts": ["germanium"], "visualEn": "germanium health bracelet" },
-  { "name": "인듐터치스크린", "emoji": "📱", "smeltProducts": ["indium", "glass"], "visualEn": "indium tin oxide touchscreen panel" },
-  { "name": "셀레늄복사드럼", "emoji": "🖨️", "smeltProducts": ["selenium", "circuit"], "visualEn": "selenium photocopier drum" },
-  { "name": "텔루륨솔라셀", "emoji": "☀️", "smeltProducts": ["tellurium", "silicon"], "visualEn": "telluride solar cell" },
-  { "name": "하프늄원자로부품", "emoji": "⚛️", "smeltProducts": ["hafnium", "iron"], "visualEn": "hafnium reactor control rod" },
-  { "name": "탄탈럼커패시터", "emoji": "🔌", "smeltProducts": ["tantalum", "circuit"], "visualEn": "tantalum capacitor" },
-  { "name": "지르코늄큐빅반지", "emoji": "💍", "smeltProducts": ["zirconium"], "visualEn": "cubic zirconia ring" },
-  { "name": "우라늄유리컵", "emoji": "🟢", "smeltProducts": ["uranium", "glass"], "visualEn": "vintage uranium glass cup" },
-
-  { "name": "반도체웨이퍼", "emoji": "💿", "smeltProducts": ["wafer", "silicon"], "visualEn": "semiconductor silicon wafer" },
-  { "name": "그래핀코팅판", "emoji": "🕸️", "smeltProducts": ["graphene", "carbon"], "visualEn": "graphene coated plate" },
-  { "name": "리튬이온셀", "emoji": "🔋", "smeltProducts": ["lithiumsalt", "lithium"], "visualEn": "lithium ion cell" },
-  { "name": "플라즈마램프", "emoji": "⚡", "smeltProducts": ["plasma", "glass"], "visualEn": "plasma globe lamp" },
-
-  { "name": "시멘트포대", "emoji": "🏗️", "smeltProducts": ["cement"], "visualEn": "cement powder bag" },
-  { "name": "콘크리트블록", "emoji": "🧱", "smeltProducts": ["concrete", "sand"], "visualEn": "concrete block" },
-  { "name": "화강암돌", "emoji": "🪨", "smeltProducts": ["granite"], "visualEn": "granite stone" },
-  { "name": "현무암돌", "emoji": "🗿", "smeltProducts": ["basalt"], "visualEn": "basalt lava rock" },
-  { "name": "아스팔트조각", "emoji": "🛣️", "smeltProducts": ["asphalt", "bitumen"], "visualEn": "asphalt road chunk" },
-  { "name": "성냥갑", "emoji": "🔥", "smeltProducts": ["sulfur", "resin"], "visualEn": "matchbox with matches" },
-  { "name": "황온천돌", "emoji": "🌋", "smeltProducts": ["sulfur"], "visualEn": "sulfur hot spring stone" },
-  { "name": "소금통", "emoji": "🧂", "smeltProducts": ["salt"], "visualEn": "salt shaker container" },
-  { "name": "소다회봉지", "emoji": "⚗️", "smeltProducts": ["sodaash"], "visualEn": "soda ash powder bag" },
-  { "name": "형광도료통", "emoji": "🟩", "smeltProducts": ["phosphor"], "visualEn": "fluorescent paint can" },
-  { "name": "비료봉지", "emoji": "🌱", "smeltProducts": ["phosphate", "nitrate"], "visualEn": "fertilizer bag" },
-  { "name": "락스통", "emoji": "🧴", "smeltProducts": ["chloride"], "visualEn": "bleach cleaner bottle" },
-  { "name": "암모니아청소제", "emoji": "🧹", "smeltProducts": ["ammonia", "chloride"], "visualEn": "ammonia cleaning solution bottle" },
-  { "name": "수소풍선", "emoji": "🎈", "smeltProducts": ["hydrogen"], "visualEn": "hydrogen gas balloon" },
-  { "name": "산소마스크", "emoji": "😷", "smeltProducts": ["oxygen"], "visualEn": "medical oxygen mask" },
-  { "name": "산소탱크", "emoji": "🫁", "smeltProducts": ["oxygen", "iron"], "visualEn": "pressurized oxygen tank" },
-  { "name": "헬륨가스통", "emoji": "🎈", "smeltProducts": ["helium"], "visualEn": "helium gas canister" },
-  { "name": "아르곤용접가스통", "emoji": "🔧", "smeltProducts": ["argon", "iron"], "visualEn": "argon welding gas cylinder" },
-  { "name": "액체질소통", "emoji": "🧊", "smeltProducts": ["nitrogen"], "visualEn": "liquid nitrogen dewar flask" },
-  { "name": "방탄조끼", "emoji": "🦺", "smeltProducts": ["kevlar"], "visualEn": "kevlar bulletproof vest" },
-  { "name": "탄소섬유자전거", "emoji": "🚲", "smeltProducts": ["carbonfiber", "rubber"], "visualEn": "carbon fiber bicycle frame" },
-  { "name": "효소세제", "emoji": "🧼", "smeltProducts": ["enzyme"], "visualEn": "enzyme laundry detergent bottle" },
-  { "name": "바이오연료통", "emoji": "🛢️", "smeltProducts": ["biofuel", "petro"], "visualEn": "biofuel canister" },
-  { "name": "마그마돌", "emoji": "🌋", "smeltProducts": ["magma"], "visualEn": "solidified magma rock" },
-  { "name": "드라이아이스", "emoji": "🧊", "smeltProducts": ["cryo", "carbon"], "visualEn": "block of dry ice" },
-  { "name": "냉동팩", "emoji": "🧊", "smeltProducts": ["cryo"], "visualEn": "reusable ice pack" }
+  {
+    "name": "냄비",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "cooking pot with two handles",
+    "tier": "common"
+  },
+  {
+    "name": "프라이팬",
+    "emoji": "🍳",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "frying pan with long handle",
+    "tier": "common"
+  },
+  {
+    "name": "주전자",
+    "emoji": "🫖",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal kettle with spout",
+    "tier": "common"
+  },
+  {
+    "name": "식칼",
+    "emoji": "🔪",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "kitchen knife with wide blade",
+    "tier": "common"
+  },
+  {
+    "name": "과도",
+    "emoji": "🔪",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "small paring knife",
+    "tier": "common"
+  },
+  {
+    "name": "가위",
+    "emoji": "✂️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal scissors",
+    "tier": "common"
+  },
+  {
+    "name": "자물쇠",
+    "emoji": "🔒",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "padlock with shackle",
+    "tier": "common"
+  },
+  {
+    "name": "열쇠",
+    "emoji": "🔑",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "old metal key",
+    "tier": "common"
+  },
+  {
+    "name": "못",
+    "emoji": "📌",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron nail",
+    "tier": "common"
+  },
+  {
+    "name": "체인",
+    "emoji": "⛓️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal chain links",
+    "tier": "common"
+  },
+  {
+    "name": "자석",
+    "emoji": "🧲",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "horseshoe magnet",
+    "tier": "common"
+  },
+  {
+    "name": "통조림",
+    "emoji": "🥫",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "tin can with label",
+    "tier": "common"
+  },
+  {
+    "name": "금고",
+    "emoji": "🗄️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "small metal safe box",
+    "tier": "common"
+  },
+  {
+    "name": "스프링",
+    "emoji": "🌀",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal coil spring",
+    "tier": "common"
+  },
+  {
+    "name": "철망",
+    "emoji": "🪤",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal wire mesh",
+    "tier": "common"
+  },
+  {
+    "name": "낚싯바늘",
+    "emoji": "🪝",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "fishing hook",
+    "tier": "common"
+  },
+  {
+    "name": "낚시추",
+    "emoji": "⚓",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "fishing sinker weight",
+    "tier": "common"
+  },
+  {
+    "name": "볼트",
+    "emoji": "🔩",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal bolt and nut",
+    "tier": "common"
+  },
+  {
+    "name": "나이프",
+    "emoji": "🗡️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "pocket knife",
+    "tier": "common"
+  },
+  {
+    "name": "포크",
+    "emoji": "🍴",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal fork",
+    "tier": "common"
+  },
+  {
+    "name": "삽",
+    "emoji": "⛏️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal shovel",
+    "tier": "common"
+  },
+  {
+    "name": "도끼",
+    "emoji": "🪓",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron axe head",
+    "tier": "common"
+  },
+  {
+    "name": "망치",
+    "emoji": "🔨",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal hammer",
+    "tier": "common"
+  },
+  {
+    "name": "렌치",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal wrench",
+    "tier": "common"
+  },
+  {
+    "name": "철봉",
+    "emoji": "🏋️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron barbell rod",
+    "tier": "common"
+  },
+  {
+    "name": "덤벨",
+    "emoji": "🏋️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron dumbbell",
+    "tier": "common"
+  },
+  {
+    "name": "쇠젓가락",
+    "emoji": "🥢",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal chopsticks",
+    "tier": "common"
+  },
+  {
+    "name": "국자",
+    "emoji": "🥄",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal soup ladle",
+    "tier": "common"
+  },
+  {
+    "name": "석쇠",
+    "emoji": "🍖",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal grill grate",
+    "tier": "common"
+  },
+  {
+    "name": "와인오프너",
+    "emoji": "🍷",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "corkscrew wine opener",
+    "tier": "common"
+  },
+  {
+    "name": "병따개",
+    "emoji": "🍺",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal bottle opener",
+    "tier": "common"
+  },
+  {
+    "name": "캔따개",
+    "emoji": "🥫",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "manual can opener",
+    "tier": "common"
+  },
+  {
+    "name": "거품기",
+    "emoji": "🍳",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal whisk",
+    "tier": "common"
+  },
+  {
+    "name": "집게",
+    "emoji": "🦀",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal kitchen tongs",
+    "tier": "common"
+  },
+  {
+    "name": "압력솥",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "iron",
+      "rubber"
+    ],
+    "visualEn": "pressure cooker with safety valve",
+    "tier": "common"
+  },
+  {
+    "name": "밥솥뚜껑",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "iron",
+      "glass"
+    ],
+    "visualEn": "pot lid with glass window",
+    "tier": "common"
+  },
+  {
+    "name": "작살",
+    "emoji": "🔱",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal spear",
+    "tier": "common"
+  },
+  {
+    "name": "검",
+    "emoji": "⚔️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron sword",
+    "tier": "common"
+  },
+  {
+    "name": "창",
+    "emoji": "🏹",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "iron-tipped spear",
+    "tier": "common"
+  },
+  {
+    "name": "방패",
+    "emoji": "🛡️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron shield",
+    "tier": "common"
+  },
+  {
+    "name": "화살촉",
+    "emoji": "🏹",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron arrowhead",
+    "tier": "common"
+  },
+  {
+    "name": "총알",
+    "emoji": "🔫",
+    "smeltProducts": [
+      "iron",
+      "lead"
+    ],
+    "visualEn": "metal bullet",
+    "tier": "common"
+  },
+  {
+    "name": "드라이버",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "screwdriver",
+    "tier": "common"
+  },
+  {
+    "name": "플라이어",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal pliers",
+    "tier": "common"
+  },
+  {
+    "name": "줄자",
+    "emoji": "📏",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal tape measure",
+    "tier": "common"
+  },
+  {
+    "name": "톱",
+    "emoji": "🪚",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "hand saw",
+    "tier": "common"
+  },
+  {
+    "name": "손전등",
+    "emoji": "🔦",
+    "smeltProducts": [
+      "iron",
+      "glass"
+    ],
+    "visualEn": "metal flashlight",
+    "tier": "common"
+  },
+  {
+    "name": "자전거자물쇠",
+    "emoji": "🔒",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "bicycle U-lock",
+    "tier": "common"
+  },
+  {
+    "name": "열쇠고리",
+    "emoji": "🔑",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal key ring with keys",
+    "tier": "common"
+  },
+  {
+    "name": "호미",
+    "emoji": "⛏️",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "garden hoe",
+    "tier": "common"
+  },
+  {
+    "name": "동전",
+    "emoji": "🪙",
+    "smeltProducts": [
+      "copper",
+      "nickel"
+    ],
+    "visualEn": "old coin",
+    "tier": "rare"
+  },
+  {
+    "name": "구리배관",
+    "emoji": "🔌",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper pipe section",
+    "tier": "common"
+  },
+  {
+    "name": "놋그릇",
+    "emoji": "🥣",
+    "smeltProducts": [
+      "copper",
+      "zinc"
+    ],
+    "visualEn": "brass bowl",
+    "tier": "common"
+  },
+  {
+    "name": "전선",
+    "emoji": "〰️",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "bundle of copper wire",
+    "tier": "common"
+  },
+  {
+    "name": "구리냄비",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper cooking pot",
+    "tier": "common"
+  },
+  {
+    "name": "트럼펫",
+    "emoji": "🎺",
+    "smeltProducts": [
+      "copper",
+      "zinc"
+    ],
+    "visualEn": "brass trumpet",
+    "tier": "common"
+  },
+  {
+    "name": "색소폰",
+    "emoji": "🎷",
+    "smeltProducts": [
+      "copper",
+      "zinc"
+    ],
+    "visualEn": "brass saxophone",
+    "tier": "common"
+  },
+  {
+    "name": "나팔",
+    "emoji": "📯",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper horn",
+    "tier": "common"
+  },
+  {
+    "name": "구리동상조각",
+    "emoji": "🗿",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper statue fragment",
+    "tier": "common"
+  },
+  {
+    "name": "금반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "gold"
+    ],
+    "visualEn": "gold ring",
+    "tier": "epic"
+  },
+  {
+    "name": "금목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "gold"
+    ],
+    "visualEn": "gold necklace chain",
+    "tier": "epic"
+  },
+  {
+    "name": "금팔찌",
+    "emoji": "💛",
+    "smeltProducts": [
+      "gold"
+    ],
+    "visualEn": "gold bracelet",
+    "tier": "epic"
+  },
+  {
+    "name": "금귀걸이",
+    "emoji": "🟡",
+    "smeltProducts": [
+      "gold"
+    ],
+    "visualEn": "gold earring",
+    "tier": "epic"
+  },
+  {
+    "name": "금시계",
+    "emoji": "⌚",
+    "smeltProducts": [
+      "gold",
+      "circuit"
+    ],
+    "visualEn": "gold wristwatch",
+    "tier": "epic"
+  },
+  {
+    "name": "금화",
+    "emoji": "🪙",
+    "smeltProducts": [
+      "gold"
+    ],
+    "visualEn": "gold coin",
+    "tier": "epic"
+  },
+  {
+    "name": "금도금접시",
+    "emoji": "🍽️",
+    "smeltProducts": [
+      "gold",
+      "iron"
+    ],
+    "visualEn": "gold plated plate",
+    "tier": "epic"
+  },
+  {
+    "name": "금왕관",
+    "emoji": "👑",
+    "smeltProducts": [
+      "gold"
+    ],
+    "visualEn": "gold crown",
+    "tier": "epic"
+  },
+  {
+    "name": "은수저",
+    "emoji": "🥄",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver spoon",
+    "tier": "rare"
+  },
+  {
+    "name": "은반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver ring",
+    "tier": "rare"
+  },
+  {
+    "name": "은목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver necklace",
+    "tier": "rare"
+  },
+  {
+    "name": "은팔찌",
+    "emoji": "⚪",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver bracelet",
+    "tier": "rare"
+  },
+  {
+    "name": "은화",
+    "emoji": "🪙",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver coin",
+    "tier": "rare"
+  },
+  {
+    "name": "은귀걸이",
+    "emoji": "⚪",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver earring",
+    "tier": "rare"
+  },
+  {
+    "name": "은촛대",
+    "emoji": "🕯️",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver candlestick",
+    "tier": "rare"
+  },
+  {
+    "name": "알루미늄캔",
+    "emoji": "🥤",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "aluminum soda can",
+    "tier": "common"
+  },
+  {
+    "name": "알루미늄호일",
+    "emoji": "🌯",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "crumpled aluminum foil",
+    "tier": "common"
+  },
+  {
+    "name": "알루미늄창틀",
+    "emoji": "🪟",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "aluminum window frame",
+    "tier": "common"
+  },
+  {
+    "name": "알루미늄냄비",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "aluminum pot",
+    "tier": "common"
+  },
+  {
+    "name": "사다리",
+    "emoji": "🪜",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "aluminum ladder",
+    "tier": "common"
+  },
+  {
+    "name": "야구배트",
+    "emoji": "⚾",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "aluminum baseball bat",
+    "tier": "common"
+  },
+  {
+    "name": "스마트폰",
+    "emoji": "📱",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "cracked smartphone",
+    "tier": "rare"
+  },
+  {
+    "name": "휴대폰",
+    "emoji": "📱",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "old mobile phone",
+    "tier": "rare"
+  },
+  {
+    "name": "노트북",
+    "emoji": "💻",
+    "smeltProducts": [
+      "circuit",
+      "aluminum",
+      "plastic"
+    ],
+    "visualEn": "laptop computer",
+    "tier": "rare"
+  },
+  {
+    "name": "태블릿",
+    "emoji": "📲",
+    "smeltProducts": [
+      "circuit",
+      "glass"
+    ],
+    "visualEn": "tablet device",
+    "tier": "rare"
+  },
+  {
+    "name": "게임패드",
+    "emoji": "🎮",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "game controller",
+    "tier": "rare"
+  },
+  {
+    "name": "키보드",
+    "emoji": "⌨️",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "computer keyboard",
+    "tier": "rare"
+  },
+  {
+    "name": "마우스",
+    "emoji": "🖱️",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "computer mouse",
+    "tier": "rare"
+  },
+  {
+    "name": "헤드셋",
+    "emoji": "🎧",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "gaming headset",
+    "tier": "rare"
+  },
+  {
+    "name": "모니터",
+    "emoji": "🖥️",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "computer monitor",
+    "tier": "rare"
+  },
+  {
+    "name": "그래픽카드",
+    "emoji": "🖥️",
+    "smeltProducts": [
+      "circuit",
+      "silicon"
+    ],
+    "visualEn": "graphics card with fans",
+    "tier": "rare"
+  },
+  {
+    "name": "충전기",
+    "emoji": "🔌",
+    "smeltProducts": [
+      "circuit",
+      "rubber"
+    ],
+    "visualEn": "phone charger",
+    "tier": "rare"
+  },
+  {
+    "name": "웹캠",
+    "emoji": "📷",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "glass"
+    ],
+    "visualEn": "webcam",
+    "tier": "rare"
+  },
+  {
+    "name": "이어폰",
+    "emoji": "🎧",
+    "smeltProducts": [
+      "circuit",
+      "rubber"
+    ],
+    "visualEn": "earphones",
+    "tier": "rare"
+  },
+  {
+    "name": "스피커",
+    "emoji": "🔊",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "portable speaker",
+    "tier": "rare"
+  },
+  {
+    "name": "마이크",
+    "emoji": "🎤",
+    "smeltProducts": [
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "microphone",
+    "tier": "rare"
+  },
+  {
+    "name": "손목시계",
+    "emoji": "⌚",
+    "smeltProducts": [
+      "circuit",
+      "glass"
+    ],
+    "visualEn": "digital wristwatch",
+    "tier": "rare"
+  },
+  {
+    "name": "전자계산기",
+    "emoji": "🖩",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "pocket calculator",
+    "tier": "rare"
+  },
+  {
+    "name": "리모컨",
+    "emoji": "📺",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "TV remote control",
+    "tier": "rare"
+  },
+  {
+    "name": "배터리팩",
+    "emoji": "🔋",
+    "smeltProducts": [
+      "battery",
+      "lithium"
+    ],
+    "visualEn": "portable battery pack",
+    "tier": "rare"
+  },
+  {
+    "name": "보조배터리",
+    "emoji": "🔋",
+    "smeltProducts": [
+      "battery",
+      "lithium"
+    ],
+    "visualEn": "power bank",
+    "tier": "rare"
+  },
+  {
+    "name": "드론",
+    "emoji": "🚁",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "aluminum"
+    ],
+    "visualEn": "small quad-rotor drone",
+    "tier": "rare"
+  },
+  {
+    "name": "전동칫솔",
+    "emoji": "🪥",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "electric toothbrush",
+    "tier": "rare"
+  },
+  {
+    "name": "면도기",
+    "emoji": "🪒",
+    "smeltProducts": [
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "electric razor",
+    "tier": "rare"
+  },
+  {
+    "name": "카메라",
+    "emoji": "📷",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "digital camera",
+    "tier": "rare"
+  },
+  {
+    "name": "USB드라이브",
+    "emoji": "💾",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "USB flash drive",
+    "tier": "rare"
+  },
+  {
+    "name": "MP3플레이어",
+    "emoji": "🎵",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "portable MP3 player",
+    "tier": "rare"
+  },
+  {
+    "name": "포터블게임기",
+    "emoji": "🎮",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "glass"
+    ],
+    "visualEn": "handheld game console",
+    "tier": "rare"
+  },
+  {
+    "name": "스마트워치",
+    "emoji": "⌚",
+    "smeltProducts": [
+      "circuit",
+      "glass"
+    ],
+    "visualEn": "smartwatch",
+    "tier": "rare"
+  },
+  {
+    "name": "블루투스스피커",
+    "emoji": "🔊",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "bluetooth speaker",
+    "tier": "rare"
+  },
+  {
+    "name": "전자책리더",
+    "emoji": "📖",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "e-book reader",
+    "tier": "rare"
+  },
+  {
+    "name": "공유기",
+    "emoji": "📡",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "WiFi router",
+    "tier": "rare"
+  },
+  {
+    "name": "CCTV카메라",
+    "emoji": "📷",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "iron"
+    ],
+    "visualEn": "security camera",
+    "tier": "rare"
+  },
+  {
+    "name": "도어락",
+    "emoji": "🔒",
+    "smeltProducts": [
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "electronic door lock",
+    "tier": "rare"
+  },
+  {
+    "name": "전자저울",
+    "emoji": "⚖️",
+    "smeltProducts": [
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "digital kitchen scale",
+    "tier": "rare"
+  },
+  {
+    "name": "초음파세척기",
+    "emoji": "🫧",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "ultrasonic cleaner",
+    "tier": "rare"
+  },
+  {
+    "name": "레이저포인터",
+    "emoji": "🔴",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "laser pointer",
+    "tier": "rare"
+  },
+  {
+    "name": "유리병",
+    "emoji": "🍶",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "glass bottle",
+    "tier": "common"
+  },
+  {
+    "name": "안경",
+    "emoji": "👓",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "eyeglasses",
+    "tier": "common"
+  },
+  {
+    "name": "선글라스",
+    "emoji": "🕶️",
+    "smeltProducts": [
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "sunglasses",
+    "tier": "common"
+  },
+  {
+    "name": "거울",
+    "emoji": "🪞",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "hand mirror",
+    "tier": "common"
+  },
+  {
+    "name": "유리컵",
+    "emoji": "🥃",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "glass tumbler",
+    "tier": "common"
+  },
+  {
+    "name": "어항",
+    "emoji": "🐠",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "small fish tank",
+    "tier": "common"
+  },
+  {
+    "name": "고글",
+    "emoji": "🥽",
+    "smeltProducts": [
+      "glass",
+      "rubber"
+    ],
+    "visualEn": "protective goggles",
+    "tier": "common"
+  },
+  {
+    "name": "망원경",
+    "emoji": "🔭",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "telescope",
+    "tier": "common"
+  },
+  {
+    "name": "현미경",
+    "emoji": "🔬",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "microscope",
+    "tier": "common"
+  },
+  {
+    "name": "나침반",
+    "emoji": "🧭",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "compass",
+    "tier": "common"
+  },
+  {
+    "name": "와인잔",
+    "emoji": "🍷",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "wine glass",
+    "tier": "common"
+  },
+  {
+    "name": "맥주잔",
+    "emoji": "🍺",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "beer mug",
+    "tier": "common"
+  },
+  {
+    "name": "샴페인잔",
+    "emoji": "🥂",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "champagne flute",
+    "tier": "common"
+  },
+  {
+    "name": "유리액자",
+    "emoji": "🖼️",
+    "smeltProducts": [
+      "glass",
+      "resin"
+    ],
+    "visualEn": "glass picture frame",
+    "tier": "common"
+  },
+  {
+    "name": "돋보기",
+    "emoji": "🔍",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "magnifying glass",
+    "tier": "common"
+  },
+  {
+    "name": "쌍안경",
+    "emoji": "🔭",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "binoculars",
+    "tier": "common"
+  },
+  {
+    "name": "수족관",
+    "emoji": "🐟",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "aquarium tank",
+    "tier": "common"
+  },
+  {
+    "name": "시험관",
+    "emoji": "🧪",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "test tube",
+    "tier": "common"
+  },
+  {
+    "name": "비커",
+    "emoji": "🧪",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "glass beaker",
+    "tier": "common"
+  },
+  {
+    "name": "플라스크",
+    "emoji": "⚗️",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "lab flask",
+    "tier": "common"
+  },
+  {
+    "name": "온도계",
+    "emoji": "🌡️",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "glass thermometer",
+    "tier": "common"
+  },
+  {
+    "name": "타이어",
+    "emoji": "🛞",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "worn car tire",
+    "tier": "common"
+  },
+  {
+    "name": "고무장갑",
+    "emoji": "🧤",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber gloves",
+    "tier": "common"
+  },
+  {
+    "name": "고무오리",
+    "emoji": "🦆",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber duck toy",
+    "tier": "common"
+  },
+  {
+    "name": "풍선",
+    "emoji": "🎈",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "deflated balloon",
+    "tier": "common"
+  },
+  {
+    "name": "지우개",
+    "emoji": "✏️",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber eraser",
+    "tier": "common"
+  },
+  {
+    "name": "고무밴드",
+    "emoji": "🔴",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber band",
+    "tier": "common"
+  },
+  {
+    "name": "고무장화",
+    "emoji": "🥾",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber rain boots",
+    "tier": "common"
+  },
+  {
+    "name": "고무호스",
+    "emoji": "🌊",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber garden hose",
+    "tier": "common"
+  },
+  {
+    "name": "스쿠버마스크",
+    "emoji": "🤿",
+    "smeltProducts": [
+      "rubber",
+      "glass"
+    ],
+    "visualEn": "diving mask",
+    "tier": "common"
+  },
+  {
+    "name": "오리발",
+    "emoji": "🤿",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "swimming fins",
+    "tier": "common"
+  },
+  {
+    "name": "고무인형",
+    "emoji": "🎎",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber toy figure",
+    "tier": "common"
+  },
+  {
+    "name": "라텍스장갑",
+    "emoji": "🧤",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "latex gloves",
+    "tier": "common"
+  },
+  {
+    "name": "지압슬리퍼",
+    "emoji": "🩴",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber massage slippers",
+    "tier": "common"
+  },
+  {
+    "name": "수중마스크",
+    "emoji": "🤿",
+    "smeltProducts": [
+      "rubber",
+      "glass"
+    ],
+    "visualEn": "underwater diving mask",
+    "tier": "common"
+  },
+  {
+    "name": "플라스틱병",
+    "emoji": "🧴",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic bottle",
+    "tier": "common"
+  },
+  {
+    "name": "도시락통",
+    "emoji": "🍱",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic lunch box",
+    "tier": "common"
+  },
+  {
+    "name": "컵라면",
+    "emoji": "🍜",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "instant noodle cup",
+    "tier": "common"
+  },
+  {
+    "name": "페트병",
+    "emoji": "🧃",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "PET plastic bottle",
+    "tier": "common"
+  },
+  {
+    "name": "바구니",
+    "emoji": "🧺",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic basket",
+    "tier": "common"
+  },
+  {
+    "name": "헬멧",
+    "emoji": "⛑️",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "safety helmet",
+    "tier": "common"
+  },
+  {
+    "name": "마스크",
+    "emoji": "😷",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "disposable face mask",
+    "tier": "common"
+  },
+  {
+    "name": "케이스",
+    "emoji": "📦",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic case",
+    "tier": "common"
+  },
+  {
+    "name": "호루라기",
+    "emoji": "📣",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic whistle",
+    "tier": "common"
+  },
+  {
+    "name": "빨대",
+    "emoji": "🥤",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "bunch of plastic straws",
+    "tier": "common"
+  },
+  {
+    "name": "프리스비",
+    "emoji": "🥏",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "flying disc toy",
+    "tier": "common"
+  },
+  {
+    "name": "레고블록",
+    "emoji": "🧱",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "pile of plastic building blocks",
+    "tier": "common"
+  },
+  {
+    "name": "물통",
+    "emoji": "🧴",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic water bottle",
+    "tier": "common"
+  },
+  {
+    "name": "텀블러",
+    "emoji": "☕",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "travel tumbler mug",
+    "tier": "common"
+  },
+  {
+    "name": "식기건조대",
+    "emoji": "🍽️",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "dish drying rack",
+    "tier": "common"
+  },
+  {
+    "name": "장난감자동차",
+    "emoji": "🚗",
+    "smeltProducts": [
+      "plastic",
+      "rubber"
+    ],
+    "visualEn": "toy car",
+    "tier": "common"
+  },
+  {
+    "name": "빨래집게",
+    "emoji": "🪢",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic laundry clip",
+    "tier": "common"
+  },
+  {
+    "name": "옷걸이",
+    "emoji": "👔",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "clothes hanger",
+    "tier": "common"
+  },
+  {
+    "name": "칫솔",
+    "emoji": "🪥",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "toothbrush",
+    "tier": "common"
+  },
+  {
+    "name": "빗",
+    "emoji": "💇",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "hair comb",
+    "tier": "common"
+  },
+  {
+    "name": "샴푸통",
+    "emoji": "🧴",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "shampoo bottle",
+    "tier": "common"
+  },
+  {
+    "name": "반찬통",
+    "emoji": "🍱",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic side dish container",
+    "tier": "common"
+  },
+  {
+    "name": "물총",
+    "emoji": "🔫",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "toy water gun",
+    "tier": "common"
+  },
+  {
+    "name": "요요",
+    "emoji": "🪀",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "yo-yo toy",
+    "tier": "common"
+  },
+  {
+    "name": "팽이",
+    "emoji": "🌀",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "spinning top toy",
+    "tier": "common"
+  },
+  {
+    "name": "자",
+    "emoji": "📏",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic ruler",
+    "tier": "common"
+  },
+  {
+    "name": "부표",
+    "emoji": "🔴",
+    "smeltProducts": [
+      "plastic",
+      "rubber"
+    ],
+    "visualEn": "buoy float",
+    "tier": "common"
+  },
+  {
+    "name": "낚시찌",
+    "emoji": "🎣",
+    "smeltProducts": [
+      "plastic",
+      "fiber"
+    ],
+    "visualEn": "fishing float bobber",
+    "tier": "common"
+  },
+  {
+    "name": "헤어드라이기",
+    "emoji": "💨",
+    "smeltProducts": [
+      "plastic",
+      "circuit"
+    ],
+    "visualEn": "hair dryer",
+    "tier": "rare"
+  },
+  {
+    "name": "주사기",
+    "emoji": "💉",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "syringe",
+    "tier": "common"
+  },
+  {
+    "name": "피펫",
+    "emoji": "🧪",
+    "smeltProducts": [
+      "plastic",
+      "glass"
+    ],
+    "visualEn": "plastic pipette",
+    "tier": "common"
+  },
+  {
+    "name": "아이스박스",
+    "emoji": "🧊",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic ice chest cooler",
+    "tier": "common"
+  },
+  {
+    "name": "쓰레기통",
+    "emoji": "🗑️",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic trash bin",
+    "tier": "common"
+  },
+  {
+    "name": "화분",
+    "emoji": "🪴",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic flower pot",
+    "tier": "common"
+  },
+  {
+    "name": "볼링공",
+    "emoji": "🎳",
+    "smeltProducts": [
+      "plastic",
+      "rubber"
+    ],
+    "visualEn": "bowling ball",
+    "tier": "common"
+  },
+  {
+    "name": "골프공",
+    "emoji": "⛳",
+    "smeltProducts": [
+      "rubber",
+      "plastic"
+    ],
+    "visualEn": "golf ball",
+    "tier": "common"
+  },
+  {
+    "name": "가죽지갑",
+    "emoji": "👛",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather wallet",
+    "tier": "common"
+  },
+  {
+    "name": "가죽벨트",
+    "emoji": "👔",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather belt with buckle",
+    "tier": "common"
+  },
+  {
+    "name": "가죽장갑",
+    "emoji": "🧤",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather gloves",
+    "tier": "common"
+  },
+  {
+    "name": "운동화",
+    "emoji": "👟",
+    "smeltProducts": [
+      "leather",
+      "rubber"
+    ],
+    "visualEn": "sneakers",
+    "tier": "common"
+  },
+  {
+    "name": "구두",
+    "emoji": "👞",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather dress shoes",
+    "tier": "common"
+  },
+  {
+    "name": "샌들",
+    "emoji": "👡",
+    "smeltProducts": [
+      "leather",
+      "rubber"
+    ],
+    "visualEn": "sandals",
+    "tier": "common"
+  },
+  {
+    "name": "부츠",
+    "emoji": "👢",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather boots",
+    "tier": "common"
+  },
+  {
+    "name": "핸드백",
+    "emoji": "👜",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather handbag",
+    "tier": "common"
+  },
+  {
+    "name": "배낭",
+    "emoji": "🎒",
+    "smeltProducts": [
+      "leather",
+      "textile"
+    ],
+    "visualEn": "backpack",
+    "tier": "common"
+  },
+  {
+    "name": "안장",
+    "emoji": "🐴",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "horse saddle",
+    "tier": "common"
+  },
+  {
+    "name": "가죽재킷",
+    "emoji": "🧥",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather jacket",
+    "tier": "common"
+  },
+  {
+    "name": "가죽소파조각",
+    "emoji": "🛋️",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather sofa cushion piece",
+    "tier": "common"
+  },
+  {
+    "name": "가죽책표지",
+    "emoji": "📖",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather book cover",
+    "tier": "common"
+  },
+  {
+    "name": "가죽케이스",
+    "emoji": "📦",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather carrying case",
+    "tier": "common"
+  },
+  {
+    "name": "발찌",
+    "emoji": "✨",
+    "smeltProducts": [
+      "leather",
+      "silver"
+    ],
+    "visualEn": "leather ankle bracelet",
+    "tier": "rare"
+  },
+  {
+    "name": "가죽모자",
+    "emoji": "🎩",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather cap",
+    "tier": "common"
+  },
+  {
+    "name": "티셔츠",
+    "emoji": "👕",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "cotton t-shirt",
+    "tier": "common"
+  },
+  {
+    "name": "청바지",
+    "emoji": "👖",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "denim jeans",
+    "tier": "common"
+  },
+  {
+    "name": "스웨터",
+    "emoji": "🧶",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "knit sweater",
+    "tier": "common"
+  },
+  {
+    "name": "패딩",
+    "emoji": "🧥",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "padded winter jacket",
+    "tier": "common"
+  },
+  {
+    "name": "수건",
+    "emoji": "🏖️",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "cotton towel",
+    "tier": "common"
+  },
+  {
+    "name": "담요",
+    "emoji": "🛏️",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "wool blanket",
+    "tier": "common"
+  },
+  {
+    "name": "이불",
+    "emoji": "🛌",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "bed comforter",
+    "tier": "common"
+  },
+  {
+    "name": "양말",
+    "emoji": "🧦",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "pair of socks",
+    "tier": "common"
+  },
+  {
+    "name": "목도리",
+    "emoji": "🧣",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "knit scarf",
+    "tier": "common"
+  },
+  {
+    "name": "장갑",
+    "emoji": "🧤",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "wool gloves",
+    "tier": "common"
+  },
+  {
+    "name": "비니",
+    "emoji": "🎿",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "knit beanie hat",
+    "tier": "common"
+  },
+  {
+    "name": "앞치마",
+    "emoji": "🍳",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "kitchen apron",
+    "tier": "common"
+  },
+  {
+    "name": "체육복",
+    "emoji": "🏃",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "athletic tracksuit",
+    "tier": "common"
+  },
+  {
+    "name": "교복",
+    "emoji": "👨‍🎓",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "school uniform",
+    "tier": "common"
+  },
+  {
+    "name": "수영복",
+    "emoji": "🩱",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "swimsuit",
+    "tier": "common"
+  },
+  {
+    "name": "요가매트",
+    "emoji": "🧘",
+    "smeltProducts": [
+      "rubber",
+      "textile"
+    ],
+    "visualEn": "yoga mat rolled up",
+    "tier": "common"
+  },
+  {
+    "name": "베개",
+    "emoji": "😴",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "bed pillow",
+    "tier": "common"
+  },
+  {
+    "name": "쿠션",
+    "emoji": "🛋️",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "decorative cushion",
+    "tier": "common"
+  },
+  {
+    "name": "넥타이",
+    "emoji": "👔",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "silk necktie",
+    "tier": "common"
+  },
+  {
+    "name": "손수건",
+    "emoji": "🤧",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "handkerchief",
+    "tier": "common"
+  },
+  {
+    "name": "행주",
+    "emoji": "🧹",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "kitchen dishcloth",
+    "tier": "common"
+  },
+  {
+    "name": "침낭",
+    "emoji": "🏕️",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "sleeping bag",
+    "tier": "common"
+  },
+  {
+    "name": "커튼",
+    "emoji": "🪟",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "fabric curtain",
+    "tier": "common"
+  },
+  {
+    "name": "반다나",
+    "emoji": "🎀",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "bandana",
+    "tier": "common"
+  },
+  {
+    "name": "캔버스가방",
+    "emoji": "👜",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "canvas tote bag",
+    "tier": "common"
+  },
+  {
+    "name": "천마스크",
+    "emoji": "😷",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "cloth face mask",
+    "tier": "common"
+  },
+  {
+    "name": "셔츠",
+    "emoji": "👕",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "dress shirt",
+    "tier": "common"
+  },
+  {
+    "name": "바지",
+    "emoji": "👖",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "trousers",
+    "tier": "common"
+  },
+  {
+    "name": "원피스",
+    "emoji": "👗",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "dress",
+    "tier": "common"
+  },
+  {
+    "name": "침대시트",
+    "emoji": "🛌",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "bed sheet",
+    "tier": "common"
+  },
+  {
+    "name": "테이블보",
+    "emoji": "🍽️",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "tablecloth",
+    "tier": "common"
+  },
+  {
+    "name": "나무젓가락",
+    "emoji": "🥢",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden chopsticks",
+    "tier": "common"
+  },
+  {
+    "name": "도마",
+    "emoji": "🍖",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden cutting board",
+    "tier": "common"
+  },
+  {
+    "name": "야구방망이",
+    "emoji": "⚾",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden baseball bat",
+    "tier": "common"
+  },
+  {
+    "name": "지팡이",
+    "emoji": "🦯",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden walking cane",
+    "tier": "common"
+  },
+  {
+    "name": "낚싯대",
+    "emoji": "🎣",
+    "smeltProducts": [
+      "resin",
+      "fiber"
+    ],
+    "visualEn": "fishing rod",
+    "tier": "common"
+  },
+  {
+    "name": "나무숟가락",
+    "emoji": "🥄",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden spoon",
+    "tier": "common"
+  },
+  {
+    "name": "나무상자",
+    "emoji": "📦",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden crate box",
+    "tier": "common"
+  },
+  {
+    "name": "빗자루",
+    "emoji": "🧹",
+    "smeltProducts": [
+      "resin",
+      "textile"
+    ],
+    "visualEn": "wooden broom",
+    "tier": "common"
+  },
+  {
+    "name": "연필",
+    "emoji": "✏️",
+    "smeltProducts": [
+      "resin",
+      "graphite"
+    ],
+    "visualEn": "wooden pencil",
+    "tier": "common"
+  },
+  {
+    "name": "나무인형",
+    "emoji": "🪆",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden puppet toy",
+    "tier": "common"
+  },
+  {
+    "name": "코르크",
+    "emoji": "🍾",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wine cork stopper",
+    "tier": "common"
+  },
+  {
+    "name": "장기말",
+    "emoji": "♟️",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden chess piece",
+    "tier": "common"
+  },
+  {
+    "name": "주사위",
+    "emoji": "🎲",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden dice",
+    "tier": "common"
+  },
+  {
+    "name": "나무도장",
+    "emoji": "📮",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden stamp",
+    "tier": "common"
+  },
+  {
+    "name": "나무액자",
+    "emoji": "🖼️",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden picture frame",
+    "tier": "common"
+  },
+  {
+    "name": "조각상",
+    "emoji": "🗿",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden carved figurine",
+    "tier": "common"
+  },
+  {
+    "name": "절구",
+    "emoji": "🫙",
+    "smeltProducts": [
+      "resin",
+      "ceramic"
+    ],
+    "visualEn": "wooden mortar and pestle",
+    "tier": "common"
+  },
+  {
+    "name": "드럼스틱",
+    "emoji": "🥁",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden drumstick",
+    "tier": "common"
+  },
+  {
+    "name": "기타픽",
+    "emoji": "🎸",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "guitar pick",
+    "tier": "common"
+  },
+  {
+    "name": "나무의자",
+    "emoji": "🪑",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden chair leg",
+    "tier": "common"
+  },
+  {
+    "name": "나무책상",
+    "emoji": "🪑",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden desk fragment",
+    "tier": "common"
+  },
+  {
+    "name": "나무막대",
+    "emoji": "🌲",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden stick",
+    "tier": "common"
+  },
+  {
+    "name": "나무통",
+    "emoji": "🛢️",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden barrel",
+    "tier": "common"
+  },
+  {
+    "name": "활",
+    "emoji": "🏹",
+    "smeltProducts": [
+      "resin",
+      "fiber"
+    ],
+    "visualEn": "wooden bow",
+    "tier": "common"
+  },
+  {
+    "name": "홀스틱",
+    "emoji": "🏑",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden field hockey stick",
+    "tier": "common"
+  },
+  {
+    "name": "하키스틱",
+    "emoji": "🏒",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "ice hockey stick",
+    "tier": "common"
+  },
+  {
+    "name": "낚싯줄",
+    "emoji": "🎣",
+    "smeltProducts": [
+      "fiber"
+    ],
+    "visualEn": "tangled fishing line",
+    "tier": "common"
+  },
+  {
+    "name": "로프",
+    "emoji": "🪢",
+    "smeltProducts": [
+      "fiber"
+    ],
+    "visualEn": "coiled rope",
+    "tier": "common"
+  },
+  {
+    "name": "케이블",
+    "emoji": "🔌",
+    "smeltProducts": [
+      "fiber",
+      "copper"
+    ],
+    "visualEn": "thick cable",
+    "tier": "common"
+  },
+  {
+    "name": "실타래",
+    "emoji": "🧵",
+    "smeltProducts": [
+      "fiber",
+      "textile"
+    ],
+    "visualEn": "spool of thread",
+    "tier": "common"
+  },
+  {
+    "name": "그물",
+    "emoji": "🥅",
+    "smeltProducts": [
+      "fiber"
+    ],
+    "visualEn": "fishing net",
+    "tier": "common"
+  },
+  {
+    "name": "어망",
+    "emoji": "🥅",
+    "smeltProducts": [
+      "fiber"
+    ],
+    "visualEn": "fishing net mesh",
+    "tier": "common"
+  },
+  {
+    "name": "그릇",
+    "emoji": "🥣",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "ceramic bowl",
+    "tier": "common"
+  },
+  {
+    "name": "접시",
+    "emoji": "🍽️",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "ceramic plate",
+    "tier": "common"
+  },
+  {
+    "name": "도자기화분",
+    "emoji": "🪴",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "clay flower pot",
+    "tier": "common"
+  },
+  {
+    "name": "찻잔",
+    "emoji": "🍵",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "ceramic tea cup",
+    "tier": "common"
+  },
+  {
+    "name": "항아리",
+    "emoji": "🏺",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "clay jar",
+    "tier": "common"
+  },
+  {
+    "name": "도자기",
+    "emoji": "🏺",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "decorative pottery vase",
+    "tier": "common"
+  },
+  {
+    "name": "머그컵",
+    "emoji": "☕",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "ceramic mug",
+    "tier": "common"
+  },
+  {
+    "name": "타일",
+    "emoji": "🧱",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "broken ceramic tile",
+    "tier": "common"
+  },
+  {
+    "name": "도자기조각",
+    "emoji": "🏺",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "broken pottery shard",
+    "tier": "common"
+  },
+  {
+    "name": "연필심",
+    "emoji": "✏️",
+    "smeltProducts": [
+      "graphite",
+      "carbon"
+    ],
+    "visualEn": "graphite pencil lead sticks",
+    "tier": "common"
+  },
+  {
+    "name": "숯덩어리",
+    "emoji": "⬛",
+    "smeltProducts": [
+      "carbon"
+    ],
+    "visualEn": "charcoal chunk",
+    "tier": "common"
+  },
+  {
+    "name": "물고기뼈",
+    "emoji": "🐟",
+    "smeltProducts": [
+      "keratin",
+      "protein"
+    ],
+    "visualEn": "dried fish skeleton",
+    "tier": "common"
+  },
+  {
+    "name": "조개껍데기",
+    "emoji": "🐚",
+    "smeltProducts": [
+      "keratin"
+    ],
+    "visualEn": "seashell",
+    "tier": "common"
+  },
+  {
+    "name": "불가사리",
+    "emoji": "⭐",
+    "smeltProducts": [
+      "keratin",
+      "protein"
+    ],
+    "visualEn": "dried starfish",
+    "tier": "common"
+  },
+  {
+    "name": "해파리",
+    "emoji": "🪼",
+    "smeltProducts": [
+      "protein"
+    ],
+    "visualEn": "jellyfish",
+    "tier": "common"
+  },
+  {
+    "name": "산호조각",
+    "emoji": "🪸",
+    "smeltProducts": [
+      "keratin",
+      "limestone"
+    ],
+    "visualEn": "coral fragment",
+    "tier": "common"
+  },
+  {
+    "name": "거북이등껍데기",
+    "emoji": "🐢",
+    "smeltProducts": [
+      "keratin"
+    ],
+    "visualEn": "turtle shell piece",
+    "tier": "common"
+  },
+  {
+    "name": "소라껍데기",
+    "emoji": "🐚",
+    "smeltProducts": [
+      "keratin"
+    ],
+    "visualEn": "conch shell",
+    "tier": "common"
+  },
+  {
+    "name": "문어잔해",
+    "emoji": "🐙",
+    "smeltProducts": [
+      "protein"
+    ],
+    "visualEn": "dried octopus remains",
+    "tier": "common"
+  },
+  {
+    "name": "말린오징어",
+    "emoji": "🦑",
+    "smeltProducts": [
+      "protein"
+    ],
+    "visualEn": "dried squid",
+    "tier": "common"
+  },
+  {
+    "name": "해삼",
+    "emoji": "🌊",
+    "smeltProducts": [
+      "protein"
+    ],
+    "visualEn": "dried sea cucumber",
+    "tier": "common"
+  },
+  {
+    "name": "성게껍질",
+    "emoji": "🦔",
+    "smeltProducts": [
+      "keratin"
+    ],
+    "visualEn": "sea urchin shell",
+    "tier": "common"
+  },
+  {
+    "name": "게껍질",
+    "emoji": "🦀",
+    "smeltProducts": [
+      "chitin"
+    ],
+    "visualEn": "crab shell",
+    "tier": "common"
+  },
+  {
+    "name": "새우껍질",
+    "emoji": "🦐",
+    "smeltProducts": [
+      "chitin"
+    ],
+    "visualEn": "shrimp shell",
+    "tier": "common"
+  },
+  {
+    "name": "가재껍질",
+    "emoji": "🦞",
+    "smeltProducts": [
+      "chitin"
+    ],
+    "visualEn": "lobster shell",
+    "tier": "common"
+  },
+  {
+    "name": "매미껍질",
+    "emoji": "🐝",
+    "smeltProducts": [
+      "chitin"
+    ],
+    "visualEn": "cicada exoskeleton",
+    "tier": "common"
+  },
+  {
+    "name": "장수풍뎅이껍질",
+    "emoji": "🪲",
+    "smeltProducts": [
+      "chitin"
+    ],
+    "visualEn": "beetle carapace",
+    "tier": "common"
+  },
+  {
+    "name": "다이아몬드반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "diamond",
+      "gold"
+    ],
+    "visualEn": "diamond ring",
+    "tier": "legendary"
+  },
+  {
+    "name": "루비반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "ruby",
+      "gold"
+    ],
+    "visualEn": "ruby ring",
+    "tier": "legendary"
+  },
+  {
+    "name": "사파이어목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "sapphire",
+      "silver"
+    ],
+    "visualEn": "sapphire necklace",
+    "tier": "legendary"
+  },
+  {
+    "name": "에메랄드팔찌",
+    "emoji": "💚",
+    "smeltProducts": [
+      "emerald",
+      "gold"
+    ],
+    "visualEn": "emerald bracelet",
+    "tier": "legendary"
+  },
+  {
+    "name": "자수정목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "amethyst",
+      "silver"
+    ],
+    "visualEn": "amethyst necklace",
+    "tier": "legendary"
+  },
+  {
+    "name": "진주목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "pearl"
+    ],
+    "visualEn": "pearl necklace",
+    "tier": "legendary"
+  },
+  {
+    "name": "오팔귀걸이",
+    "emoji": "💎",
+    "smeltProducts": [
+      "opal",
+      "silver"
+    ],
+    "visualEn": "opal earring",
+    "tier": "legendary"
+  },
+  {
+    "name": "토파즈반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "topaz",
+      "gold"
+    ],
+    "visualEn": "topaz ring",
+    "tier": "legendary"
+  },
+  {
+    "name": "가넷목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "garnet",
+      "silver"
+    ],
+    "visualEn": "garnet necklace",
+    "tier": "legendary"
+  },
+  {
+    "name": "보석함",
+    "emoji": "💎",
+    "smeltProducts": [
+      "gold",
+      "iron"
+    ],
+    "visualEn": "jewelry box",
+    "tier": "epic"
+  },
+  {
+    "name": "브로치",
+    "emoji": "✨",
+    "smeltProducts": [
+      "silver",
+      "ruby"
+    ],
+    "visualEn": "decorative brooch",
+    "tier": "legendary"
+  },
+  {
+    "name": "모래시계",
+    "emoji": "⏳",
+    "smeltProducts": [
+      "sand",
+      "glass"
+    ],
+    "visualEn": "hourglass",
+    "tier": "common"
+  },
+  {
+    "name": "모래주머니",
+    "emoji": "🏖️",
+    "smeltProducts": [
+      "sand"
+    ],
+    "visualEn": "sandbag",
+    "tier": "common"
+  },
+  {
+    "name": "기타",
+    "emoji": "🎸",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "acoustic guitar",
+    "tier": "common"
+  },
+  {
+    "name": "바이올린",
+    "emoji": "🎻",
+    "smeltProducts": [
+      "resin",
+      "textile"
+    ],
+    "visualEn": "violin",
+    "tier": "common"
+  },
+  {
+    "name": "피아노건반",
+    "emoji": "🎹",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "piano key fragment",
+    "tier": "common"
+  },
+  {
+    "name": "탬버린",
+    "emoji": "🪘",
+    "smeltProducts": [
+      "iron",
+      "textile"
+    ],
+    "visualEn": "tambourine",
+    "tier": "common"
+  },
+  {
+    "name": "마라카스",
+    "emoji": "🪇",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden maracas",
+    "tier": "common"
+  },
+  {
+    "name": "실로폰",
+    "emoji": "🎵",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "toy xylophone",
+    "tier": "common"
+  },
+  {
+    "name": "하모니카",
+    "emoji": "🎵",
+    "smeltProducts": [
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "harmonica",
+    "tier": "common"
+  },
+  {
+    "name": "플루트",
+    "emoji": "🎵",
+    "smeltProducts": [
+      "silver",
+      "iron"
+    ],
+    "visualEn": "metal flute",
+    "tier": "rare"
+  },
+  {
+    "name": "캐스터네츠",
+    "emoji": "🪘",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden castanets",
+    "tier": "common"
+  },
+  {
+    "name": "우쿨렐레",
+    "emoji": "🎸",
+    "smeltProducts": [
+      "resin",
+      "textile"
+    ],
+    "visualEn": "ukulele",
+    "tier": "common"
+  },
+  {
+    "name": "축구공",
+    "emoji": "⚽",
+    "smeltProducts": [
+      "rubber",
+      "textile"
+    ],
+    "visualEn": "soccer ball",
+    "tier": "common"
+  },
+  {
+    "name": "농구공",
+    "emoji": "🏀",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "basketball",
+    "tier": "common"
+  },
+  {
+    "name": "테니스공",
+    "emoji": "🎾",
+    "smeltProducts": [
+      "rubber",
+      "textile"
+    ],
+    "visualEn": "tennis ball",
+    "tier": "common"
+  },
+  {
+    "name": "테니스라켓",
+    "emoji": "🎾",
+    "smeltProducts": [
+      "resin",
+      "textile",
+      "iron"
+    ],
+    "visualEn": "tennis racket",
+    "tier": "common"
+  },
+  {
+    "name": "배드민턴채",
+    "emoji": "🏸",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "badminton racket",
+    "tier": "common"
+  },
+  {
+    "name": "탁구공",
+    "emoji": "🏓",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "ping pong ball",
+    "tier": "common"
+  },
+  {
+    "name": "탁구채",
+    "emoji": "🏓",
+    "smeltProducts": [
+      "resin",
+      "rubber"
+    ],
+    "visualEn": "table tennis paddle",
+    "tier": "common"
+  },
+  {
+    "name": "골프채",
+    "emoji": "⛳",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "golf club",
+    "tier": "common"
+  },
+  {
+    "name": "수영모",
+    "emoji": "🏊",
+    "smeltProducts": [
+      "rubber",
+      "textile"
+    ],
+    "visualEn": "swimming cap",
+    "tier": "common"
+  },
+  {
+    "name": "복싱글러브",
+    "emoji": "🥊",
+    "smeltProducts": [
+      "leather",
+      "rubber"
+    ],
+    "visualEn": "boxing glove",
+    "tier": "common"
+  },
+  {
+    "name": "줄넘기",
+    "emoji": "🪢",
+    "smeltProducts": [
+      "rubber",
+      "resin"
+    ],
+    "visualEn": "jump rope",
+    "tier": "common"
+  },
+  {
+    "name": "훌라후프",
+    "emoji": "🌀",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic hula hoop",
+    "tier": "common"
+  },
+  {
+    "name": "스키폴",
+    "emoji": "⛷️",
+    "smeltProducts": [
+      "aluminum",
+      "iron"
+    ],
+    "visualEn": "ski pole",
+    "tier": "common"
+  },
+  {
+    "name": "럭비공",
+    "emoji": "🏉",
+    "smeltProducts": [
+      "rubber",
+      "leather"
+    ],
+    "visualEn": "rugby ball",
+    "tier": "common"
+  },
+  {
+    "name": "배구공",
+    "emoji": "🏐",
+    "smeltProducts": [
+      "rubber",
+      "textile"
+    ],
+    "visualEn": "volleyball",
+    "tier": "common"
+  },
+  {
+    "name": "스케이트보드",
+    "emoji": "🛹",
+    "smeltProducts": [
+      "resin",
+      "rubber",
+      "aluminum"
+    ],
+    "visualEn": "skateboard",
+    "tier": "common"
+  },
+  {
+    "name": "킥보드",
+    "emoji": "🛴",
+    "smeltProducts": [
+      "aluminum",
+      "rubber"
+    ],
+    "visualEn": "kick scooter",
+    "tier": "common"
+  },
+  {
+    "name": "수경",
+    "emoji": "🤿",
+    "smeltProducts": [
+      "glass",
+      "rubber"
+    ],
+    "visualEn": "swim goggles",
+    "tier": "common"
+  },
+  {
+    "name": "아령",
+    "emoji": "🏋️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron dumbbell",
+    "tier": "common"
+  },
+  {
+    "name": "역기",
+    "emoji": "🏋️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "barbell weight plate",
+    "tier": "common"
+  },
+  {
+    "name": "인라인스케이트",
+    "emoji": "⛸️",
+    "smeltProducts": [
+      "plastic",
+      "iron",
+      "rubber"
+    ],
+    "visualEn": "inline roller skates",
+    "tier": "common"
+  },
+  {
+    "name": "스노보드",
+    "emoji": "🏂",
+    "smeltProducts": [
+      "resin",
+      "aluminum"
+    ],
+    "visualEn": "snowboard",
+    "tier": "common"
+  },
+  {
+    "name": "서핑보드",
+    "emoji": "🏄",
+    "smeltProducts": [
+      "resin",
+      "rubber"
+    ],
+    "visualEn": "surfboard",
+    "tier": "common"
+  },
+  {
+    "name": "투구",
+    "emoji": "🪖",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron warrior helmet",
+    "tier": "common"
+  },
+  {
+    "name": "갑옷조각",
+    "emoji": "⚔️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "piece of iron armor",
+    "tier": "common"
+  },
+  {
+    "name": "세탁기",
+    "emoji": "🌀",
+    "smeltProducts": [
+      "iron",
+      "plastic",
+      "rubber"
+    ],
+    "visualEn": "washing machine",
+    "tier": "common"
+  },
+  {
+    "name": "냉장고",
+    "emoji": "🧊",
+    "smeltProducts": [
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "refrigerator",
+    "tier": "common"
+  },
+  {
+    "name": "전자레인지",
+    "emoji": "📦",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "glass"
+    ],
+    "visualEn": "microwave oven",
+    "tier": "rare"
+  },
+  {
+    "name": "선풍기",
+    "emoji": "💨",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "electric fan",
+    "tier": "rare"
+  },
+  {
+    "name": "에어컨",
+    "emoji": "❄️",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "aluminum"
+    ],
+    "visualEn": "air conditioner unit",
+    "tier": "rare"
+  },
+  {
+    "name": "청소기",
+    "emoji": "🧹",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "vacuum cleaner",
+    "tier": "rare"
+  },
+  {
+    "name": "다리미",
+    "emoji": "👔",
+    "smeltProducts": [
+      "iron",
+      "circuit"
+    ],
+    "visualEn": "clothes iron",
+    "tier": "rare"
+  },
+  {
+    "name": "토스터",
+    "emoji": "🍞",
+    "smeltProducts": [
+      "iron",
+      "circuit"
+    ],
+    "visualEn": "toaster",
+    "tier": "rare"
+  },
+  {
+    "name": "믹서기",
+    "emoji": "🥤",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "blender",
+    "tier": "rare"
+  },
+  {
+    "name": "커피머신",
+    "emoji": "☕",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "coffee maker",
+    "tier": "rare"
+  },
+  {
+    "name": "전기밥솥",
+    "emoji": "🍚",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "electric rice cooker",
+    "tier": "rare"
+  },
+  {
+    "name": "에어프라이어",
+    "emoji": "🍟",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "air fryer",
+    "tier": "rare"
+  },
+  {
+    "name": "인덕션",
+    "emoji": "🍳",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "glass"
+    ],
+    "visualEn": "induction cooktop",
+    "tier": "rare"
+  },
+  {
+    "name": "식기세척기",
+    "emoji": "🍽️",
+    "smeltProducts": [
+      "iron",
+      "plastic",
+      "circuit"
+    ],
+    "visualEn": "dishwasher",
+    "tier": "rare"
+  },
+  {
+    "name": "고데기",
+    "emoji": "💇",
+    "smeltProducts": [
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "hair straightener iron",
+    "tier": "rare"
+  },
+  {
+    "name": "제습기",
+    "emoji": "💧",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "dehumidifier",
+    "tier": "rare"
+  },
+  {
+    "name": "가습기",
+    "emoji": "💨",
+    "smeltProducts": [
+      "plastic",
+      "circuit"
+    ],
+    "visualEn": "humidifier",
+    "tier": "rare"
+  },
+  {
+    "name": "공기청정기",
+    "emoji": "🌬️",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "textile"
+    ],
+    "visualEn": "air purifier",
+    "tier": "rare"
+  },
+  {
+    "name": "전기히터",
+    "emoji": "🔥",
+    "smeltProducts": [
+      "iron",
+      "circuit"
+    ],
+    "visualEn": "electric heater",
+    "tier": "rare"
+  },
+  {
+    "name": "주스기",
+    "emoji": "🍊",
+    "smeltProducts": [
+      "plastic",
+      "circuit"
+    ],
+    "visualEn": "electric juicer",
+    "tier": "rare"
+  },
+  {
+    "name": "전기드릴",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "power drill",
+    "tier": "rare"
+  },
+  {
+    "name": "전동드라이버",
+    "emoji": "🔩",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "electric screwdriver",
+    "tier": "rare"
+  },
+  {
+    "name": "초인종",
+    "emoji": "🔔",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "doorbell",
+    "tier": "rare"
+  },
+  {
+    "name": "냉풍기",
+    "emoji": "❄️",
+    "smeltProducts": [
+      "plastic",
+      "circuit"
+    ],
+    "visualEn": "personal cooler fan",
+    "tier": "rare"
+  },
+  {
+    "name": "전기포트",
+    "emoji": "🫖",
+    "smeltProducts": [
+      "plastic",
+      "circuit",
+      "iron"
+    ],
+    "visualEn": "electric kettle",
+    "tier": "rare"
+  },
+  {
+    "name": "와플메이커",
+    "emoji": "🧇",
+    "smeltProducts": [
+      "iron",
+      "circuit"
+    ],
+    "visualEn": "waffle iron maker",
+    "tier": "rare"
+  },
+  {
+    "name": "자전거",
+    "emoji": "🚲",
+    "smeltProducts": [
+      "iron",
+      "rubber"
+    ],
+    "visualEn": "bicycle frame and wheels",
+    "tier": "common"
+  },
+  {
+    "name": "자전거바퀴",
+    "emoji": "🛞",
+    "smeltProducts": [
+      "iron",
+      "rubber"
+    ],
+    "visualEn": "bicycle wheel",
+    "tier": "common"
+  },
+  {
+    "name": "자전거핸들",
+    "emoji": "🚲",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "bicycle handlebar",
+    "tier": "common"
+  },
+  {
+    "name": "물뿌리개",
+    "emoji": "🌿",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "watering can",
+    "tier": "common"
+  },
+  {
+    "name": "삽자루",
+    "emoji": "🌱",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "shovel with wooden handle",
+    "tier": "common"
+  },
+  {
+    "name": "전기톱",
+    "emoji": "🪚",
+    "smeltProducts": [
+      "iron",
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "electric chainsaw",
+    "tier": "rare"
+  },
+  {
+    "name": "끌",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "wood chisel",
+    "tier": "common"
+  },
+  {
+    "name": "대패",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "hand plane tool",
+    "tier": "common"
+  },
+  {
+    "name": "바이스",
+    "emoji": "🔩",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "bench vise clamp",
+    "tier": "common"
+  },
+  {
+    "name": "수평계",
+    "emoji": "📏",
+    "smeltProducts": [
+      "iron",
+      "glass"
+    ],
+    "visualEn": "spirit level",
+    "tier": "common"
+  },
+  {
+    "name": "책",
+    "emoji": "📚",
+    "smeltProducts": [
+      "resin",
+      "textile"
+    ],
+    "visualEn": "stack of old books",
+    "tier": "common"
+  },
+  {
+    "name": "노트",
+    "emoji": "📓",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "spiral notebook",
+    "tier": "common"
+  },
+  {
+    "name": "볼펜",
+    "emoji": "🖊️",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "ballpoint pen",
+    "tier": "common"
+  },
+  {
+    "name": "만년필",
+    "emoji": "✒️",
+    "smeltProducts": [
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "fountain pen",
+    "tier": "common"
+  },
+  {
+    "name": "스테이플러",
+    "emoji": "📎",
+    "smeltProducts": [
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "stapler",
+    "tier": "common"
+  },
+  {
+    "name": "클립",
+    "emoji": "📎",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal paper clip",
+    "tier": "common"
+  },
+  {
+    "name": "붓",
+    "emoji": "🖌️",
+    "smeltProducts": [
+      "resin",
+      "textile"
+    ],
+    "visualEn": "paint brush",
+    "tier": "common"
+  },
+  {
+    "name": "팔레트",
+    "emoji": "🎨",
+    "smeltProducts": [
+      "plastic",
+      "resin"
+    ],
+    "visualEn": "artist palette",
+    "tier": "common"
+  },
+  {
+    "name": "크레파스",
+    "emoji": "🖍️",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "box of crayons",
+    "tier": "common"
+  },
+  {
+    "name": "색연필",
+    "emoji": "✏️",
+    "smeltProducts": [
+      "resin",
+      "graphite"
+    ],
+    "visualEn": "colored pencils",
+    "tier": "common"
+  },
+  {
+    "name": "컴퍼스",
+    "emoji": "✏️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "drawing compass",
+    "tier": "common"
+  },
+  {
+    "name": "삼각자",
+    "emoji": "📐",
+    "smeltProducts": [
+      "plastic"
+    ],
+    "visualEn": "plastic triangle ruler",
+    "tier": "common"
+  },
+  {
+    "name": "도장",
+    "emoji": "📮",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "rubber stamp",
+    "tier": "common"
+  },
+  {
+    "name": "풀건",
+    "emoji": "🔫",
+    "smeltProducts": [
+      "plastic",
+      "resin"
+    ],
+    "visualEn": "glue gun",
+    "tier": "common"
+  },
+  {
+    "name": "사포",
+    "emoji": "🟫",
+    "smeltProducts": [
+      "iron",
+      "sand"
+    ],
+    "visualEn": "sandpaper sheet",
+    "tier": "common"
+  },
+  {
+    "name": "통발",
+    "emoji": "🧺",
+    "smeltProducts": [
+      "iron",
+      "fiber"
+    ],
+    "visualEn": "wire fish trap basket",
+    "tier": "common"
+  },
+  {
+    "name": "뜰채",
+    "emoji": "🥅",
+    "smeltProducts": [
+      "iron",
+      "fiber"
+    ],
+    "visualEn": "fish landing net",
+    "tier": "common"
+  },
+  {
+    "name": "작살",
+    "emoji": "🔱",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal spear",
+    "tier": "common"
+  },
+  {
+    "name": "우산",
+    "emoji": "☂️",
+    "smeltProducts": [
+      "iron",
+      "textile"
+    ],
+    "visualEn": "umbrella",
+    "tier": "common"
+  },
+  {
+    "name": "여행가방",
+    "emoji": "🧳",
+    "smeltProducts": [
+      "plastic",
+      "iron",
+      "textile"
+    ],
+    "visualEn": "rolling suitcase",
+    "tier": "common"
+  },
+  {
+    "name": "랜턴",
+    "emoji": "🪔",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "metal lantern",
+    "tier": "common"
+  },
+  {
+    "name": "양초",
+    "emoji": "🕯️",
+    "smeltProducts": [
+      "petro",
+      "textile"
+    ],
+    "visualEn": "wax candle",
+    "tier": "common"
+  },
+  {
+    "name": "촛대",
+    "emoji": "🕯️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "iron candlestick",
+    "tier": "common"
+  },
+  {
+    "name": "쌍안경",
+    "emoji": "🔭",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "binoculars",
+    "tier": "common"
+  },
+  {
+    "name": "나침반",
+    "emoji": "🧭",
+    "smeltProducts": [
+      "glass",
+      "iron"
+    ],
+    "visualEn": "compass",
+    "tier": "common"
+  },
+  {
+    "name": "혈압계",
+    "emoji": "💊",
+    "smeltProducts": [
+      "circuit",
+      "rubber"
+    ],
+    "visualEn": "blood pressure monitor",
+    "tier": "rare"
+  },
+  {
+    "name": "청진기",
+    "emoji": "🩺",
+    "smeltProducts": [
+      "iron",
+      "rubber"
+    ],
+    "visualEn": "stethoscope",
+    "tier": "common"
+  },
+  {
+    "name": "핀셋",
+    "emoji": "🔬",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal tweezers",
+    "tier": "common"
+  },
+  {
+    "name": "컴퓨터",
+    "emoji": "🖥️",
+    "smeltProducts": [
+      "circuit",
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "desktop computer tower",
+    "tier": "rare"
+  },
+  {
+    "name": "프린터",
+    "emoji": "🖨️",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "inkjet printer",
+    "tier": "rare"
+  },
+  {
+    "name": "스캐너",
+    "emoji": "📠",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "flatbed scanner",
+    "tier": "rare"
+  },
+  {
+    "name": "빔프로젝터",
+    "emoji": "📽️",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "projector",
+    "tier": "rare"
+  },
+  {
+    "name": "TV",
+    "emoji": "📺",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "flat screen television",
+    "tier": "rare"
+  },
+  {
+    "name": "라디오",
+    "emoji": "📻",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "portable radio",
+    "tier": "rare"
+  },
+  {
+    "name": "전화기",
+    "emoji": "📞",
+    "smeltProducts": [
+      "circuit",
+      "plastic"
+    ],
+    "visualEn": "landline telephone",
+    "tier": "rare"
+  },
+  {
+    "name": "팩스기",
+    "emoji": "📠",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "fax machine",
+    "tier": "rare"
+  },
+  {
+    "name": "전자피아노",
+    "emoji": "🎹",
+    "smeltProducts": [
+      "circuit",
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "electronic keyboard",
+    "tier": "rare"
+  },
+  {
+    "name": "냄비뚜껑",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "iron",
+      "glass"
+    ],
+    "visualEn": "pot lid with glass window",
+    "tier": "common"
+  },
+  {
+    "name": "쇠솥",
+    "emoji": "🫕",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "heavy iron cauldron",
+    "tier": "common"
+  },
+  {
+    "name": "식기세트",
+    "emoji": "🍽️",
+    "smeltProducts": [
+      "iron",
+      "ceramic"
+    ],
+    "visualEn": "metal cutlery set",
+    "tier": "common"
+  },
+  {
+    "name": "아이스픽",
+    "emoji": "🧊",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "ice pick tool",
+    "tier": "common"
+  },
+  {
+    "name": "고기집게",
+    "emoji": "🍖",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "barbecue tongs",
+    "tier": "common"
+  },
+  {
+    "name": "석쇠받침",
+    "emoji": "🍳",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal grill stand",
+    "tier": "common"
+  },
+  {
+    "name": "군용칼",
+    "emoji": "🗡️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "military knife",
+    "tier": "common"
+  },
+  {
+    "name": "칼집",
+    "emoji": "⚔️",
+    "smeltProducts": [
+      "leather",
+      "iron"
+    ],
+    "visualEn": "sword scabbard",
+    "tier": "common"
+  },
+  {
+    "name": "철제함",
+    "emoji": "📦",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal tin box",
+    "tier": "common"
+  },
+  {
+    "name": "닻",
+    "emoji": "⚓",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "ship anchor",
+    "tier": "common"
+  },
+  {
+    "name": "구리팔찌",
+    "emoji": "🟠",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper bracelet",
+    "tier": "common"
+  },
+  {
+    "name": "구리반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper ring",
+    "tier": "common"
+  },
+  {
+    "name": "놋쇠촛대",
+    "emoji": "🕯️",
+    "smeltProducts": [
+      "copper",
+      "zinc"
+    ],
+    "visualEn": "brass candlestick",
+    "tier": "common"
+  },
+  {
+    "name": "금도금잔",
+    "emoji": "🏆",
+    "smeltProducts": [
+      "gold",
+      "iron"
+    ],
+    "visualEn": "gold plated trophy cup",
+    "tier": "epic"
+  },
+  {
+    "name": "은식기",
+    "emoji": "🍴",
+    "smeltProducts": [
+      "silver"
+    ],
+    "visualEn": "silver cutlery set",
+    "tier": "rare"
+  },
+  {
+    "name": "선글라스케이스",
+    "emoji": "🕶️",
+    "smeltProducts": [
+      "plastic",
+      "leather"
+    ],
+    "visualEn": "sunglasses case",
+    "tier": "common"
+  },
+  {
+    "name": "유리마블",
+    "emoji": "🔮",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "glass marble",
+    "tier": "common"
+  },
+  {
+    "name": "수정구슬",
+    "emoji": "🔮",
+    "smeltProducts": [
+      "glass",
+      "silica"
+    ],
+    "visualEn": "crystal ball",
+    "tier": "common"
+  },
+  {
+    "name": "유리공예품",
+    "emoji": "🫙",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "decorative glass figurine",
+    "tier": "common"
+  },
+  {
+    "name": "바퀴달린슬리퍼",
+    "emoji": "🩴",
+    "smeltProducts": [
+      "rubber",
+      "plastic"
+    ],
+    "visualEn": "roller slipper",
+    "tier": "common"
+  },
+  {
+    "name": "고무도장",
+    "emoji": "📮",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber stamp",
+    "tier": "common"
+  },
+  {
+    "name": "고무타이어튜브",
+    "emoji": "🛞",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "inner tube",
+    "tier": "common"
+  },
+  {
+    "name": "점토",
+    "emoji": "🟤",
+    "smeltProducts": [
+      "ceramic",
+      "sand"
+    ],
+    "visualEn": "lump of clay",
+    "tier": "common"
+  },
+  {
+    "name": "도자기조각",
+    "emoji": "🏺",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "broken pottery fragment",
+    "tier": "common"
+  },
+  {
+    "name": "벽돌",
+    "emoji": "🧱",
+    "smeltProducts": [
+      "ceramic",
+      "sand"
+    ],
+    "visualEn": "fired clay brick",
+    "tier": "common"
+  },
+  {
+    "name": "화분받침",
+    "emoji": "🪴",
+    "smeltProducts": [
+      "ceramic"
+    ],
+    "visualEn": "ceramic pot saucer",
+    "tier": "common"
+  },
+  {
+    "name": "밀짚모자",
+    "emoji": "👒",
+    "smeltProducts": [
+      "textile",
+      "resin"
+    ],
+    "visualEn": "straw hat",
+    "tier": "common"
+  },
+  {
+    "name": "가방끈",
+    "emoji": "👜",
+    "smeltProducts": [
+      "textile",
+      "leather"
+    ],
+    "visualEn": "bag strap",
+    "tier": "common"
+  },
+  {
+    "name": "허리띠",
+    "emoji": "👔",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "cloth waist band",
+    "tier": "common"
+  },
+  {
+    "name": "머플러",
+    "emoji": "🧣",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "wool muffler scarf",
+    "tier": "common"
+  },
+  {
+    "name": "레깅스",
+    "emoji": "🩳",
+    "smeltProducts": [
+      "textile",
+      "rubber"
+    ],
+    "visualEn": "athletic leggings",
+    "tier": "common"
+  },
+  {
+    "name": "조끼",
+    "emoji": "🦺",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "vest",
+    "tier": "common"
+  },
+  {
+    "name": "두건",
+    "emoji": "🎀",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "cloth hood",
+    "tier": "common"
+  },
+  {
+    "name": "대나무통",
+    "emoji": "🎋",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "bamboo container",
+    "tier": "common"
+  },
+  {
+    "name": "나무망치",
+    "emoji": "🔨",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden mallet",
+    "tier": "common"
+  },
+  {
+    "name": "나무빨래판",
+    "emoji": "🧺",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden washboard",
+    "tier": "common"
+  },
+  {
+    "name": "나무빗",
+    "emoji": "💇",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden hair comb",
+    "tier": "common"
+  },
+  {
+    "name": "도르래",
+    "emoji": "⚙️",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "wooden pulley",
+    "tier": "common"
+  },
+  {
+    "name": "나무저금통",
+    "emoji": "🐷",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden piggy bank",
+    "tier": "common"
+  },
+  {
+    "name": "나무피리",
+    "emoji": "🎵",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden flute",
+    "tier": "common"
+  },
+  {
+    "name": "나무퍼즐",
+    "emoji": "🧩",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "wooden puzzle pieces",
+    "tier": "common"
+  },
+  {
+    "name": "코르크보드",
+    "emoji": "📌",
+    "smeltProducts": [
+      "resin"
+    ],
+    "visualEn": "cork bulletin board",
+    "tier": "common"
+  },
+  {
+    "name": "얼레",
+    "emoji": "🎣",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "fishing reel spool",
+    "tier": "common"
+  },
+  {
+    "name": "오징어뼈",
+    "emoji": "🦑",
+    "smeltProducts": [
+      "keratin",
+      "protein"
+    ],
+    "visualEn": "dried cuttlefish bone",
+    "tier": "common"
+  },
+  {
+    "name": "홍합껍데기",
+    "emoji": "🦪",
+    "smeltProducts": [
+      "keratin"
+    ],
+    "visualEn": "mussel shell",
+    "tier": "common"
+  },
+  {
+    "name": "굴껍데기",
+    "emoji": "🦪",
+    "smeltProducts": [
+      "keratin",
+      "limestone"
+    ],
+    "visualEn": "oyster shell",
+    "tier": "common"
+  },
+  {
+    "name": "말린해마",
+    "emoji": "🌊",
+    "smeltProducts": [
+      "keratin",
+      "protein"
+    ],
+    "visualEn": "dried seahorse",
+    "tier": "common"
+  },
+  {
+    "name": "곤충표본",
+    "emoji": "🦋",
+    "smeltProducts": [
+      "chitin"
+    ],
+    "visualEn": "pinned insect specimen",
+    "tier": "common"
+  },
+  {
+    "name": "공룡화석조각",
+    "emoji": "🦕",
+    "smeltProducts": [
+      "keratin",
+      "limestone"
+    ],
+    "visualEn": "dinosaur fossil fragment",
+    "tier": "common"
+  },
+  {
+    "name": "자동차열쇠",
+    "emoji": "🔑",
+    "smeltProducts": [
+      "iron",
+      "circuit"
+    ],
+    "visualEn": "car key fob",
+    "tier": "rare"
+  },
+  {
+    "name": "자동차번호판",
+    "emoji": "🚗",
+    "smeltProducts": [
+      "aluminum",
+      "iron"
+    ],
+    "visualEn": "car license plate",
+    "tier": "common"
+  },
+  {
+    "name": "와이퍼",
+    "emoji": "🚗",
+    "smeltProducts": [
+      "rubber",
+      "iron"
+    ],
+    "visualEn": "windshield wiper",
+    "tier": "common"
+  },
+  {
+    "name": "사이드미러",
+    "emoji": "🚗",
+    "smeltProducts": [
+      "glass",
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "car side mirror",
+    "tier": "common"
+  },
+  {
+    "name": "자동차배터리",
+    "emoji": "🔋",
+    "smeltProducts": [
+      "battery",
+      "lead"
+    ],
+    "visualEn": "car battery",
+    "tier": "rare"
+  },
+  {
+    "name": "소화기",
+    "emoji": "🧯",
+    "smeltProducts": [
+      "iron",
+      "aluminum"
+    ],
+    "visualEn": "fire extinguisher",
+    "tier": "common"
+  },
+  {
+    "name": "경광등",
+    "emoji": "🚨",
+    "smeltProducts": [
+      "circuit",
+      "glass",
+      "plastic"
+    ],
+    "visualEn": "emergency light",
+    "tier": "rare"
+  },
+  {
+    "name": "안전벨트",
+    "emoji": "🚗",
+    "smeltProducts": [
+      "textile",
+      "iron"
+    ],
+    "visualEn": "seatbelt",
+    "tier": "common"
+  },
+  {
+    "name": "경고삼각대",
+    "emoji": "⚠️",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "road warning triangle",
+    "tier": "common"
+  },
+  {
+    "name": "행거",
+    "emoji": "👔",
+    "smeltProducts": [
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "metal clothes rack",
+    "tier": "common"
+  },
+  {
+    "name": "서랍손잡이",
+    "emoji": "🚪",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal drawer handle",
+    "tier": "common"
+  },
+  {
+    "name": "문고리",
+    "emoji": "🚪",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "door knob",
+    "tier": "common"
+  },
+  {
+    "name": "경첩",
+    "emoji": "🚪",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal door hinge",
+    "tier": "common"
+  },
+  {
+    "name": "네일아트도구",
+    "emoji": "💅",
+    "smeltProducts": [
+      "iron",
+      "plastic"
+    ],
+    "visualEn": "nail art tool set",
+    "tier": "common"
+  },
+  {
+    "name": "면도칼",
+    "emoji": "🪒",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "straight razor blade",
+    "tier": "common"
+  },
+  {
+    "name": "손톱깎이",
+    "emoji": "✂️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "nail clipper",
+    "tier": "common"
+  },
+  {
+    "name": "사냥덫",
+    "emoji": "🪤",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal animal trap",
+    "tier": "common"
+  },
+  {
+    "name": "새장",
+    "emoji": "🐦",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal bird cage",
+    "tier": "common"
+  },
+  {
+    "name": "목줄",
+    "emoji": "🐕",
+    "smeltProducts": [
+      "leather",
+      "iron"
+    ],
+    "visualEn": "dog collar and leash",
+    "tier": "common"
+  },
+  {
+    "name": "말굽",
+    "emoji": "🐴",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "horseshoe",
+    "tier": "common"
+  },
+  {
+    "name": "물고기통조림",
+    "emoji": "🐟",
+    "smeltProducts": [
+      "iron",
+      "protein"
+    ],
+    "visualEn": "canned fish tin",
+    "tier": "common"
+  },
+  {
+    "name": "바벨",
+    "emoji": "🏋️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "heavy barbell",
+    "tier": "common"
+  },
+  {
+    "name": "철제선반",
+    "emoji": "🗄️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal shelf rack",
+    "tier": "common"
+  },
+  {
+    "name": "가스통",
+    "emoji": "🛢️",
+    "smeltProducts": [
+      "iron"
+    ],
+    "visualEn": "metal gas canister",
+    "tier": "common"
+  },
+  {
+    "name": "낫",
+    "emoji": "⚔️",
+    "smeltProducts": [
+      "iron",
+      "resin"
+    ],
+    "visualEn": "iron sickle",
+    "tier": "common"
+  },
+  {
+    "name": "동판화",
+    "emoji": "🖼️",
+    "smeltProducts": [
+      "copper"
+    ],
+    "visualEn": "copper etching plate",
+    "tier": "common"
+  },
+  {
+    "name": "알루미늄캡",
+    "emoji": "🧢",
+    "smeltProducts": [
+      "aluminum"
+    ],
+    "visualEn": "aluminum bottle cap",
+    "tier": "common"
+  },
+  {
+    "name": "유리구슬",
+    "emoji": "🔮",
+    "smeltProducts": [
+      "glass"
+    ],
+    "visualEn": "glass bead",
+    "tier": "common"
+  },
+  {
+    "name": "타이어튜브",
+    "emoji": "🛞",
+    "smeltProducts": [
+      "rubber"
+    ],
+    "visualEn": "rubber bicycle tube",
+    "tier": "common"
+  },
+  {
+    "name": "미니어처자동차",
+    "emoji": "🚗",
+    "smeltProducts": [
+      "plastic",
+      "iron"
+    ],
+    "visualEn": "miniature die-cast car",
+    "tier": "common"
+  },
+  {
+    "name": "나무저울",
+    "emoji": "⚖️",
+    "smeltProducts": [
+      "resin",
+      "iron"
+    ],
+    "visualEn": "wooden balance scale",
+    "tier": "common"
+  },
+  {
+    "name": "가죽안경집",
+    "emoji": "👓",
+    "smeltProducts": [
+      "leather"
+    ],
+    "visualEn": "leather glasses case",
+    "tier": "common"
+  },
+  {
+    "name": "목화솜",
+    "emoji": "🌸",
+    "smeltProducts": [
+      "textile"
+    ],
+    "visualEn": "raw cotton ball",
+    "tier": "common"
+  },
+  {
+    "name": "해골모형",
+    "emoji": "💀",
+    "smeltProducts": [
+      "keratin",
+      "plastic"
+    ],
+    "visualEn": "plastic skull model",
+    "tier": "common"
+  },
+  {
+    "name": "곤충채집통",
+    "emoji": "🪲",
+    "smeltProducts": [
+      "plastic",
+      "chitin"
+    ],
+    "visualEn": "insect collection jar",
+    "tier": "common"
+  },
+  {
+    "name": "방울",
+    "emoji": "🔔",
+    "smeltProducts": [
+      "iron",
+      "copper"
+    ],
+    "visualEn": "small metal bell",
+    "tier": "common"
+  },
+  {
+    "name": "탁상시계",
+    "emoji": "🕰️",
+    "smeltProducts": [
+      "iron",
+      "glass",
+      "circuit"
+    ],
+    "visualEn": "desk clock",
+    "tier": "rare"
+  },
+  {
+    "name": "백금반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "platinum"
+    ],
+    "visualEn": "platinum ring",
+    "tier": "epic"
+  },
+  {
+    "name": "백금목걸이",
+    "emoji": "📿",
+    "smeltProducts": [
+      "platinum"
+    ],
+    "visualEn": "platinum necklace",
+    "tier": "epic"
+  },
+  {
+    "name": "팔라듐촉매변환기",
+    "emoji": "⚙️",
+    "smeltProducts": [
+      "palladium"
+    ],
+    "visualEn": "catalytic converter fragment",
+    "tier": "epic"
+  },
+  {
+    "name": "로듐도금귀걸이",
+    "emoji": "💎",
+    "smeltProducts": [
+      "rhodium",
+      "silver"
+    ],
+    "visualEn": "rhodium plated earring",
+    "tier": "epic"
+  },
+  {
+    "name": "이리듐만년필촉",
+    "emoji": "✒️",
+    "smeltProducts": [
+      "iridium",
+      "iron"
+    ],
+    "visualEn": "iridium fountain pen nib",
+    "tier": "epic"
+  },
+  {
+    "name": "텅스텐전구",
+    "emoji": "💡",
+    "smeltProducts": [
+      "tungsten",
+      "glass"
+    ],
+    "visualEn": "incandescent light bulb with tungsten filament",
+    "tier": "epic"
+  },
+  {
+    "name": "텅스텐반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "tungsten"
+    ],
+    "visualEn": "tungsten carbide ring",
+    "tier": "epic"
+  },
+  {
+    "name": "티타늄안경테",
+    "emoji": "👓",
+    "smeltProducts": [
+      "titanium"
+    ],
+    "visualEn": "titanium eyeglass frame",
+    "tier": "rare"
+  },
+  {
+    "name": "티타늄골프채",
+    "emoji": "⛳",
+    "smeltProducts": [
+      "titanium",
+      "iron"
+    ],
+    "visualEn": "titanium golf club head",
+    "tier": "rare"
+  },
+  {
+    "name": "몰리브덴낚싯대",
+    "emoji": "🎣",
+    "smeltProducts": [
+      "molybdenum",
+      "resin"
+    ],
+    "visualEn": "molybdenum alloy fishing rod",
+    "tier": "epic"
+  },
+  {
+    "name": "크롬도금손잡이",
+    "emoji": "🚪",
+    "smeltProducts": [
+      "chromium",
+      "iron"
+    ],
+    "visualEn": "chrome plated door handle",
+    "tier": "rare"
+  },
+  {
+    "name": "크롬수도꼭지",
+    "emoji": "🚿",
+    "smeltProducts": [
+      "chromium",
+      "iron"
+    ],
+    "visualEn": "chrome bathroom faucet",
+    "tier": "rare"
+  },
+  {
+    "name": "바나듐강철볼트",
+    "emoji": "🔩",
+    "smeltProducts": [
+      "vanadium",
+      "iron"
+    ],
+    "visualEn": "vanadium alloy steel bolt",
+    "tier": "epic"
+  },
+  {
+    "name": "니오븀피어싱",
+    "emoji": "💎",
+    "smeltProducts": [
+      "niobium"
+    ],
+    "visualEn": "niobium body piercing jewelry",
+    "tier": "epic"
+  },
+  {
+    "name": "코발트파란안료",
+    "emoji": "🔵",
+    "smeltProducts": [
+      "cobalt"
+    ],
+    "visualEn": "cobalt blue pigment jar",
+    "tier": "rare"
+  },
+  {
+    "name": "코발트자석",
+    "emoji": "🧲",
+    "smeltProducts": [
+      "cobalt",
+      "iron"
+    ],
+    "visualEn": "cobalt alloy magnet",
+    "tier": "rare"
+  },
+  {
+    "name": "망간건전지",
+    "emoji": "🔋",
+    "smeltProducts": [
+      "manganese",
+      "battery"
+    ],
+    "visualEn": "manganese dry cell battery",
+    "tier": "rare"
+  },
+  {
+    "name": "주석컵",
+    "emoji": "🥃",
+    "smeltProducts": [
+      "tin"
+    ],
+    "visualEn": "tin drinking cup",
+    "tier": "common"
+  },
+  {
+    "name": "양철통",
+    "emoji": "🛢️",
+    "smeltProducts": [
+      "tin",
+      "iron"
+    ],
+    "visualEn": "tin metal can",
+    "tier": "common"
+  },
+  {
+    "name": "비스무트위장약",
+    "emoji": "💊",
+    "smeltProducts": [
+      "bismuth"
+    ],
+    "visualEn": "bismuth stomach medicine tablet",
+    "tier": "epic"
+  },
+  {
+    "name": "안티모니도자기",
+    "emoji": "🏺",
+    "smeltProducts": [
+      "antimony",
+      "ceramic"
+    ],
+    "visualEn": "antimony glazed pottery",
+    "tier": "epic"
+  },
+  {
+    "name": "마그네슘불꽃봉",
+    "emoji": "✨",
+    "smeltProducts": [
+      "magnesium"
+    ],
+    "visualEn": "magnesium flare stick",
+    "tier": "rare"
+  },
+  {
+    "name": "마그네슘합금노트북",
+    "emoji": "💻",
+    "smeltProducts": [
+      "magnesium",
+      "circuit"
+    ],
+    "visualEn": "magnesium alloy laptop shell",
+    "tier": "rare"
+  },
+  {
+    "name": "네오디뮴자석",
+    "emoji": "🧲",
+    "smeltProducts": [
+      "neodymium"
+    ],
+    "visualEn": "neodymium rare earth magnet",
+    "tier": "epic"
+  },
+  {
+    "name": "희토류자석",
+    "emoji": "🧲",
+    "smeltProducts": [
+      "rareearth"
+    ],
+    "visualEn": "rare earth magnet block",
+    "tier": "epic"
+  },
+  {
+    "name": "란타넘렌즈",
+    "emoji": "🔭",
+    "smeltProducts": [
+      "lanthanum",
+      "glass"
+    ],
+    "visualEn": "lanthanum optical lens",
+    "tier": "epic"
+  },
+  {
+    "name": "세륨연마제",
+    "emoji": "🪞",
+    "smeltProducts": [
+      "cerium"
+    ],
+    "visualEn": "cerium oxide polishing compound",
+    "tier": "epic"
+  },
+  {
+    "name": "사마륨코발트자석",
+    "emoji": "🧲",
+    "smeltProducts": [
+      "samarium",
+      "cobalt"
+    ],
+    "visualEn": "samarium cobalt magnet",
+    "tier": "epic"
+  },
+  {
+    "name": "이트륨형광등",
+    "emoji": "💡",
+    "smeltProducts": [
+      "yttrium",
+      "glass"
+    ],
+    "visualEn": "yttrium fluorescent lamp",
+    "tier": "epic"
+  },
+  {
+    "name": "갈륨온도계",
+    "emoji": "🌡️",
+    "smeltProducts": [
+      "gallium"
+    ],
+    "visualEn": "gallium thermometer",
+    "tier": "epic"
+  },
+  {
+    "name": "게르마늄팔찌",
+    "emoji": "💚",
+    "smeltProducts": [
+      "germanium"
+    ],
+    "visualEn": "germanium health bracelet",
+    "tier": "epic"
+  },
+  {
+    "name": "인듐터치스크린",
+    "emoji": "📱",
+    "smeltProducts": [
+      "indium",
+      "glass"
+    ],
+    "visualEn": "indium tin oxide touchscreen panel",
+    "tier": "epic"
+  },
+  {
+    "name": "셀레늄복사드럼",
+    "emoji": "🖨️",
+    "smeltProducts": [
+      "selenium",
+      "circuit"
+    ],
+    "visualEn": "selenium photocopier drum",
+    "tier": "epic"
+  },
+  {
+    "name": "텔루륨솔라셀",
+    "emoji": "☀️",
+    "smeltProducts": [
+      "tellurium",
+      "silicon"
+    ],
+    "visualEn": "telluride solar cell",
+    "tier": "epic"
+  },
+  {
+    "name": "하프늄원자로부품",
+    "emoji": "⚛️",
+    "smeltProducts": [
+      "hafnium",
+      "iron"
+    ],
+    "visualEn": "hafnium reactor control rod",
+    "tier": "epic"
+  },
+  {
+    "name": "탄탈럼커패시터",
+    "emoji": "🔌",
+    "smeltProducts": [
+      "tantalum",
+      "circuit"
+    ],
+    "visualEn": "tantalum capacitor",
+    "tier": "epic"
+  },
+  {
+    "name": "지르코늄큐빅반지",
+    "emoji": "💍",
+    "smeltProducts": [
+      "zirconium"
+    ],
+    "visualEn": "cubic zirconia ring",
+    "tier": "epic"
+  },
+  {
+    "name": "우라늄유리컵",
+    "emoji": "🟢",
+    "smeltProducts": [
+      "uranium",
+      "glass"
+    ],
+    "visualEn": "vintage uranium glass cup",
+    "tier": "epic"
+  },
+  {
+    "name": "반도체웨이퍼",
+    "emoji": "💿",
+    "smeltProducts": [
+      "wafer",
+      "silicon"
+    ],
+    "visualEn": "semiconductor silicon wafer",
+    "tier": "rare"
+  },
+  {
+    "name": "그래핀코팅판",
+    "emoji": "🕸️",
+    "smeltProducts": [
+      "graphene",
+      "carbon"
+    ],
+    "visualEn": "graphene coated plate",
+    "tier": "epic"
+  },
+  {
+    "name": "리튬이온셀",
+    "emoji": "🔋",
+    "smeltProducts": [
+      "lithiumsalt",
+      "lithium"
+    ],
+    "visualEn": "lithium ion cell",
+    "tier": "epic"
+  },
+  {
+    "name": "플라즈마램프",
+    "emoji": "⚡",
+    "smeltProducts": [
+      "plasma",
+      "glass"
+    ],
+    "visualEn": "plasma globe lamp",
+    "tier": "epic"
+  },
+  {
+    "name": "시멘트포대",
+    "emoji": "🏗️",
+    "smeltProducts": [
+      "cement"
+    ],
+    "visualEn": "cement powder bag",
+    "tier": "common"
+  },
+  {
+    "name": "콘크리트블록",
+    "emoji": "🧱",
+    "smeltProducts": [
+      "concrete",
+      "sand"
+    ],
+    "visualEn": "concrete block",
+    "tier": "common"
+  },
+  {
+    "name": "화강암돌",
+    "emoji": "🪨",
+    "smeltProducts": [
+      "granite"
+    ],
+    "visualEn": "granite stone",
+    "tier": "common"
+  },
+  {
+    "name": "현무암돌",
+    "emoji": "🗿",
+    "smeltProducts": [
+      "basalt"
+    ],
+    "visualEn": "basalt lava rock",
+    "tier": "common"
+  },
+  {
+    "name": "아스팔트조각",
+    "emoji": "🛣️",
+    "smeltProducts": [
+      "asphalt",
+      "bitumen"
+    ],
+    "visualEn": "asphalt road chunk",
+    "tier": "common"
+  },
+  {
+    "name": "성냥갑",
+    "emoji": "🔥",
+    "smeltProducts": [
+      "sulfur",
+      "resin"
+    ],
+    "visualEn": "matchbox with matches",
+    "tier": "common"
+  },
+  {
+    "name": "황온천돌",
+    "emoji": "🌋",
+    "smeltProducts": [
+      "sulfur"
+    ],
+    "visualEn": "sulfur hot spring stone",
+    "tier": "common"
+  },
+  {
+    "name": "소금통",
+    "emoji": "🧂",
+    "smeltProducts": [
+      "salt"
+    ],
+    "visualEn": "salt shaker container",
+    "tier": "common"
+  },
+  {
+    "name": "소다회봉지",
+    "emoji": "⚗️",
+    "smeltProducts": [
+      "sodaash"
+    ],
+    "visualEn": "soda ash powder bag",
+    "tier": "common"
+  },
+  {
+    "name": "형광도료통",
+    "emoji": "🟩",
+    "smeltProducts": [
+      "phosphor"
+    ],
+    "visualEn": "fluorescent paint can",
+    "tier": "epic"
+  },
+  {
+    "name": "비료봉지",
+    "emoji": "🌱",
+    "smeltProducts": [
+      "phosphate",
+      "nitrate"
+    ],
+    "visualEn": "fertilizer bag",
+    "tier": "common"
+  },
+  {
+    "name": "락스통",
+    "emoji": "🧴",
+    "smeltProducts": [
+      "chloride"
+    ],
+    "visualEn": "bleach cleaner bottle",
+    "tier": "common"
+  },
+  {
+    "name": "암모니아청소제",
+    "emoji": "🧹",
+    "smeltProducts": [
+      "ammonia",
+      "chloride"
+    ],
+    "visualEn": "ammonia cleaning solution bottle",
+    "tier": "rare"
+  },
+  {
+    "name": "수소풍선",
+    "emoji": "🎈",
+    "smeltProducts": [
+      "hydrogen"
+    ],
+    "visualEn": "hydrogen gas balloon",
+    "tier": "rare"
+  },
+  {
+    "name": "산소마스크",
+    "emoji": "😷",
+    "smeltProducts": [
+      "oxygen"
+    ],
+    "visualEn": "medical oxygen mask",
+    "tier": "rare"
+  },
+  {
+    "name": "산소탱크",
+    "emoji": "🫁",
+    "smeltProducts": [
+      "oxygen",
+      "iron"
+    ],
+    "visualEn": "pressurized oxygen tank",
+    "tier": "rare"
+  },
+  {
+    "name": "헬륨가스통",
+    "emoji": "🎈",
+    "smeltProducts": [
+      "helium"
+    ],
+    "visualEn": "helium gas canister",
+    "tier": "rare"
+  },
+  {
+    "name": "아르곤용접가스통",
+    "emoji": "🔧",
+    "smeltProducts": [
+      "argon",
+      "iron"
+    ],
+    "visualEn": "argon welding gas cylinder",
+    "tier": "rare"
+  },
+  {
+    "name": "액체질소통",
+    "emoji": "🧊",
+    "smeltProducts": [
+      "nitrogen"
+    ],
+    "visualEn": "liquid nitrogen dewar flask",
+    "tier": "rare"
+  },
+  {
+    "name": "방탄조끼",
+    "emoji": "🦺",
+    "smeltProducts": [
+      "kevlar"
+    ],
+    "visualEn": "kevlar bulletproof vest",
+    "tier": "rare"
+  },
+  {
+    "name": "탄소섬유자전거",
+    "emoji": "🚲",
+    "smeltProducts": [
+      "carbonfiber",
+      "rubber"
+    ],
+    "visualEn": "carbon fiber bicycle frame",
+    "tier": "rare"
+  },
+  {
+    "name": "효소세제",
+    "emoji": "🧼",
+    "smeltProducts": [
+      "enzyme"
+    ],
+    "visualEn": "enzyme laundry detergent bottle",
+    "tier": "common"
+  },
+  {
+    "name": "바이오연료통",
+    "emoji": "🛢️",
+    "smeltProducts": [
+      "biofuel",
+      "petro"
+    ],
+    "visualEn": "biofuel canister",
+    "tier": "rare"
+  },
+  {
+    "name": "마그마돌",
+    "emoji": "🌋",
+    "smeltProducts": [
+      "magma"
+    ],
+    "visualEn": "solidified magma rock",
+    "tier": "legendary"
+  },
+  {
+    "name": "드라이아이스",
+    "emoji": "🧊",
+    "smeltProducts": [
+      "cryo",
+      "carbon"
+    ],
+    "visualEn": "block of dry ice",
+    "tier": "rare"
+  },
+  {
+    "name": "냉동팩",
+    "emoji": "🧊",
+    "smeltProducts": [
+      "cryo"
+    ],
+    "visualEn": "reusable ice pack",
+    "tier": "rare"
+  }
 ]
