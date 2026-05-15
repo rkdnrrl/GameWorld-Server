@@ -163,6 +163,44 @@ router.delete('/shared-pixel-arts/one', requireAuth, requireOperator, async (req
 });
 
 /**
+ * GET /api/operator/shared-pixel-arts/bulk-delete-preview
+ * 기간 내 삭제 대상 건수 미리보기
+ * 쿼리: from (ISO), to (ISO)
+ */
+router.get('/shared-pixel-arts/bulk-delete-preview', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to   = req.query.to   ? new Date(req.query.to)   : null;
+    if (!from || !to || isNaN(from) || isNaN(to)) {
+      return res.status(400).json({ error: { message: 'from, to 날짜가 필요합니다.' } });
+    }
+    const count = await prisma.sharedPixelArt.count({
+      where: { createdAt: { gte: from, lte: to } },
+    });
+    res.json({ count });
+  } catch (err) { next(err); }
+});
+
+/**
+ * DELETE /api/operator/shared-pixel-arts/bulk-delete
+ * 기간 내 항목 일괄 삭제
+ * body: { from: string, to: string }
+ */
+router.delete('/shared-pixel-arts/bulk-delete', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const from = req.body.from ? new Date(req.body.from) : null;
+    const to   = req.body.to   ? new Date(req.body.to)   : null;
+    if (!from || !to || isNaN(from) || isNaN(to)) {
+      return res.status(400).json({ error: { message: 'from, to 날짜가 필요합니다.' } });
+    }
+    const { count } = await prisma.sharedPixelArt.deleteMany({
+      where: { createdAt: { gte: from, lte: to } },
+    });
+    res.json({ ok: true, deleted: count });
+  } catch (err) { next(err); }
+});
+
+/**
  * GET /api/operator/activity-logs
  * 쿼리: action(all|fish_catch|smelt_melt|forge_craft), nickname, page, limit
  */
