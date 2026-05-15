@@ -11,7 +11,7 @@ model User {
   id                  String             @id @default(cuid())
   email               String             @unique
   nickname            String             @unique
-  passwordHash        String
+  passwordHash        String?  // Supabase Auth 사용 시 null (Supabase가 비밀번호 관리)
   coins               Int                @default(0)
   /// 운영 콘솔 접근 (또는 환경변수 OPERATOR_EMAILS 목록과 병행)
   isOperator          Boolean            @default(false)
