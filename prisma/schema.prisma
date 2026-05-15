@@ -32,6 +32,7 @@ model User {
   activityLogs          ActivityLog[]
   enhancementStocks     EnhancementStock[]
   modules               Module[]
+  donations             Donation[]
 
   @@map("users")
 }
@@ -210,6 +211,22 @@ model Module {
   @@index([userId])
   @@index([equippedTo])
   @@map("modules")
+}
+
+/// 토스페이먼츠 후원 내역
+model Donation {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId    String   @unique @db.VarChar(64)
+  paymentKey String   @db.VarChar(200)
+  amount     Int      // 결제 금액 (원)
+  coins      Int      // 지급 코인
+  status     String   @default("done") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("donations")
 }
 
 /// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)

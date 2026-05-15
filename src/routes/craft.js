@@ -473,28 +473,48 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
     if (rawFinalDur == null || rawTotalCost == null) {
       return res.status(400).json({ error: { message: 'finalDur, totalCost 필요' } });
     }
-    const newDur  = Math.max(0, Math.min(durMax, Math.round(Number(rawFinalDur))));
-    const cost    = Math.max(0, Math.round(Number(rawTotalCost)));
+    const newDur = Math.max(0, Math.min(durMax, Math.round(Number(rawFinalDur))));
+    const cost   = Math.max(0, Math.round(Number(rawTotalCost)));
 
     if (newDur === durCur && cost === 0) {
       return res.status(400).json({ error: { message: '변경 사항이 없습니다.' } });
     }
 
+    // 코인 선검사 (트랜잭션 외부 — Prisma interactive tx 에서 커스텀 에러 속성이
+    // 유실되는 경우를 방지하기 위해 트랜잭션 진입 전에 처리)
+    if (cost > 0) {
+      const currentCoins = req.user.coins ?? 0;
+      if (currentCoins < cost) {
+        return res.status(402).json({ error: { message: `코인이 부족합니다. (필요 ${cost}, 보유 ${currentCoins})` } });
+      }
+    }
+
     const newStats = { ...stats, durability: newDur };
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { id: req.user.id }, select: { coins: true } });
-      if ((user?.coins ?? 0) < cost) throw Object.assign(new Error('COINS'), { status: 402 });
-
-      if (cost > 0) {
-        await tx.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } });
+    let updated;
+    try {
+      updated = await prisma.$transaction([
+        prisma.craftedEquipment.update({ where: { id }, data: { stats: newStats } }),
+        ...(cost > 0
+          ? [prisma.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } } })]
+          : []),
+      ]);
+    } catch (txErr) {
+      // P2025: 업데이트 대상 레코드가 없음 (장비가 삭제된 경우)
+      if (txErr?.code === 'P2025') {
+        return res.status(404).json({ error: { message: '장비를 찾을 수 없습니다.' } });
       }
-      return tx.craftedEquipment.update({ where: { id }, data: { stats: newStats } });
-    });
+      // P2034: 낙관적 잠금 충돌 — 재시도 유도
+      if (txErr?.code === 'P2034') {
+        return res.status(409).json({ error: { message: '처리 중 충돌이 발생했습니다. 다시 시도해 주세요.' } });
+      }
+      console.error('[craft/repair] 트랜잭션 오류:', txErr?.code, txErr?.message);
+      throw txErr;
+    }
 
-    res.json({ ok: true, costPaid: cost, equipment: toPublicEquipment(updated) });
+    res.json({ ok: true, costPaid: cost, equipment: toPublicEquipment(updated[0]) });
   } catch (err) {
-    if (err.status === 402) return res.status(402).json({ error: { message: '코인이 부족합니다.' } });
+    console.error('[craft/repair] 수리 처리 오류:', err?.code, err?.message);
     next(err);
   }
 });
