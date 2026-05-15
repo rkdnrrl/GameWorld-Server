@@ -480,14 +480,9 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: { message: '변경 사항이 없습니다.' } });
     }
 
-    // 코인 선검사 (트랜잭션 외부 — Prisma interactive tx 에서 커스텀 에러 속성이
-    // 유실되는 경우를 방지하기 위해 트랜잭션 진입 전에 처리)
-    if (cost > 0) {
-      const currentCoins = req.user.coins ?? 0;
-      if (currentCoins < cost) {
-        return res.status(402).json({ error: { message: `코인이 부족합니다. (필요 ${cost}, 보유 ${currentCoins})` } });
-      }
-    }
+    // 코인 부족 시 보유량만큼만 차감 (수리 자체는 항상 완료)
+    const currentCoins = req.user.coins ?? 0;
+    const actualCost = cost > 0 ? Math.min(cost, currentCoins) : 0;
 
     // 직렬화 가능 여부 사전 확인 — NaN/Infinity/undefined 방어
     const sanitizeJsonValue = (v) => {
@@ -498,14 +493,14 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       Object.entries({ ...stats, durability: newDur }).map(([k, v]) => [k, sanitizeJsonValue(v)])
     );
 
-    console.log('[craft/repair] id=%s newStats=%s cost=%d', id, JSON.stringify(newStats), cost);
+    console.log('[craft/repair] id=%s newStats=%s cost=%d actualCost=%d', id, JSON.stringify(newStats), cost, actualCost);
 
     let updated;
     try {
       updated = await prisma.$transaction([
         prisma.craftedEquipment.update({ where: { id }, data: { stats: newStats } }),
-        ...(cost > 0
-          ? [prisma.user.update({ where: { id: req.user.id }, data: { coins: { decrement: cost } }, select: { id: true, coins: true } })]
+        ...(actualCost > 0
+          ? [prisma.user.update({ where: { id: req.user.id }, data: { coins: { decrement: actualCost } }, select: { id: true, coins: true } })]
           : []),
       ]);
     } catch (txErr) {
@@ -521,7 +516,7 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       throw txErr;
     }
 
-    res.json({ ok: true, costPaid: cost, equipment: toPublicEquipment(updated[0]) });
+    res.json({ ok: true, costPaid: actualCost, equipment: toPublicEquipment(updated[0]) });
   } catch (err) {
     console.error('[craft/repair] 수리 처리 오류 code=%s msg=%s', err?.code, err?.message, err);
     next(err);
