@@ -82,8 +82,25 @@ router.post('/craft', requireAuth, async (req, res, next) => {
     // Roll random variant
     const catalog = MODULE_CATALOG[moduleType];
     const variant = catalog.variants[Math.floor(Math.random() * catalog.variants.length)];
-    const stats = applyTierToStats(variant.stats, tier);
-    const durMax = TIER_DUR[tier];
+    let stats = applyTierToStats(variant.stats, tier);
+    let durMax = TIER_DUR[tier];
+
+    // Apply synergy multipliers from client (clamped for safety)
+    const rawMul = req.body.statMuls || {};
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number(v) || 1));
+    const allMul = clamp(rawMul.allMul, 0.3, 3.0);
+    const atkMul = clamp(rawMul.atkMul, 0.5, 2.5);
+    const defMul = clamp(rawMul.defMul, 0.5, 2.5);
+    const spdMul = clamp(rawMul.spdMul, 0.5, 2.5);
+    const hpMul  = clamp(rawMul.hpMul,  0.5, 2.5);
+    const durMul = clamp(rawMul.durMul,  0.5, 2.5);
+    const finalStats = {};
+    if (stats.attackBonus  != null) finalStats.attackBonus  = Math.round(stats.attackBonus  * allMul * atkMul);
+    if (stats.defenseBonus != null) finalStats.defenseBonus = Math.round(stats.defenseBonus * allMul * defMul);
+    if (stats.speedBonus   != null) finalStats.speedBonus   = Math.round(stats.speedBonus   * allMul * spdMul * 1000) / 1000;
+    if (stats.hpBonus      != null) finalStats.hpBonus      = Math.round(stats.hpBonus      * allMul * hpMul);
+    stats = { ...stats, ...finalStats };
+    durMax = Math.max(1, Math.round(durMax * allMul * durMul));
 
     // Consume smelt stock and create module in a transaction
     const newModule = await prisma.$transaction(async (tx) => {
