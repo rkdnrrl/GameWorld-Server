@@ -5,9 +5,17 @@ const { prisma } = require('../db');
 // Supabase 클라이언트 (토큰 검증용)
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  try {
+    const ws = require('ws');
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      realtime: { transport: ws },
+    });
+  } catch {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+}
 
 async function requireAuth(req, res, next) {
   try {
