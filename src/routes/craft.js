@@ -21,6 +21,32 @@ const { generateCraftedEquipmentPixelArt } = require('../lib/pixelLabEquipmentAr
 
 const router = Router();
 
+// ─── PixelLab 동시 요청 제어 ──────────────────────────────────
+/** 동일 cacheKey에 대한 중복 PixelLab 호출 방지 */
+const _pixelLabInFlight = new Map();
+/** PixelLab 최대 동시 실행 수 */
+const PIXELLAB_MAX_CONCURRENT = 3;
+let _pixelLabActive = 0;
+const _pixelLabQueue = [];
+
+function _pixelLabEnqueue(fn) {
+  return new Promise((resolve, reject) => {
+    _pixelLabQueue.push({ fn, resolve, reject });
+    _pixelLabDrain();
+  });
+}
+
+function _pixelLabDrain() {
+  while (_pixelLabActive < PIXELLAB_MAX_CONCURRENT && _pixelLabQueue.length > 0) {
+    const { fn, resolve, reject } = _pixelLabQueue.shift();
+    _pixelLabActive++;
+    fn().then(resolve, reject).finally(() => {
+      _pixelLabActive--;
+      _pixelLabDrain();
+    });
+  }
+}
+
 const DYNAMIC_RECIPE_ID = 'dynamic';
 const MAX_DYNAMIC_MATERIALS = 12;
 /** 모루에서 산출물만으로 제련 시 최소 개수 */
@@ -512,12 +538,25 @@ router.post('/generate-pixel-art', requireAuth, async (req, res, next) => {
     const cached = await prisma.sharedPixelArt.findUnique({ where: { name: cacheKey } });
     if (cached) return res.json({ imageDataUrl: cached.imageData, cached: true, coinReward: 0 });
 
-    // PixelLab 생성 — 실제 대기시간 측정
+    // 동일 키 in-flight 중복 방지: 이미 요청 중이면 같은 Promise를 공유
+    if (_pixelLabInFlight.has(cacheKey)) {
+      const { imageDataUrl, elapsedSec } = await _pixelLabInFlight.get(cacheKey);
+      return res.json({ imageDataUrl, cached: false, coinReward: 0, elapsedSec });
+    }
+
+    // PixelLab 생성 — 동시 실행 제한 + in-flight 등록
     const genStart = Date.now();
-    const imageDataUrl = await generateCraftedEquipmentPixelArt(
-      name, tier, undefined, null, _slotFromName(name),
-    );
-    const elapsedSec = Math.round((Date.now() - genStart) / 1000);
+    const genPromise = _pixelLabEnqueue(() =>
+      generateCraftedEquipmentPixelArt(name, tier, undefined, null, _slotFromName(name)),
+    ).then((imageDataUrl) => ({ imageDataUrl, elapsedSec: Math.round((Date.now() - genStart) / 1000) }));
+
+    _pixelLabInFlight.set(cacheKey, genPromise);
+    let imageDataUrl, elapsedSec;
+    try {
+      ({ imageDataUrl, elapsedSec } = await genPromise);
+    } finally {
+      _pixelLabInFlight.delete(cacheKey);
+    }
 
     if (!imageDataUrl) {
       return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
