@@ -1,7 +1,8 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
+const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
-const { pickFishingItem } = require('../lib/fishingItemPicker');
+const fishingItems = require('../data/fishingItems.json');
 
 const router = Router();
 
@@ -808,63 +809,71 @@ router.post('/fishing-scan-bonus', requireAuth, async (req, res) => {
 
 /**
  * POST /api/ai/fishing-common
- * 일반 스크랩: JSON 고정 목록에서 선택 후 shared_pixel_arts 캐시 확인 → PixelLab 생성·저장.
- * response: { name, type, emoji, imageUrl?, cached, nameSource, bonusCoins: 0, coins: null }
+ * DB에 이미 캐시된 fishingItems.json 항목 중 랜덤 반환.
+ * 이미지가 없는 항목은 절대 반환하지 않음 — 운영 페이지에서 미리 생성 필요.
  */
 router.post('/fishing-common', requireAuth, async (req, res) => {
   try {
-    const item = pickFishingItem('common');
-    const cleanName = item.name;
-    const rarity = 'common';
-    const type = 'scrap';
-    const emoji = item.emoji;
-    const cacheKey = sharedScrapyardCacheKey(cleanName);
+    const allKeys = fishingItems.map((item) => sharedScrapyardCacheKey(item.name));
+    const cachedRows = await prisma.sharedPixelArt.findMany({
+      where: { name: { in: allKeys } },
+      select: { name: true, imageData: true },
+    });
 
-    try {
-      const cached = await prisma.sharedPixelArt.findUnique({
-        where: { name: cacheKey },
-        select: { imageData: true },
-      });
-      if (cached?.imageData) {
-        console.log(`[AI /fishing-common] cache hit: "${cacheKey}"`);
-        return res.json({
-          name: cleanName, type, emoji,
-          imageUrl: cached.imageData,
-          cached: true, nameSource: 'json',
-          bonusCoins: 0, coins: null,
-        });
-      }
-    } catch (dbErr) {
-      console.warn('[AI /fishing-common] cache lookup skipped:', dbErr.message);
+    if (cachedRows.length === 0) {
+      return res.status(503).json({ error: { message: '아직 낚시 아이템이 준비되지 않았습니다.' } });
     }
 
-    const imageUrl = await generatePixelLabImage(cleanName, rarity, type, item.visualEn || '');
-    if (!imageUrl) {
-      return res.json({
-        name: cleanName, type, emoji,
-        imageUrl: null, cached: false, pixelLabFailed: true, nameSource: 'json',
-        bonusCoins: 0, coins: null,
-      });
-    }
-
-    try {
-      await prisma.sharedPixelArt.upsert({
-        where: { name: cacheKey },
-        create: { name: cacheKey, imageData: imageUrl, rarity, type },
-        update: { imageData: imageUrl, rarity, type },
-      });
-    } catch (dbErr) {
-      console.warn('[AI /fishing-common] cache save skipped:', dbErr.message);
-    }
+    const picked = cachedRows[Math.floor(Math.random() * cachedRows.length)];
+    const itemName = picked.name.slice(SHARED_SCRAPYARD_CACHE_PREFIX.length);
+    const itemMeta = fishingItems.find((i) => i.name === itemName) || {};
 
     return res.json({
-      name: cleanName, type, emoji,
-      imageUrl, cached: false, nameSource: 'json',
-      bonusCoins: 0, coins: null,
+      name: itemName,
+      type: 'scrap',
+      emoji: itemMeta.emoji || '📦',
+      imageUrl: picked.imageData,
+      cached: true,
+      nameSource: 'json',
+      bonusCoins: 0,
+      coins: null,
     });
   } catch (err) {
     console.error('[AI /fishing-common]', err.message || err);
     return res.status(500).json({ error: { message: '요청 처리 중 오류가 발생했습니다.' } });
+  }
+});
+
+/**
+ * POST /api/ai/fishing-items/generate-one
+ * 운영자 전용: fishingItems.json의 특정 아이템 이미지를 PixelLab으로 생성 후 DB 캐시 저장.
+ * body: { name: string }
+ */
+router.post('/fishing-items/generate-one', requireAuth, requireOperator, async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ error: { message: 'name 필요' } });
+
+    const item = fishingItems.find((i) => i.name === name);
+    if (!item) return res.status(404).json({ error: { message: '알고리즘 목록에 없는 아이템입니다.' } });
+
+    const cacheKey = sharedScrapyardCacheKey(item.name);
+    const imageUrl = await generatePixelLabImage(item.name, item.tier || 'common', 'scrap', item.visualEn || '');
+
+    if (!imageUrl) {
+      return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
+    }
+
+    await prisma.sharedPixelArt.upsert({
+      where: { name: cacheKey },
+      create: { name: cacheKey, imageData: imageUrl, rarity: item.tier || 'common', type: 'scrap' },
+      update: { imageData: imageUrl, rarity: item.tier || 'common' },
+    });
+
+    return res.json({ ok: true, name: item.name, emoji: item.emoji, imageUrl });
+  } catch (err) {
+    console.error('[AI /fishing-items/generate-one]', err.message || err);
+    return res.status(500).json({ error: { message: '오류가 발생했습니다.' } });
   }
 });
 

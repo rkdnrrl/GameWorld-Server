@@ -5,6 +5,8 @@ const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
 const { ALLOWED_IDS, metaForProductId, SMELT_CATALOG } = require('../lib/smeltProduct');
+const fishingItems = require('../data/fishingItems.json');
+const FISHING_CACHE_PREFIX = 'shared:scrapyard:';
 
 const router = Router();
 
@@ -248,6 +250,32 @@ router.post('/smelt-stock/grant', requireAuth, requireOperator, async (req, res,
     });
 
     res.json({ ok: true, targetNickname: targetUser.nickname, granted, errors });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/operator/fishing-items/status
+ * fishingItems.json 전체 목록과 각 항목의 DB 캐시 존재 여부 반환.
+ */
+router.get('/fishing-items/status', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const allKeys = fishingItems.map((item) =>
+      `${FISHING_CACHE_PREFIX}${item.name}`.slice(0, 100),
+    );
+    const cachedRows = await prisma.sharedPixelArt.findMany({
+      where: { name: { in: allKeys } },
+      select: { name: true },
+    });
+    const cachedSet = new Set(cachedRows.map((r) => r.name));
+
+    const items = fishingItems.map((item) => {
+      const cacheKey = `${FISHING_CACHE_PREFIX}${item.name}`.slice(0, 100);
+      return { name: item.name, emoji: item.emoji, tier: item.tier, hasCache: cachedSet.has(cacheKey) };
+    });
+
+    res.json({ total: items.length, cached: cachedSet.size, missing: items.length - cachedSet.size, items });
   } catch (err) {
     next(err);
   }
