@@ -5,7 +5,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
 const { ALLOWED_IDS, metaForProductId, SMELT_CATALOG } = require('../lib/smeltProduct');
-const fishingItems = require('../data/fishingItems.json');
+const baseNouns = require('../data/baseNouns.json');
 const FISHING_CACHE_PREFIX = 'shared:scrapyard:';
 
 const router = Router();
@@ -257,25 +257,34 @@ router.post('/smelt-stock/grant', requireAuth, requireOperator, async (req, res,
 
 /**
  * GET /api/operator/fishing-items/status
- * fishingItems.json 전체 목록과 각 항목의 DB 캐시 존재 여부 반환.
+ * baseNouns.json 명사(615개) 기준으로, 각 명사에 대한 DB 캐시 존재 여부 반환.
+ * 캐시 키 = "shared:scrapyard:{형용사} {명사}" — 명사로 끝나는 항목이 하나라도 있으면 hasCache = true.
  */
 router.get('/fishing-items/status', requireAuth, requireOperator, async (req, res, next) => {
   try {
-    const allKeys = fishingItems.map((item) =>
-      `${FISHING_CACHE_PREFIX}${item.name}`.slice(0, 100),
-    );
+    // DB에서 스크랩야드 캐시 전체 이름만 조회
     const cachedRows = await prisma.sharedPixelArt.findMany({
-      where: { name: { in: allKeys } },
+      where: { name: { startsWith: FISHING_CACHE_PREFIX } },
       select: { name: true },
     });
-    const cachedSet = new Set(cachedRows.map((r) => r.name));
 
-    const items = fishingItems.map((item) => {
-      const cacheKey = `${FISHING_CACHE_PREFIX}${item.name}`.slice(0, 100);
-      return { name: item.name, emoji: item.emoji, tier: item.tier, hasCache: cachedSet.has(cacheKey) };
-    });
+    // 각 캐시 항목에서 명사 부분 추출 (형식: "shared:scrapyard:{형용사} {명사}")
+    const cachedNounSet = new Set();
+    for (const row of cachedRows) {
+      const itemName = row.name.slice(FISHING_CACHE_PREFIX.length);
+      if (itemName.includes(' ')) {
+        cachedNounSet.add(itemName.slice(itemName.indexOf(' ') + 1));
+      }
+    }
 
-    res.json({ total: items.length, cached: cachedSet.size, missing: items.length - cachedSet.size, items });
+    const items = baseNouns.map((noun) => ({
+      name: noun.name,
+      emoji: noun.emoji,
+      hasCache: cachedNounSet.has(noun.name),
+    }));
+
+    const cachedCount = items.filter((i) => i.hasCache).length;
+    res.json({ total: items.length, cached: cachedCount, missing: items.length - cachedCount, items });
   } catch (err) {
     next(err);
   }
