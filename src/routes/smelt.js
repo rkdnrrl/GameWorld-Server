@@ -218,9 +218,12 @@ router.post('/melt', requireAuth, async (req, res, next) => {
           const yieldCount = MODULE_YIELD[mod.tier] || 1;
           for (let i = 0; i < yieldCount; i++) {
             const pid = MODULE_POOL[Math.floor(Math.random() * MODULE_POOL.length)];
-            if (ALLOWED_IDS.has(pid)) {
-              delta[pid]        = (delta[pid]        || 0) + 1;
-              recovered[pid]    = (recovered[pid]    || 0) + 1;
+            if (!ALLOWED_IDS.has(pid)) continue;
+            if (Math.random() < EQUIP_SMELT_SURVIVAL_RATE) {
+              delta[pid]     = (delta[pid]     || 0) + 1;
+              recovered[pid] = (recovered[pid] || 0) + 1;
+            } else {
+              lost[pid] = (lost[pid] || 0) + 1;
             }
           }
         }
