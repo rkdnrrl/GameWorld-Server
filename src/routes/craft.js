@@ -489,7 +489,16 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       }
     }
 
-    const newStats = { ...stats, durability: newDur };
+    // 직렬화 가능 여부 사전 확인 — NaN/Infinity/undefined 방어
+    const sanitizeJsonValue = (v) => {
+      if (typeof v === 'number' && !Number.isFinite(v)) return null;
+      return v;
+    };
+    const newStats = Object.fromEntries(
+      Object.entries({ ...stats, durability: newDur }).map(([k, v]) => [k, sanitizeJsonValue(v)])
+    );
+
+    console.log('[craft/repair] id=%s newStats=%s cost=%d', id, JSON.stringify(newStats), cost);
 
     let updated;
     try {
@@ -508,13 +517,13 @@ router.post('/equipment/:id/repair', requireAuth, async (req, res, next) => {
       if (txErr?.code === 'P2034') {
         return res.status(409).json({ error: { message: '처리 중 충돌이 발생했습니다. 다시 시도해 주세요.' } });
       }
-      console.error('[craft/repair] 트랜잭션 오류:', txErr?.code, txErr?.message);
+      console.error('[craft/repair] 트랜잭션 오류 code=%s msg=%s', txErr?.code, txErr?.message, txErr);
       throw txErr;
     }
 
     res.json({ ok: true, costPaid: cost, equipment: toPublicEquipment(updated[0]) });
   } catch (err) {
-    console.error('[craft/repair] 수리 처리 오류:', err?.code, err?.message);
+    console.error('[craft/repair] 수리 처리 오류 code=%s msg=%s', err?.code, err?.message, err);
     next(err);
   }
 });
