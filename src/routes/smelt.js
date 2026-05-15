@@ -76,9 +76,10 @@ router.post('/melt', requireAuth, async (req, res, next) => {
   try {
     const catchIds = normalizeIdArray(req.body && req.body.catchIds);
     const equipmentIds = normalizeIdArray(req.body && req.body.equipmentIds);
-    const total = catchIds.length + equipmentIds.length;
+    const moduleIds = normalizeIdArray(req.body && req.body.moduleIds);
+    const total = catchIds.length + equipmentIds.length + moduleIds.length;
     if (total === 0) {
-      return res.status(400).json({ error: { message: 'catchIds 또는 equipmentIds 배열이 필요합니다.' } });
+      return res.status(400).json({ error: { message: 'catchIds, equipmentIds 또는 moduleIds 배열이 필요합니다.' } });
     }
     if (total > MAX_MELT_PER_REQUEST) {
       return res.status(400).json({ error: { message: `한 번에 최대 ${MAX_MELT_PER_REQUEST}개까지 녹일 수 있습니다.` } });
@@ -198,6 +199,36 @@ router.post('/melt', requireAuth, async (req, res, next) => {
         });
       }
 
+      // 모듈 녹이기 — 티어별 고정 수율로 일반 금속 반환
+      if (moduleIds.length > 0) {
+        const modRows = await tx.module.findMany({
+          where: { id: { in: moduleIds }, userId: req.user.id },
+          select: { id: true, tier: true, equippedTo: true },
+        });
+        if (modRows.length !== moduleIds.length) {
+          return { err: 'NOT_FOUND_MODULE' };
+        }
+        const equipped = modRows.find((m) => m.equippedTo);
+        if (equipped) {
+          return { err: 'MODULE_EQUIPPED' };
+        }
+        const MODULE_YIELD = { common: 1, rare: 2, epic: 3, legendary: 5 };
+        const MODULE_POOL  = ['iron', 'copper', 'aluminum', 'nickel', 'zinc', 'tin', 'slag'];
+        for (const mod of modRows) {
+          const yieldCount = MODULE_YIELD[mod.tier] || 1;
+          for (let i = 0; i < yieldCount; i++) {
+            const pid = MODULE_POOL[Math.floor(Math.random() * MODULE_POOL.length)];
+            if (ALLOWED_IDS.has(pid)) {
+              delta[pid]        = (delta[pid]        || 0) + 1;
+              recovered[pid]    = (recovered[pid]    || 0) + 1;
+            }
+          }
+        }
+        await tx.module.deleteMany({
+          where: { id: { in: modRows.map((r) => r.id) }, userId: req.user.id },
+        });
+      }
+
       for (const [productId, add] of Object.entries(delta)) {
         const inc = Math.min(MAX_STOCK_PER_PRODUCT, Math.max(0, Math.floor(Number(add)) || 0));
         if (inc <= 0) continue;
@@ -231,6 +262,12 @@ router.post('/melt', requireAuth, async (req, res, next) => {
       return res.status(400).json({
         error: { message: '일부 재료를 찾을 수 없거나 이미 처리되었습니다.' },
       });
+    }
+    if (out.err === 'NOT_FOUND_MODULE') {
+      return res.status(400).json({ error: { message: '일부 모듈을 찾을 수 없습니다.' } });
+    }
+    if (out.err === 'MODULE_EQUIPPED') {
+      return res.status(400).json({ error: { message: '장비에 부착된 모듈은 먼저 분리해야 녹일 수 있습니다.' } });
     }
 
     // recovered/lost를 이름·이모지 포함 배열로 변환해 응답
