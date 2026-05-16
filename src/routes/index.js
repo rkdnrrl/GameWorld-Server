@@ -20,5 +20,7 @@ router.use('/operator', require('./operator'));
 router.use('/dungeon', require('./dungeon'));
 router.use('/modules', require('./modules'));
 router.use('/donate', require('./donate'));
+router.use('/announcements', require('./announcements'));
+router.use('/shop', require('./shop'));
 
 module.exports = router;

@@ -29,6 +29,7 @@ model User {
   smeltStock            SmeltStock[]
   alchemyElementStocks  AlchemyElementStock[]
   dungeonSave           DungeonSave?
+  userRecord            UserRecord?
   activityLogs          ActivityLog[]
   enhancementStocks     EnhancementStock[]
   modules               Module[]
@@ -160,6 +161,32 @@ model DungeonSave {
   savedAt DateTime @updatedAt
 
   @@map("dungeon_saves")
+}
+
+/// 공지사항 / 패치노트
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String   @db.VarChar(120)
+  body      String   @db.Text
+  /// notice | patch
+  kind      String   @default("notice") @db.VarChar(20)
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt(sort: Desc)])
+  @@map("announcements")
+}
+
+/// 게임별 개인 최고 기록
+model UserRecord {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dungeonMaxFloor Int      @default(0)
+  dungeonMaxKills Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@map("user_records")
 }
 
 /// 활동 로그 — 낚시·용광로·제련 이벤트 기록

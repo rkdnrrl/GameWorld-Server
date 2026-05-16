@@ -271,7 +271,10 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       const activeSynergies = detectSynergies(rollSlots); // 발동된 시너지 목록
 
       // 3. 성공/실패 판정 (성공률은 평균 강도 기반 — 강한 재료일수록 다루기 어려움)
-      const successRate = calcSuccessRate(currentProficiency, materialAvgStr);
+      // timingBonus: 클라이언트 타이밍 미니게임 결과 (0.5~1.5, 기본 1.0)
+      const rawTimingBonus = Number(body.timingBonus ?? 1.0);
+      const timingBonus = Math.max(0.5, Math.min(1.5, Number.isFinite(rawTimingBonus) ? rawTimingBonus : 1.0));
+      const successRate = Math.min(0.97, calcSuccessRate(currentProficiency, materialAvgStr) * timingBonus);
       const succeeded = Math.random() < successRate;
 
       // 4. smelt 재고 차감 (성공/실패 모두 소모)

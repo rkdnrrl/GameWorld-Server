@@ -315,6 +315,15 @@ async function processKillDrops(userId, saveData) {
   return drops;
 }
 
+router.get('/record', requireAuth, async (req, res, next) => {
+  try {
+    const row = await prisma.userRecord.findUnique({ where: { userId: req.user.id } });
+    res.json({ record: row ? { dungeonMaxFloor: row.dungeonMaxFloor, dungeonMaxKills: row.dungeonMaxKills } : null });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/exit', requireAuth, async (req, res, next) => {
   try {
     const { data } = req.body;
@@ -334,6 +343,20 @@ router.post('/exit', requireAuth, async (req, res, next) => {
 
     // 사망 시에만 킬 수 기반 아이템 드롭 처리
     const drops = finalData ? await processKillDrops(req.user.id, finalData) : {};
+
+    // 개인 최고 기록 갱신
+    if (finalData?.player) {
+      const floor = Math.max(0, Math.floor(finalData.floor ?? finalData.player.floor ?? 0));
+      const kills = Math.max(0, Math.floor(finalData.player.kills ?? 0));
+      const existing = await prisma.userRecord.findUnique({ where: { userId: req.user.id } });
+      const newFloor = Math.max(floor, existing?.dungeonMaxFloor ?? 0);
+      const newKills = Math.max(kills, existing?.dungeonMaxKills ?? 0);
+      await prisma.userRecord.upsert({
+        where:  { userId: req.user.id },
+        create: { userId: req.user.id, dungeonMaxFloor: newFloor, dungeonMaxKills: newKills },
+        update: { dungeonMaxFloor: newFloor, dungeonMaxKills: newKills },
+      });
+    }
 
     await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
     res.json({ ok: true, drops });
