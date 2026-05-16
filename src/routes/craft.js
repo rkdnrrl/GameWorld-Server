@@ -187,8 +187,15 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
     let materials = materialsFromBody(body);
     const customName = body.customName && typeof body.customName === 'string'
       ? body.customName.trim().slice(0, 24) : null;
-    const pixelArtData = Array.isArray(body.pixelArtData) && body.pixelArtData.length === 1024
-      ? body.pixelArtData : null;
+    const pixelArtData = (() => {
+      const d = body.pixelArtData;
+      if (!d) return null;
+      // 배열 형식 (레거시)
+      if (Array.isArray(d) && d.length === 1024) return d;
+      // 객체 형식 { w, h, palette, cells }
+      if (d && typeof d === 'object' && Array.isArray(d.cells) && Array.isArray(d.palette)) return d;
+      return null;
+    })();
     const pixelArtUrl = typeof body.pixelArtUrl === 'string' && body.pixelArtUrl.startsWith('data:image/')
       ? body.pixelArtUrl : null;
 
