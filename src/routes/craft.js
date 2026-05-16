@@ -205,7 +205,8 @@ router.post('/equipment', requireAuth, async (req, res, next) => {
       ? (correctCount * FIT_BONUS + (materials.length - correctCount) * FIT_PENALTY) / materials.length
       : 1.0;
     const itemEmoji = '⚒️';
-    const slot = 'weapon';
+    const VALID_SLOTS = new Set(['weapon','head','chest','pants','gloves','boots','accessory']);
+    const slot = VALID_SLOTS.has(body.equipSlot) ? body.equipSlot : 'weapon';
 
     // smelt 아닌 재료 거부
     const nonSmelt = materials.filter((m) => m.kind !== 'smelt');
