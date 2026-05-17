@@ -7,8 +7,8 @@
 const GAMES = [
   {
     id: 'space-fishing',
-    title: '우주 낚시',
-    description: '우주 공간에서 희귀한 생명체와 유물을 낚아보세요!',
+    title: '폐품 낚시',
+    description: '폐기장과 오염된 강에서 희귀한 폐품을 건져 올리세요!',
     url: process.env.SPACE_FISHING_URL || 'http://13.125.187.132/space-fishing',
     // 싱글플레이 — statusUrl 없음
     emoji: '🎣',
