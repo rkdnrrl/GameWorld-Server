@@ -48,12 +48,11 @@ async function requireAuth(req, res, next) {
       where: { id: userId },
       select: {
         id: true,
-        email: true,
         nickname: true,
-        coins: true,
         smithingProficiency: true,
         createdAt: true,
         isOperator: true,
+        lifetimeCatchCount: true,
       },
     });
     if (!user) {

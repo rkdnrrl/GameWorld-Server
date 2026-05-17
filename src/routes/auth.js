@@ -77,7 +77,7 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data: { nickname },
-      select: { id: true, email: true, nickname: true, coins: true, createdAt: true, isOperator: true },
+      select: { id: true, nickname: true, createdAt: true, isOperator: true },
     });
 
     res.json({ user: { ...updated, operatorAccess: userIsOperator(updated) } });
