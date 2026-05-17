@@ -44,7 +44,7 @@ async function requireAuth(req, res, next) {
       }
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -55,6 +55,40 @@ async function requireAuth(req, res, next) {
         lifetimeCatchCount: true,
       },
     });
+
+    // 소셜 로그인 신규 유저 자동 생성
+    if (!user && supabase) {
+      const { data: userData } = await supabase.auth.getUser(token);
+      const supaUser = userData?.user;
+      if (supaUser) {
+        const email = supaUser.email || '';
+        const rawNickname = supaUser.user_metadata?.full_name
+          || supaUser.user_metadata?.name
+          || email.split('@')[0]
+          || `user_${userId.slice(0, 8)}`;
+        // 닉네임 중복 방지
+        let nickname = rawNickname.slice(0, 20);
+        const exists = await prisma.user.findFirst({ where: { nickname } });
+        if (exists) nickname = `${nickname.slice(0, 16)}_${userId.slice(0, 4)}`;
+
+        user = await prisma.user.create({
+          data: { id: userId, nickname },
+          select: {
+            id: true,
+            nickname: true,
+            smithingProficiency: true,
+            createdAt: true,
+            isOperator: true,
+            lifetimeCatchCount: true,
+          },
+        });
+
+        // Common API 유저 등록
+        const { ensureCommonUser } = require('../lib/commonApi');
+        ensureCommonUser(email, nickname).catch(() => {});
+      }
+    }
+
     if (!user) {
       return res.status(401).json({ error: { message: '존재하지 않는 사용자입니다.' } });
     }
