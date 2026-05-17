@@ -285,6 +285,54 @@ router.get('/', requireAuth, async (req, res, next) => {
 });
 
 // 포획 통계
+// 낚시 도감 — 잡은 아이템 종합 통계
+router.get('/compendium', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const [byType, byRarity, topItems, userRow] = await Promise.all([
+      // 타입별 집계
+      prisma.catch.groupBy({
+        by: ['itemType'],
+        where: { userId },
+        _count: { id: true },
+        _sum: { coinValue: true },
+      }),
+      // 희귀도별 집계
+      prisma.catch.groupBy({
+        by: ['rarity'],
+        where: { userId },
+        _count: { id: true },
+      }),
+      // 가장 많이 잡은 아이템 이름 TOP 10
+      prisma.catch.groupBy({
+        by: ['itemName', 'itemEmoji', 'itemType', 'rarity'],
+        where: { userId },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 10,
+      }),
+      // 누적 수확 횟수
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { lifetimeCatchCount: true },
+      }),
+    ]);
+
+    res.json({
+      lifetimeTotal: userRow?.lifetimeCatchCount ?? 0,
+      byType: byType.map((r) => ({ type: r.itemType, count: r._count.id, coins: r._sum.coinValue ?? 0 })),
+      byRarity: byRarity.map((r) => ({ rarity: r.rarity, count: r._count.id })),
+      topItems: topItems.map((r) => ({
+        name: r.itemName, emoji: r.itemEmoji, type: r.itemType,
+        rarity: r.rarity, count: r._count.id,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/stats', requireAuth, async (req, res, next) => {
   try {
     const userRow = await prisma.user.findUnique({

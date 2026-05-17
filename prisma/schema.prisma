@@ -185,6 +185,8 @@ model UserRecord {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   dungeonMaxFloor Int      @default(0)
   dungeonMaxKills Int      @default(0)
+  skillPoints     Int      @default(0)
+  skillData       Json     @default("{}")
   updatedAt       DateTime @updatedAt
 
   @@map("user_records")

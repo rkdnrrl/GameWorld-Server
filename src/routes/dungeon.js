@@ -5,6 +5,62 @@ const { prisma } = require('../db');
 const router = Router();
 const MOVE_BASE_MS = 220;
 
+// ── 스킬 정의 ────────────────────────────────────────────────
+const SKILLS = {
+  warrior: { name: '전사 훈련', emoji: '⚔️', maxLevel: 5 },
+  shield:  { name: '철벽 방어', emoji: '🛡️', maxLevel: 5 },
+  swift:   { name: '신속',     emoji: '💨', maxLevel: 3 },
+  tough:   { name: '강인함',   emoji: '❤️', maxLevel: 5 },
+};
+// 레벨별 스킬 포인트 비용 (0→1: 10, 1→2: 20, ...)
+const SKILL_COST = [10, 20, 35, 50, 70];
+
+function skillCost(currentLevel) {
+  return SKILL_COST[currentLevel] ?? 9999;
+}
+
+// 스킬 포인트 조회 + 스킬 데이터
+router.get('/skills', requireAuth, async (req, res, next) => {
+  try {
+    const row = await prisma.userRecord.findUnique({ where: { userId: req.user.id } });
+    res.json({
+      skillPoints: row?.skillPoints ?? 0,
+      skillData:   row?.skillData   ?? {},
+      skills: SKILLS,
+      skillCosts: SKILL_COST,
+    });
+  } catch (err) { next(err); }
+});
+
+// 스킬 업그레이드
+router.post('/skills/upgrade', requireAuth, async (req, res, next) => {
+  try {
+    const { skillId } = req.body;
+    if (!SKILLS[skillId]) return res.status(400).json({ error: { message: '잘못된 스킬입니다.' } });
+
+    const row = await prisma.userRecord.findUnique({ where: { userId: req.user.id } });
+    const skillData   = (row?.skillData   ?? {});
+    const skillPoints = row?.skillPoints  ?? 0;
+    const curLevel    = (skillData[skillId] ?? 0);
+    const maxLevel    = SKILLS[skillId].maxLevel;
+
+    if (curLevel >= maxLevel) return res.status(400).json({ error: { message: '최대 레벨입니다.' } });
+    const cost = skillCost(curLevel);
+    if (skillPoints < cost) return res.status(400).json({ error: { message: '스킬 포인트가 부족합니다.' } });
+
+    const newData   = { ...skillData, [skillId]: curLevel + 1 };
+    const newPoints = skillPoints - cost;
+
+    await prisma.userRecord.upsert({
+      where:  { userId: req.user.id },
+      create: { userId: req.user.id, skillPoints: newPoints, skillData: newData },
+      update: { skillPoints: newPoints, skillData: newData },
+    });
+
+    res.json({ ok: true, skillPoints: newPoints, skillData: newData });
+  } catch (err) { next(err); }
+});
+
 router.get('/save', requireAuth, async (req, res, next) => {
   try {
     const row = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
@@ -386,22 +442,27 @@ router.post('/exit', requireAuth, async (req, res, next) => {
       }
     }
 
-    // 개인 최고 기록 갱신
+    // 개인 최고 기록 + 스킬 포인트 갱신
     if (finalData?.player) {
       const floor = Math.max(0, Math.floor(finalData.floor ?? finalData.player.floor ?? 0));
       const kills = Math.max(0, Math.floor(finalData.player.kills ?? 0));
       const existing = await prisma.userRecord.findUnique({ where: { userId: req.user.id } });
-      const newFloor = Math.max(floor, existing?.dungeonMaxFloor ?? 0);
-      const newKills = Math.max(kills, existing?.dungeonMaxKills ?? 0);
+      const newFloor  = Math.max(floor, existing?.dungeonMaxFloor ?? 0);
+      const newKills  = Math.max(kills, existing?.dungeonMaxKills ?? 0);
+      // 탈출 시에만 스킬 포인트 지급
+      const spGain = (!isDeath) ? Math.floor(floor * 3 + kills * 0.5) : 0;
+      const newSP = (existing?.skillPoints ?? 0) + spGain;
       await prisma.userRecord.upsert({
         where:  { userId: req.user.id },
-        create: { userId: req.user.id, dungeonMaxFloor: newFloor, dungeonMaxKills: newKills },
-        update: { dungeonMaxFloor: newFloor, dungeonMaxKills: newKills },
+        create: { userId: req.user.id, dungeonMaxFloor: newFloor, dungeonMaxKills: newKills, skillPoints: newSP },
+        update: { dungeonMaxFloor: newFloor, dungeonMaxKills: newKills, skillPoints: newSP },
       });
+      finalData._spGain = spGain;
     }
 
+    const spGain = finalData?._spGain ?? 0;
     await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
-    res.json({ ok: true, drops, coinsEarned });
+    res.json({ ok: true, drops, coinsEarned, skillPointsGained: spGain });
   } catch (err) {
     next(err);
   }
