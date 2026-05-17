@@ -398,11 +398,11 @@ async function destroyEquippedItems(userId, saveData) {
   });
 }
 
-// 층수·처치 기반 코인 계산
+// 층수·처치 기반 코인 계산 (사망 시 0)
 function calcDungeonCoins(saveData, isDeath) {
+  if (isDeath) return 0;
   const floor = Math.max(0, Math.floor(saveData?.floor ?? 0));
   const kills = Math.max(0, Math.floor(saveData?.player?.kills ?? 0));
-  if (isDeath) return Math.floor(floor * 5 + kills * 1);
   return Math.floor(floor * 15 + kills * 3);
 }
 
@@ -422,8 +422,8 @@ router.post('/exit', requireAuth, async (req, res, next) => {
       }
     }
 
-    // 킬 수 기반 아이템 드롭
-    const drops = finalData ? await processKillDrops(req.user.id, finalData) : {};
+    // 킬 수 기반 아이템 드롭 — 탈출 시에만
+    const drops = (!isDeath && finalData) ? await processKillDrops(req.user.id, finalData) : {};
 
     // 사망 시: 착용 장비 전부 삭제
     if (isDeath && finalData) {
