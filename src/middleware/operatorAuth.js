@@ -12,10 +12,13 @@ function parseOperatorEmailsFromEnv() {
 }
 
 function userIsOperator(user) {
-  if (!user || !user.email) return false;
+  if (!user) return false;
   if (user.isOperator === true) return true;
-  const emails = parseOperatorEmailsFromEnv();
-  return emails.includes(String(user.email).toLowerCase().trim());
+  if (user.email) {
+    const emails = parseOperatorEmailsFromEnv();
+    return emails.includes(String(user.email).toLowerCase().trim());
+  }
+  return false;
 }
 
 function requireOperator(req, res, next) {
