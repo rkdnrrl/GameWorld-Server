@@ -3,6 +3,7 @@ const COMMON_API = 'https://api.airliveplay.com';
 /**
  * 공통 API 유저 연동 — 이메일로 commonUserId 발급
  */
+// { userId, isOperator, coins } 반환
 async function ensureCommonUser(email, nickname) {
   try {
     const res = await fetch(`${COMMON_API}/api/users/ensure`, {
@@ -11,8 +12,7 @@ async function ensureCommonUser(email, nickname) {
       body: JSON.stringify({ email, nickname }),
     });
     if (!res.ok) return null;
-    const data = await res.json();
-    return data.userId ?? null;
+    return await res.json(); // { userId, isOperator, coins, ... }
   } catch {
     return null;
   }

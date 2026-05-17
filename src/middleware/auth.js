@@ -26,20 +26,22 @@ async function requireAuth(req, res, next) {
     }
 
     let userId;
+    let jwtIsOperator = false;
 
-    // Supabase SDK로 토큰 검증 (SUPABASE_URL/ANON_KEY 설정된 경우)
-    if (supabase) {
-      const { data, error } = await supabase.auth.getUser(token);
-      if (error || !data?.user) {
-        return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
-      }
-      userId = data.user.id;
-    } else {
-      // 레거시: JWT_SECRET으로 직접 검증
-      try {
-        const decoded = verifyToken(token);
-        userId = decoded.sub;
-      } catch {
+    // 플랫폼 JWT 우선 검증 (isOperator 포함)
+    try {
+      const decoded = verifyToken(token);
+      userId = decoded.sub;
+      jwtIsOperator = !!decoded.isOperator;
+    } catch {
+      // 플랫폼 JWT 실패 시 Supabase 토큰으로 폴백 (소셜 로그인)
+      if (supabase) {
+        const { data, error } = await supabase.auth.getUser(token);
+        if (error || !data?.user) {
+          return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
+        }
+        userId = data.user.id;
+      } else {
         return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
       }
     }
@@ -66,10 +68,14 @@ async function requireAuth(req, res, next) {
           || supaUser.user_metadata?.name
           || email.split('@')[0]
           || `user_${userId.slice(0, 8)}`;
-        // 닉네임 중복 방지
         let nickname = rawNickname.slice(0, 20);
         const exists = await prisma.user.findFirst({ where: { nickname } });
         if (exists) nickname = `${nickname.slice(0, 16)}_${userId.slice(0, 4)}`;
+
+        // Common API 유저 등록 + isOperator 가져오기
+        const { ensureCommonUser } = require('../lib/commonApi');
+        const commonData = await ensureCommonUser(email, nickname).catch(() => null);
+        jwtIsOperator = !!commonData?.isOperator;
 
         user = await prisma.user.create({
           data: { id: userId, nickname },
@@ -78,14 +84,9 @@ async function requireAuth(req, res, next) {
             nickname: true,
             smithingProficiency: true,
             createdAt: true,
-            isOperator: true,
             lifetimeCatchCount: true,
           },
         });
-
-        // Common API 유저 등록
-        const { ensureCommonUser } = require('../lib/commonApi');
-        ensureCommonUser(email, nickname).catch(() => {});
       }
     }
 
@@ -93,7 +94,7 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: { message: '존재하지 않는 사용자입니다.' } });
     }
 
-    req.user = user;
+    req.user = { ...user, isOperator: jwtIsOperator };
     next();
   } catch (err) {
     next(err);

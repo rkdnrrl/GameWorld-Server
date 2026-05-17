@@ -28,14 +28,16 @@ async function signup({ email, nickname, password }) {
   const commonUserId = data.userId;
 
   // 플랫폼 DB에 게임 프로필 생성
+  const isOperator = !!data.isOperator;
+
   const user = await prisma.user.create({
     data: { id: commonUserId, nickname },
-    select: { id: true, nickname: true, isOperator: true, createdAt: true },
+    select: { id: true, nickname: true, createdAt: true },
   });
 
-  const token = signToken(user.id);
+  const token = signToken(user.id, isOperator);
   return {
-    user: { ...user, email, coins: 0, operatorAccess: userIsOperator(user) },
+    user: { ...user, email, coins: 0, isOperator, operatorAccess: isOperator },
     token,
   };
 }
@@ -64,7 +66,8 @@ async function login({ email, password }) {
     });
   }
 
-  const token = signToken(user.id);
+  const isOperator = !!commonUser.isOperator;
+  const token = signToken(user.id, isOperator);
   return {
     user: {
       id: user.id,
@@ -72,15 +75,15 @@ async function login({ email, password }) {
       nickname: user.nickname,
       coins: commonUser.coins,
       createdAt: user.createdAt,
-      isOperator: user.isOperator,
-      operatorAccess: userIsOperator(user),
+      isOperator,
+      operatorAccess: isOperator,
     },
     token,
   };
 }
 
-function signToken(userId) {
-  return jwt.sign({ sub: userId }, config.jwt.secret, {
+function signToken(userId, isOperator = false) {
+  return jwt.sign({ sub: userId, isOperator: !!isOperator }, config.jwt.secret, {
     expiresIn: config.jwt.expiresIn,
   });
 }
