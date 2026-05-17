@@ -592,16 +592,22 @@ function englishHintFromKoreanItemName(displayName) {
 /** Singleplay-Game3 회수 아이템 — 희귀도별 금속·야적 질감 (픽셀 아이콘용, 금속 감지 시) */
 const SCRAP_RARITY_STYLE = {
   common:    'worn rust patina, dull gray brown steel, flat lighting, humble scrap metal or machine part',
-  rare:      'cleaner machined steel, cool blue grey highlights, subtle edge gleam',
-  epic:      'orange heat glow on edges, welding sparks, stronger metal contrast',
-  legendary: 'dark steel with gold trim, ornate bolts, relic-like scrap centerpiece',
+  uncommon:  'lightly polished steel, green oxidation highlights, faint edge gleam',
+  rare:      'cleaner machined steel, cool blue highlights, subtle edge gleam',
+  epic:      'dark purple energy glow on edges, arcane engravings, stronger metal contrast',
+  legendary: 'orange heat glow, molten metal trim, relic-like scrap centerpiece',
+  mythic:    'crimson dark steel, blood-red energy veins, ominous rune carvings',
+  divine:    'radiant gold and white, celestial glow, heavenly ornate details, blinding aura',
 };
 
 const RARITY_STYLE = {
   common:    'simple design, muted colors',
-  rare:      'blue and purple tones, glowing aura',
-  epic:      'red and gold fiery tones, intense glow',
-  legendary: 'golden divine radiance, awe-inspiring, ornate details',
+  uncommon:  'green tones, faint glow',
+  rare:      'blue tones, glowing aura',
+  epic:      'purple and violet tones, arcane glow',
+  legendary: 'orange and red fiery tones, intense glow',
+  mythic:    'crimson and black, dark energy, ominous aura',
+  divine:    'golden divine radiance, awe-inspiring, celestial ornate details',
 };
 
 /** 힌트가 금속/공구류인지 판단 */
@@ -741,13 +747,14 @@ async function generatePixelLabImage(name, rarity, type, visualEn) {
 }
 
 /* ── POST /api/ai/catch ─────────────────────────────────────
-   에픽·전설용: JSON 고정 목록에서 선택 + PixelLab 이미지 생성
-   body: { rarity: 'epic' | 'legendary' }
+   에픽 이상 고등급용: JSON 고정 목록에서 선택 + PixelLab 이미지 생성
+   body: { rarity: 'epic' | 'legendary' | 'mythic' | 'divine' }
    response: { name, type, emoji, imageUrl? }
 ──────────────────────────────────────────────────────────── */
 router.post('/catch', requireAuth, async (req, res) => {
   const { rarity = 'epic' } = req.body;
-  const tier = (rarity === 'legendary') ? 'legendary' : 'epic';
+  // legendary·mythic·divine은 legendary 풀 사용, 나머지는 epic 풀
+  const tier = ['legendary', 'mythic', 'divine'].includes(rarity) ? 'legendary' : 'epic';
 
   const item = pickFishingItem(tier);
   const name = item.name;
@@ -813,7 +820,7 @@ router.post('/fishing-scan-bonus', requireAuth, async (req, res) => {
  * DB에 캐시된 스크랩야드 아이템(shared:scrapyard: 접두사) 중 랜덤 반환.
  * 운영 페이지에서 미리 생성해 두어야 낚시에서 나올 수 있음.
  */
-const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
+const VALID_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
 
 router.post('/fishing-common', requireAuth, async (req, res) => {
   try {
@@ -827,7 +834,7 @@ router.post('/fishing-common', requireAuth, async (req, res) => {
     }
 
     // 클라이언트가 결정한 형용사 등급으로 노운 필터링 (명사 tier <= 형용사 rarity)
-    const TIER_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 };
+    const TIER_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, divine: 6 };
     const adjRarity = VALID_RARITIES.includes(req.body?.rarity) ? req.body.rarity : 'common';
     const adjLevel = TIER_ORDER[adjRarity];
 

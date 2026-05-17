@@ -62,7 +62,7 @@ async function getUnsoldInventoryPayload(userId, page, limit) {
   };
 }
 
-const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
+const VALID_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
 const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris', 'cosmic', 'scrap'];
 const MAX_COIN_VALUE = 1000;
 
