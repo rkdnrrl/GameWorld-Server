@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
+const { earnCoins } = require('../lib/commonApi');
 
 const router = Router();
 const MOVE_BASE_MS = 220;
@@ -445,6 +446,9 @@ router.post('/exit', requireAuth, async (req, res, next) => {
           where: { id: req.user.id },
           data:  { coins: { increment: coinsEarned } },
         });
+        // 공통 API 코인 동기화
+        const reason = isDeath ? '던전 사망' : '던전 탈출';
+        earnCoins(req.user.commonUserId, coinsEarned, reason, 'platform').catch(() => {});
       }
     }
 

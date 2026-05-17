@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { prisma } = require('../db');
 const config = require('../config');
 const { userIsOperator } = require('../middleware/operatorAuth');
+const { ensureCommonUser } = require('../lib/commonApi');
 
 const SALT_ROUNDS = 12;
 
@@ -48,6 +49,16 @@ async function signup({ email, nickname, password }) {
     },
   });
 
+  // 공통 API 유저 생성 (비동기, 실패해도 회원가입 영향 없음)
+  ensureCommonUser(normalizedEmail, nickname).then(commonUserId => {
+    if (commonUserId) {
+      prisma.user.update({
+        where: { id: user.id },
+        data: { commonUserId },
+      }).catch(() => {});
+    }
+  });
+
   const token = signToken(user.id);
   return { user: { ...user, operatorAccess: userIsOperator(user) }, token };
 }
@@ -65,6 +76,18 @@ async function login({ email, password }) {
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
     throw new HttpError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
+  }
+
+  // commonUserId 없으면 발급 (기존 유저 대응)
+  if (!user.commonUserId) {
+    ensureCommonUser(user.email, user.nickname).then(commonUserId => {
+      if (commonUserId) {
+        prisma.user.update({
+          where: { id: user.id },
+          data: { commonUserId },
+        }).catch(() => {});
+      }
+    });
   }
 
   const token = signToken(user.id);

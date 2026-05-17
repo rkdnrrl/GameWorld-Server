@@ -7,6 +7,7 @@ const {
   resolveCatchRowPixelArt,
 } = require('../lib/catchPixelArt');
 const { logActivity } = require('../lib/activityLog');
+const { earnCoins } = require('../lib/commonApi');
 
 const router = Router();
 
@@ -211,6 +212,9 @@ router.post('/sell', requireAuth, async (req, res, next) => {
         select: { coins: true },
       }),
     ]);
+
+    // 공통 API 코인 동기화
+    earnCoins(req.user.commonUserId, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
 
     res.json({ sold: sellIds.length, coinsEarned, totalCoins: user.coins });
   } catch (err) {
