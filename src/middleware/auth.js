@@ -41,6 +41,13 @@ async function requireAuth(req, res, next) {
           return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
         }
         userId = data.user.id;
+        // 소셜 로그인: Common API에서 isOperator 가져오기
+        const email = data.user.email;
+        if (email) {
+          const { ensureCommonUser } = require('../lib/commonApi');
+          const commonData = await ensureCommonUser(email, data.user.user_metadata?.name || email.split('@')[0]).catch(() => null);
+          jwtIsOperator = !!commonData?.isOperator;
+        }
       } else {
         return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
       }
