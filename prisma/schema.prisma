@@ -34,6 +34,7 @@ model User {
   enhancementStocks     EnhancementStock[]
   modules               Module[]
   donations             Donation[]
+  dailyMissions         DailyMissionProgress[]
 
   @@map("users")
 }
@@ -238,6 +239,21 @@ model Module {
   @@index([userId])
   @@index([equippedTo])
   @@map("modules")
+}
+
+/// 일일 미션 진행 상황 (유저·날짜·미션ID 복합키)
+model DailyMissionProgress {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date           // KST 기준 날짜
+  missionId  String   @db.VarChar(32)
+  progress   Int      @default(0)
+  completed  Boolean  @default(false)
+  rewardPaid Boolean  @default(false)
+
+  @@id([userId, date, missionId])
+  @@index([userId, date])
+  @@map("daily_mission_progress")
 }
 
 /// 토스페이먼츠 후원 내역
