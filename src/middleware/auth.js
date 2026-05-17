@@ -27,12 +27,14 @@ async function requireAuth(req, res, next) {
 
     let userId;
     let jwtIsOperator = false;
+    let commonUserId = null; // CommonDB의 실제 userId
 
     // 플랫폼 JWT 우선 검증 (isOperator 포함)
     try {
       const decoded = verifyToken(token);
       userId = decoded.sub;
       jwtIsOperator = !!decoded.isOperator;
+      commonUserId = userId; // 플랫폼 JWT의 sub는 곧 commonUserId
     } catch {
       // 플랫폼 JWT 실패 시 Supabase 토큰으로 폴백 (소셜 로그인)
       if (supabase) {
@@ -41,12 +43,13 @@ async function requireAuth(req, res, next) {
           return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
         }
         userId = data.user.id;
-        // 소셜 로그인: Common API에서 isOperator 가져오기
+        // 소셜 로그인: Common API에서 isOperator + commonUserId 가져오기
         const email = data.user.email;
         if (email) {
           const { ensureCommonUser } = require('../lib/commonApi');
           const commonData = await ensureCommonUser(email, data.user.user_metadata?.name || email.split('@')[0]).catch(() => null);
           jwtIsOperator = !!commonData?.isOperator;
+          if (commonData?.userId) commonUserId = commonData.userId;
         }
       } else {
         return res.status(401).json({ error: { message: '유효하지 않은 토큰입니다.' } });
@@ -101,7 +104,7 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: { message: '존재하지 않는 사용자입니다.' } });
     }
 
-    req.user = { ...user, isOperator: jwtIsOperator };
+    req.user = { ...user, isOperator: jwtIsOperator, commonUserId: commonUserId || user.id };
     next();
   } catch (err) {
     next(err);
