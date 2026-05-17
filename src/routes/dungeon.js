@@ -393,8 +393,14 @@ async function destroyEquippedItems(userId, saveData) {
   // 무기
   if (p.equipment?.id != null) ids.add(String(p.equipment.id));
   if (ids.size === 0) return;
+
+  const idList = [...ids];
+  // 장비에 장착된 모듈도 함께 삭제
+  await prisma.module.deleteMany({
+    where: { userId, equippedTo: { in: idList } },
+  });
   await prisma.craftedEquipment.deleteMany({
-    where: { id: { in: [...ids] }, userId },
+    where: { id: { in: idList }, userId },
   });
 }
 
