@@ -398,12 +398,12 @@ async function destroyEquippedItems(userId, saveData) {
   });
 }
 
-// 층수·처치 기반 코인 계산 (사망 시 0)
+// 층수·처치 기반 코인 계산
 function calcDungeonCoins(saveData, isDeath) {
-  if (isDeath) return 0;
   const floor = Math.max(0, Math.floor(saveData?.floor ?? 0));
   const kills = Math.max(0, Math.floor(saveData?.player?.kills ?? 0));
-  return Math.floor(floor * 15 + kills * 3);
+  if (isDeath) return Math.floor(floor * 5 + kills * 1);   // 사망: 탈출의 약 1/3
+  return Math.floor(floor * 15 + kills * 3);               // 탈출
 }
 
 router.post('/exit', requireAuth, async (req, res, next) => {
