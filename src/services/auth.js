@@ -1,11 +1,9 @@
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { prisma } = require('../db');
 const config = require('../config');
 const { userIsOperator } = require('../middleware/operatorAuth');
-const { ensureCommonUser } = require('../lib/commonApi');
 
-const SALT_ROUNDS = 12;
+const COMMON_API = 'https://api.airliveplay.com';
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -15,78 +13,54 @@ class HttpError extends Error {
 }
 
 async function signup({ email, nickname, password }) {
-  const normalizedEmail = email.toLowerCase().trim();
-
-  const exists = await prisma.user.findFirst({
-    where: {
-      OR: [{ email: normalizedEmail }, { nickname }],
-    },
-    select: { email: true, nickname: true },
+  // Common API에 회원가입
+  const res = await fetch(`${COMMON_API}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, nickname, password }),
   });
 
-  if (exists) {
-    if (exists.email === normalizedEmail) {
-      throw new HttpError(409, '이미 사용 중인 이메일입니다.');
-    }
-    throw new HttpError(409, '이미 사용 중인 닉네임입니다.');
+  const data = await res.json();
+  if (!res.ok) {
+    throw new HttpError(res.status, data.error || '회원가입 실패');
   }
 
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const commonUserId = data.userId;
 
+  // 플랫폼 DB에 게임 프로필 생성
   const user = await prisma.user.create({
-    data: {
-      email: normalizedEmail,
-      nickname,
-      passwordHash,
-    },
-    select: {
-      id: true,
-      email: true,
-      nickname: true,
-      coins: true,
-      createdAt: true,
-      isOperator: true,
-    },
-  });
-
-  // 공통 API 유저 생성 (비동기, 실패해도 회원가입 영향 없음)
-  ensureCommonUser(normalizedEmail, nickname).then(commonUserId => {
-    if (commonUserId) {
-      prisma.user.update({
-        where: { id: user.id },
-        data: { commonUserId },
-      }).catch(() => {});
-    }
+    data: { id: commonUserId, nickname },
+    select: { id: true, nickname: true, isOperator: true, createdAt: true },
   });
 
   const token = signToken(user.id);
-  return { user: { ...user, operatorAccess: userIsOperator(user) }, token };
+  return {
+    user: { ...user, email, coins: 0, operatorAccess: userIsOperator(user) },
+    token,
+  };
 }
 
 async function login({ email, password }) {
-  const normalizedEmail = email.toLowerCase().trim();
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+  // Common API에 로그인
+  const res = await fetch(`${COMMON_API}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   });
 
+  const data = await res.json();
+  if (!res.ok) {
+    throw new HttpError(401, data.error || '이메일 또는 비밀번호가 올바르지 않습니다.');
+  }
+
+  const { user: commonUser } = data;
+  const commonUserId = commonUser.id;
+
+  // 플랫폼 DB 프로필 조회 또는 생성
+  let user = await prisma.user.findUnique({ where: { id: commonUserId } });
   if (!user) {
-    throw new HttpError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
-  }
-
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) {
-    throw new HttpError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
-  }
-
-  // commonUserId 없으면 발급 (기존 유저 대응)
-  if (!user.commonUserId) {
-    ensureCommonUser(user.email, user.nickname).then(commonUserId => {
-      if (commonUserId) {
-        prisma.user.update({
-          where: { id: user.id },
-          data: { commonUserId },
-        }).catch(() => {});
-      }
+    user = await prisma.user.create({
+      data: { id: commonUserId, nickname: commonUser.nickname },
     });
   }
 
@@ -94,9 +68,9 @@ async function login({ email, password }) {
   return {
     user: {
       id: user.id,
-      email: user.email,
+      email: commonUser.email,
       nickname: user.nickname,
-      coins: user.coins,
+      coins: commonUser.coins,
       createdAt: user.createdAt,
       isOperator: user.isOperator,
       operatorAccess: userIsOperator(user),

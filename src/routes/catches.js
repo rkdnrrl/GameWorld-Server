@@ -201,22 +201,15 @@ router.post('/sell', requireAuth, async (req, res, next) => {
     const coinsEarned = toSell.reduce((sum, c) => sum + c.coinValue, 0);
     const sellIds = toSell.map(c => c.id);
 
-    const [, user] = await prisma.$transaction([
-      prisma.catch.updateMany({
-        where: { id: { in: sellIds } },
-        data: { sold: true, soldAt: new Date() },
-      }),
-      prisma.user.update({
-        where: { id: req.user.id },
-        data: { coins: { increment: coinsEarned } },
-        select: { coins: true },
-      }),
-    ]);
+    await prisma.catch.updateMany({
+      where: { id: { in: sellIds } },
+      data: { sold: true, soldAt: new Date() },
+    });
 
-    // 공통 API 코인 동기화
-    earnCoins(req.user.commonUserId, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
+    // 코인 지급 (Common API)
+    earnCoins(req.user.id, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
 
-    res.json({ sold: sellIds.length, coinsEarned, totalCoins: user.coins });
+    res.json({ sold: sellIds.length, coinsEarned });
   } catch (err) {
     next(err);
   }

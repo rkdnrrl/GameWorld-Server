@@ -437,18 +437,13 @@ router.post('/exit', requireAuth, async (req, res, next) => {
       await destroyEquippedItems(req.user.id, finalData);
     }
 
-    // 코인 지급
+    // 코인 지급 (Common API)
     let coinsEarned = 0;
     if (finalData) {
       coinsEarned = calcDungeonCoins(finalData, !!isDeath);
       if (coinsEarned > 0) {
-        await prisma.user.update({
-          where: { id: req.user.id },
-          data:  { coins: { increment: coinsEarned } },
-        });
-        // 공통 API 코인 동기화
         const reason = isDeath ? '던전 사망' : '던전 탈출';
-        earnCoins(req.user.commonUserId, coinsEarned, reason, 'platform').catch(() => {});
+        earnCoins(req.user.id, coinsEarned, reason, 'platform').catch(() => {});
       }
     }
 
