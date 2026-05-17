@@ -324,15 +324,40 @@ router.get('/record', requireAuth, async (req, res, next) => {
   }
 });
 
+// 사망 시 착용 장비 전부 삭제
+async function destroyEquippedItems(userId, saveData) {
+  const p = saveData?.player;
+  if (!p) return;
+  const ids = new Set();
+  // 방어구 슬롯
+  for (const wrapper of Object.values(p.equippedSlots || {})) {
+    const id = wrapper?.equip?.id ?? wrapper?.id;
+    if (id != null) ids.add(String(id));
+  }
+  // 무기
+  if (p.equipment?.id != null) ids.add(String(p.equipment.id));
+  if (ids.size === 0) return;
+  await prisma.craftedEquipment.deleteMany({
+    where: { id: { in: [...ids] }, userId },
+  });
+}
+
+// 층수·처치 기반 코인 계산
+function calcDungeonCoins(saveData, isDeath) {
+  const floor = Math.max(0, Math.floor(saveData?.floor ?? 0));
+  const kills = Math.max(0, Math.floor(saveData?.player?.kills ?? 0));
+  if (isDeath) return Math.floor(floor * 5 + kills * 1);
+  return Math.floor(floor * 15 + kills * 3);
+}
+
 router.post('/exit', requireAuth, async (req, res, next) => {
   try {
-    const { data } = req.body;
+    const { data, isDeath = false } = req.body;
     let finalData = data;
     if (finalData) {
       await syncEquipmentDurability(req.user.id, finalData);
       await syncModuleDurability(req.user.id, finalData);
     } else {
-      // data 없으면 마지막 저장된 세이브에서 동기화
       const existing = await prisma.dungeonSave.findUnique({ where: { userId: req.user.id } });
       finalData = existing?.data ?? null;
       if (finalData) {
@@ -341,8 +366,25 @@ router.post('/exit', requireAuth, async (req, res, next) => {
       }
     }
 
-    // 사망 시에만 킬 수 기반 아이템 드롭 처리
+    // 킬 수 기반 아이템 드롭
     const drops = finalData ? await processKillDrops(req.user.id, finalData) : {};
+
+    // 사망 시: 착용 장비 전부 삭제
+    if (isDeath && finalData) {
+      await destroyEquippedItems(req.user.id, finalData);
+    }
+
+    // 코인 지급
+    let coinsEarned = 0;
+    if (finalData) {
+      coinsEarned = calcDungeonCoins(finalData, !!isDeath);
+      if (coinsEarned > 0) {
+        await prisma.user.update({
+          where: { id: req.user.id },
+          data:  { coins: { increment: coinsEarned } },
+        });
+      }
+    }
 
     // 개인 최고 기록 갱신
     if (finalData?.player) {
@@ -359,7 +401,7 @@ router.post('/exit', requireAuth, async (req, res, next) => {
     }
 
     await prisma.dungeonSave.deleteMany({ where: { userId: req.user.id } });
-    res.json({ ok: true, drops });
+    res.json({ ok: true, drops, coinsEarned });
   } catch (err) {
     next(err);
   }
