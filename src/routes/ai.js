@@ -890,13 +890,12 @@ router.post('/fishing-items/generate-one', requireAuth, requireOperator, async (
 
     // 명사 자체로 이미지 생성·캐시 (형용사는 낚시 시점에 랜덤으로 붙임)
     const cacheKey = sharedScrapyardCacheKey(noun.name);
+    const nounTier = VALID_RARITIES.includes(noun.tier) ? noun.tier : 'common';
 
-    const imageUrl = await generatePixelLabImage(noun.name, 'common', 'scrap', noun.visualEn || '');
+    const imageUrl = await generatePixelLabImage(noun.name, nounTier, 'scrap', noun.visualEn || '');
     if (!imageUrl) {
       return res.status(503).json({ error: { message: 'PixelLab 생성 실패 (API 키 없음 또는 서버 오류)' } });
     }
-
-    const nounTier = VALID_RARITIES.includes(noun.tier) ? noun.tier : 'common';
 
     await prisma.sharedPixelArt.upsert({
       where: { name: cacheKey },

@@ -465,7 +465,7 @@
       "nickel"
     ],
     "visualEn": "old coin",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "구리배관",
@@ -623,7 +623,7 @@
       "silver"
     ],
     "visualEn": "silver spoon",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "은반지",
@@ -632,7 +632,7 @@
       "silver"
     ],
     "visualEn": "silver ring",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "은목걸이",
@@ -641,7 +641,7 @@
       "silver"
     ],
     "visualEn": "silver necklace",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "은팔찌",
@@ -650,7 +650,7 @@
       "silver"
     ],
     "visualEn": "silver bracelet",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "은화",
@@ -659,7 +659,7 @@
       "silver"
     ],
     "visualEn": "silver coin",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "은귀걸이",
@@ -668,7 +668,7 @@
       "silver"
     ],
     "visualEn": "silver earring",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "은촛대",
@@ -677,7 +677,7 @@
       "silver"
     ],
     "visualEn": "silver candlestick",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "알루미늄캔",
@@ -742,7 +742,7 @@
       "plastic"
     ],
     "visualEn": "cracked smartphone",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "휴대폰",
@@ -752,7 +752,7 @@
       "plastic"
     ],
     "visualEn": "old mobile phone",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "노트북",
@@ -763,7 +763,7 @@
       "plastic"
     ],
     "visualEn": "laptop computer",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "태블릿",
@@ -773,7 +773,7 @@
       "glass"
     ],
     "visualEn": "tablet device",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "게임패드",
@@ -783,7 +783,7 @@
       "plastic"
     ],
     "visualEn": "game controller",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "키보드",
@@ -793,7 +793,7 @@
       "plastic"
     ],
     "visualEn": "computer keyboard",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "마우스",
@@ -803,7 +803,7 @@
       "plastic"
     ],
     "visualEn": "computer mouse",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "헤드셋",
@@ -813,7 +813,7 @@
       "plastic"
     ],
     "visualEn": "gaming headset",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "모니터",
@@ -824,7 +824,7 @@
       "plastic"
     ],
     "visualEn": "computer monitor",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "그래픽카드",
@@ -834,7 +834,7 @@
       "silicon"
     ],
     "visualEn": "graphics card with fans",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "충전기",
@@ -844,7 +844,7 @@
       "rubber"
     ],
     "visualEn": "phone charger",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "웹캠",
@@ -855,7 +855,7 @@
       "glass"
     ],
     "visualEn": "webcam",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "이어폰",
@@ -865,7 +865,7 @@
       "rubber"
     ],
     "visualEn": "earphones",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "스피커",
@@ -875,7 +875,7 @@
       "plastic"
     ],
     "visualEn": "portable speaker",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "마이크",
@@ -885,7 +885,7 @@
       "iron"
     ],
     "visualEn": "microphone",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "손목시계",
@@ -895,7 +895,7 @@
       "glass"
     ],
     "visualEn": "digital wristwatch",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "전자계산기",
@@ -905,7 +905,7 @@
       "plastic"
     ],
     "visualEn": "pocket calculator",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "리모컨",
@@ -915,7 +915,7 @@
       "plastic"
     ],
     "visualEn": "TV remote control",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "배터리팩",
@@ -925,7 +925,7 @@
       "lithium"
     ],
     "visualEn": "portable battery pack",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "보조배터리",
@@ -935,7 +935,7 @@
       "lithium"
     ],
     "visualEn": "power bank",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "드론",
@@ -946,7 +946,7 @@
       "aluminum"
     ],
     "visualEn": "small quad-rotor drone",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "전동칫솔",
@@ -956,7 +956,7 @@
       "plastic"
     ],
     "visualEn": "electric toothbrush",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "면도기",
@@ -966,7 +966,7 @@
       "iron"
     ],
     "visualEn": "electric razor",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "카메라",
@@ -977,7 +977,7 @@
       "plastic"
     ],
     "visualEn": "digital camera",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "USB드라이브",
@@ -987,7 +987,7 @@
       "plastic"
     ],
     "visualEn": "USB flash drive",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "MP3플레이어",
@@ -997,7 +997,7 @@
       "plastic"
     ],
     "visualEn": "portable MP3 player",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "포터블게임기",
@@ -1008,7 +1008,7 @@
       "glass"
     ],
     "visualEn": "handheld game console",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "스마트워치",
@@ -1018,7 +1018,7 @@
       "glass"
     ],
     "visualEn": "smartwatch",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "블루투스스피커",
@@ -1028,7 +1028,7 @@
       "plastic"
     ],
     "visualEn": "bluetooth speaker",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "전자책리더",
@@ -1039,7 +1039,7 @@
       "plastic"
     ],
     "visualEn": "e-book reader",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "공유기",
@@ -1049,7 +1049,7 @@
       "plastic"
     ],
     "visualEn": "WiFi router",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "CCTV카메라",
@@ -1060,7 +1060,7 @@
       "iron"
     ],
     "visualEn": "security camera",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "도어락",
@@ -1070,7 +1070,7 @@
       "iron"
     ],
     "visualEn": "electronic door lock",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "전자저울",
@@ -1080,7 +1080,7 @@
       "iron"
     ],
     "visualEn": "digital kitchen scale",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "초음파세척기",
@@ -1091,7 +1091,7 @@
       "iron"
     ],
     "visualEn": "ultrasonic cleaner",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "레이저포인터",
@@ -1101,7 +1101,7 @@
       "plastic"
     ],
     "visualEn": "laser pointer",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "유리병",
@@ -1696,7 +1696,7 @@
       "circuit"
     ],
     "visualEn": "hair dryer",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "주사기",
@@ -1902,7 +1902,7 @@
       "silver"
     ],
     "visualEn": "leather ankle bracelet",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "가죽모자",
@@ -2744,7 +2744,7 @@
       "gold"
     ],
     "visualEn": "diamond ring",
-    "tier": "legendary"
+    "tier": "mythic"
   },
   {
     "name": "루비반지",
@@ -2754,7 +2754,7 @@
       "gold"
     ],
     "visualEn": "ruby ring",
-    "tier": "legendary"
+    "tier": "mythic"
   },
   {
     "name": "사파이어목걸이",
@@ -2764,7 +2764,7 @@
       "silver"
     ],
     "visualEn": "sapphire necklace",
-    "tier": "legendary"
+    "tier": "mythic"
   },
   {
     "name": "에메랄드팔찌",
@@ -2774,7 +2774,7 @@
       "gold"
     ],
     "visualEn": "emerald bracelet",
-    "tier": "legendary"
+    "tier": "mythic"
   },
   {
     "name": "자수정목걸이",
@@ -2784,7 +2784,7 @@
       "silver"
     ],
     "visualEn": "amethyst necklace",
-    "tier": "legendary"
+    "tier": "mythic"
   },
   {
     "name": "진주목걸이",
@@ -2793,7 +2793,7 @@
       "pearl"
     ],
     "visualEn": "pearl necklace",
-    "tier": "legendary"
+    "tier": "mythic"
   },
   {
     "name": "오팔귀걸이",
@@ -2803,7 +2803,7 @@
       "silver"
     ],
     "visualEn": "opal earring",
-    "tier": "legendary"
+    "tier": "divine"
   },
   {
     "name": "토파즈반지",
@@ -2813,7 +2813,7 @@
       "gold"
     ],
     "visualEn": "topaz ring",
-    "tier": "legendary"
+    "tier": "divine"
   },
   {
     "name": "가넷목걸이",
@@ -2823,7 +2823,7 @@
       "silver"
     ],
     "visualEn": "garnet necklace",
-    "tier": "legendary"
+    "tier": "divine"
   },
   {
     "name": "보석함",
@@ -2843,7 +2843,7 @@
       "ruby"
     ],
     "visualEn": "decorative brooch",
-    "tier": "legendary"
+    "tier": "divine"
   },
   {
     "name": "모래시계",
@@ -2862,7 +2862,7 @@
       "sand"
     ],
     "visualEn": "sandbag",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "기타",
@@ -2872,7 +2872,7 @@
       "iron"
     ],
     "visualEn": "acoustic guitar",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "바이올린",
@@ -2882,7 +2882,7 @@
       "textile"
     ],
     "visualEn": "violin",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "피아노건반",
@@ -2892,7 +2892,7 @@
       "iron"
     ],
     "visualEn": "piano key fragment",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "탬버린",
@@ -2902,7 +2902,7 @@
       "textile"
     ],
     "visualEn": "tambourine",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "마라카스",
@@ -2911,7 +2911,7 @@
       "resin"
     ],
     "visualEn": "wooden maracas",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "실로폰",
@@ -2921,7 +2921,7 @@
       "resin"
     ],
     "visualEn": "toy xylophone",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "하모니카",
@@ -2931,7 +2931,7 @@
       "plastic"
     ],
     "visualEn": "harmonica",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "플루트",
@@ -2941,7 +2941,7 @@
       "iron"
     ],
     "visualEn": "metal flute",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "캐스터네츠",
@@ -2950,7 +2950,7 @@
       "resin"
     ],
     "visualEn": "wooden castanets",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "우쿨렐레",
@@ -2960,7 +2960,7 @@
       "textile"
     ],
     "visualEn": "ukulele",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "축구공",
@@ -2970,7 +2970,7 @@
       "textile"
     ],
     "visualEn": "soccer ball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "농구공",
@@ -2979,7 +2979,7 @@
       "rubber"
     ],
     "visualEn": "basketball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "테니스공",
@@ -2989,7 +2989,7 @@
       "textile"
     ],
     "visualEn": "tennis ball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "테니스라켓",
@@ -3000,7 +3000,7 @@
       "iron"
     ],
     "visualEn": "tennis racket",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "배드민턴채",
@@ -3010,7 +3010,7 @@
       "iron"
     ],
     "visualEn": "badminton racket",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "탁구공",
@@ -3019,7 +3019,7 @@
       "plastic"
     ],
     "visualEn": "ping pong ball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "탁구채",
@@ -3029,7 +3029,7 @@
       "rubber"
     ],
     "visualEn": "table tennis paddle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "골프채",
@@ -3039,7 +3039,7 @@
       "resin"
     ],
     "visualEn": "golf club",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "수영모",
@@ -3049,7 +3049,7 @@
       "textile"
     ],
     "visualEn": "swimming cap",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "복싱글러브",
@@ -3059,7 +3059,7 @@
       "rubber"
     ],
     "visualEn": "boxing glove",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "줄넘기",
@@ -3069,7 +3069,7 @@
       "resin"
     ],
     "visualEn": "jump rope",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "훌라후프",
@@ -3078,7 +3078,7 @@
       "plastic"
     ],
     "visualEn": "plastic hula hoop",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "스키폴",
@@ -3088,7 +3088,7 @@
       "iron"
     ],
     "visualEn": "ski pole",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "럭비공",
@@ -3098,7 +3098,7 @@
       "leather"
     ],
     "visualEn": "rugby ball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "배구공",
@@ -3108,7 +3108,7 @@
       "textile"
     ],
     "visualEn": "volleyball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "스케이트보드",
@@ -3119,7 +3119,7 @@
       "aluminum"
     ],
     "visualEn": "skateboard",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "킥보드",
@@ -3129,7 +3129,7 @@
       "rubber"
     ],
     "visualEn": "kick scooter",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "수경",
@@ -3139,7 +3139,7 @@
       "rubber"
     ],
     "visualEn": "swim goggles",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "아령",
@@ -3148,7 +3148,7 @@
       "iron"
     ],
     "visualEn": "iron dumbbell",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "역기",
@@ -3157,7 +3157,7 @@
       "iron"
     ],
     "visualEn": "barbell weight plate",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "인라인스케이트",
@@ -3168,7 +3168,7 @@
       "rubber"
     ],
     "visualEn": "inline roller skates",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "스노보드",
@@ -3178,7 +3178,7 @@
       "aluminum"
     ],
     "visualEn": "snowboard",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "서핑보드",
@@ -3188,7 +3188,7 @@
       "rubber"
     ],
     "visualEn": "surfboard",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "투구",
@@ -3197,7 +3197,7 @@
       "iron"
     ],
     "visualEn": "iron warrior helmet",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "갑옷조각",
@@ -3206,7 +3206,7 @@
       "iron"
     ],
     "visualEn": "piece of iron armor",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "세탁기",
@@ -3217,7 +3217,7 @@
       "rubber"
     ],
     "visualEn": "washing machine",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "냉장고",
@@ -3227,7 +3227,7 @@
       "plastic"
     ],
     "visualEn": "refrigerator",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "전자레인지",
@@ -3238,7 +3238,7 @@
       "glass"
     ],
     "visualEn": "microwave oven",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "선풍기",
@@ -3249,7 +3249,7 @@
       "iron"
     ],
     "visualEn": "electric fan",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "에어컨",
@@ -3260,7 +3260,7 @@
       "aluminum"
     ],
     "visualEn": "air conditioner unit",
-    "tier": "rare"
+    "tier": "uncommon"
   },
   {
     "name": "청소기",
@@ -3493,7 +3493,7 @@
       "rubber"
     ],
     "visualEn": "bicycle frame and wheels",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "자전거바퀴",
@@ -3503,7 +3503,7 @@
       "rubber"
     ],
     "visualEn": "bicycle wheel",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "자전거핸들",
@@ -3512,7 +3512,7 @@
       "iron"
     ],
     "visualEn": "bicycle handlebar",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "물뿌리개",
@@ -3522,7 +3522,7 @@
       "iron"
     ],
     "visualEn": "watering can",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "삽자루",
@@ -3532,7 +3532,7 @@
       "iron"
     ],
     "visualEn": "shovel with wooden handle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "전기톱",
@@ -3553,7 +3553,7 @@
       "resin"
     ],
     "visualEn": "wood chisel",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "대패",
@@ -3563,7 +3563,7 @@
       "resin"
     ],
     "visualEn": "hand plane tool",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "바이스",
@@ -3572,7 +3572,7 @@
       "iron"
     ],
     "visualEn": "bench vise clamp",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "수평계",
@@ -3582,7 +3582,7 @@
       "glass"
     ],
     "visualEn": "spirit level",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "책",
@@ -3592,7 +3592,7 @@
       "textile"
     ],
     "visualEn": "stack of old books",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "노트",
@@ -3601,7 +3601,7 @@
       "resin"
     ],
     "visualEn": "spiral notebook",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "볼펜",
@@ -3611,7 +3611,7 @@
       "iron"
     ],
     "visualEn": "ballpoint pen",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "만년필",
@@ -3621,7 +3621,7 @@
       "plastic"
     ],
     "visualEn": "fountain pen",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "스테이플러",
@@ -3631,7 +3631,7 @@
       "plastic"
     ],
     "visualEn": "stapler",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "클립",
@@ -3640,7 +3640,7 @@
       "iron"
     ],
     "visualEn": "metal paper clip",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "붓",
@@ -3650,7 +3650,7 @@
       "textile"
     ],
     "visualEn": "paint brush",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "팔레트",
@@ -3660,7 +3660,7 @@
       "resin"
     ],
     "visualEn": "artist palette",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "크레파스",
@@ -3669,7 +3669,7 @@
       "plastic"
     ],
     "visualEn": "box of crayons",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "색연필",
@@ -3679,7 +3679,7 @@
       "graphite"
     ],
     "visualEn": "colored pencils",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "컴퍼스",
@@ -3688,7 +3688,7 @@
       "iron"
     ],
     "visualEn": "drawing compass",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "삼각자",
@@ -3697,7 +3697,7 @@
       "plastic"
     ],
     "visualEn": "plastic triangle ruler",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "도장",
@@ -3707,7 +3707,7 @@
       "iron"
     ],
     "visualEn": "rubber stamp",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "풀건",
@@ -3717,7 +3717,7 @@
       "resin"
     ],
     "visualEn": "glue gun",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "사포",
@@ -3727,7 +3727,7 @@
       "sand"
     ],
     "visualEn": "sandpaper sheet",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "통발",
@@ -3737,7 +3737,7 @@
       "fiber"
     ],
     "visualEn": "wire fish trap basket",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "뜰채",
@@ -3747,7 +3747,7 @@
       "fiber"
     ],
     "visualEn": "fish landing net",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "작살",
@@ -3756,7 +3756,7 @@
       "iron"
     ],
     "visualEn": "metal spear",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "우산",
@@ -3766,7 +3766,7 @@
       "textile"
     ],
     "visualEn": "umbrella",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "여행가방",
@@ -3777,7 +3777,7 @@
       "textile"
     ],
     "visualEn": "rolling suitcase",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "랜턴",
@@ -3787,7 +3787,7 @@
       "iron"
     ],
     "visualEn": "metal lantern",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "양초",
@@ -3797,7 +3797,7 @@
       "textile"
     ],
     "visualEn": "wax candle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "촛대",
@@ -3806,7 +3806,7 @@
       "iron"
     ],
     "visualEn": "iron candlestick",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "쌍안경",
@@ -3816,7 +3816,7 @@
       "iron"
     ],
     "visualEn": "binoculars",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나침반",
@@ -3826,7 +3826,7 @@
       "iron"
     ],
     "visualEn": "compass",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "혈압계",
@@ -3846,7 +3846,7 @@
       "rubber"
     ],
     "visualEn": "stethoscope",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "핀셋",
@@ -3855,7 +3855,7 @@
       "iron"
     ],
     "visualEn": "metal tweezers",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "컴퓨터",
@@ -3962,7 +3962,7 @@
       "glass"
     ],
     "visualEn": "pot lid with glass window",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "쇠솥",
@@ -3971,7 +3971,7 @@
       "iron"
     ],
     "visualEn": "heavy iron cauldron",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "식기세트",
@@ -3981,7 +3981,7 @@
       "ceramic"
     ],
     "visualEn": "metal cutlery set",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "아이스픽",
@@ -3991,7 +3991,7 @@
       "resin"
     ],
     "visualEn": "ice pick tool",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "고기집게",
@@ -4000,7 +4000,7 @@
       "iron"
     ],
     "visualEn": "barbecue tongs",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "석쇠받침",
@@ -4009,7 +4009,7 @@
       "iron"
     ],
     "visualEn": "metal grill stand",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "군용칼",
@@ -4018,7 +4018,7 @@
       "iron"
     ],
     "visualEn": "military knife",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "칼집",
@@ -4028,7 +4028,7 @@
       "iron"
     ],
     "visualEn": "sword scabbard",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "철제함",
@@ -4037,7 +4037,7 @@
       "iron"
     ],
     "visualEn": "metal tin box",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "닻",
@@ -4046,7 +4046,7 @@
       "iron"
     ],
     "visualEn": "ship anchor",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "구리팔찌",
@@ -4055,7 +4055,7 @@
       "copper"
     ],
     "visualEn": "copper bracelet",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "구리반지",
@@ -4064,7 +4064,7 @@
       "copper"
     ],
     "visualEn": "copper ring",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "놋쇠촛대",
@@ -4074,7 +4074,7 @@
       "zinc"
     ],
     "visualEn": "brass candlestick",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "금도금잔",
@@ -4103,7 +4103,7 @@
       "leather"
     ],
     "visualEn": "sunglasses case",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "유리마블",
@@ -4112,7 +4112,7 @@
       "glass"
     ],
     "visualEn": "glass marble",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "수정구슬",
@@ -4122,7 +4122,7 @@
       "silica"
     ],
     "visualEn": "crystal ball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "유리공예품",
@@ -4131,7 +4131,7 @@
       "glass"
     ],
     "visualEn": "decorative glass figurine",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "바퀴달린슬리퍼",
@@ -4141,7 +4141,7 @@
       "plastic"
     ],
     "visualEn": "roller slipper",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "고무도장",
@@ -4150,7 +4150,7 @@
       "rubber"
     ],
     "visualEn": "rubber stamp",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "고무타이어튜브",
@@ -4159,7 +4159,7 @@
       "rubber"
     ],
     "visualEn": "inner tube",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "점토",
@@ -4169,7 +4169,7 @@
       "sand"
     ],
     "visualEn": "lump of clay",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "도자기조각",
@@ -4178,7 +4178,7 @@
       "ceramic"
     ],
     "visualEn": "broken pottery fragment",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "벽돌",
@@ -4188,7 +4188,7 @@
       "sand"
     ],
     "visualEn": "fired clay brick",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "화분받침",
@@ -4197,7 +4197,7 @@
       "ceramic"
     ],
     "visualEn": "ceramic pot saucer",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "밀짚모자",
@@ -4207,7 +4207,7 @@
       "resin"
     ],
     "visualEn": "straw hat",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "가방끈",
@@ -4217,7 +4217,7 @@
       "leather"
     ],
     "visualEn": "bag strap",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "허리띠",
@@ -4226,7 +4226,7 @@
       "textile"
     ],
     "visualEn": "cloth waist band",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "머플러",
@@ -4235,7 +4235,7 @@
       "textile"
     ],
     "visualEn": "wool muffler scarf",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "레깅스",
@@ -4245,7 +4245,7 @@
       "rubber"
     ],
     "visualEn": "athletic leggings",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "조끼",
@@ -4254,7 +4254,7 @@
       "textile"
     ],
     "visualEn": "vest",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "두건",
@@ -4263,7 +4263,7 @@
       "textile"
     ],
     "visualEn": "cloth hood",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "대나무통",
@@ -4272,7 +4272,7 @@
       "resin"
     ],
     "visualEn": "bamboo container",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무망치",
@@ -4281,7 +4281,7 @@
       "resin"
     ],
     "visualEn": "wooden mallet",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무빨래판",
@@ -4290,7 +4290,7 @@
       "resin"
     ],
     "visualEn": "wooden washboard",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무빗",
@@ -4299,7 +4299,7 @@
       "resin"
     ],
     "visualEn": "wooden hair comb",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "도르래",
@@ -4309,7 +4309,7 @@
       "iron"
     ],
     "visualEn": "wooden pulley",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무저금통",
@@ -4318,7 +4318,7 @@
       "resin"
     ],
     "visualEn": "wooden piggy bank",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무피리",
@@ -4327,7 +4327,7 @@
       "resin"
     ],
     "visualEn": "wooden flute",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무퍼즐",
@@ -4336,7 +4336,7 @@
       "resin"
     ],
     "visualEn": "wooden puzzle pieces",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "코르크보드",
@@ -4345,7 +4345,7 @@
       "resin"
     ],
     "visualEn": "cork bulletin board",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "얼레",
@@ -4355,7 +4355,7 @@
       "iron"
     ],
     "visualEn": "fishing reel spool",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "오징어뼈",
@@ -4365,7 +4365,7 @@
       "protein"
     ],
     "visualEn": "dried cuttlefish bone",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "홍합껍데기",
@@ -4374,7 +4374,7 @@
       "keratin"
     ],
     "visualEn": "mussel shell",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "굴껍데기",
@@ -4384,7 +4384,7 @@
       "limestone"
     ],
     "visualEn": "oyster shell",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "말린해마",
@@ -4394,7 +4394,7 @@
       "protein"
     ],
     "visualEn": "dried seahorse",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "곤충표본",
@@ -4403,7 +4403,7 @@
       "chitin"
     ],
     "visualEn": "pinned insect specimen",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "공룡화석조각",
@@ -4413,7 +4413,7 @@
       "limestone"
     ],
     "visualEn": "dinosaur fossil fragment",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "자동차열쇠",
@@ -4433,7 +4433,7 @@
       "iron"
     ],
     "visualEn": "car license plate",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "와이퍼",
@@ -4443,7 +4443,7 @@
       "iron"
     ],
     "visualEn": "windshield wiper",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "사이드미러",
@@ -4454,7 +4454,7 @@
       "iron"
     ],
     "visualEn": "car side mirror",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "자동차배터리",
@@ -4474,7 +4474,7 @@
       "aluminum"
     ],
     "visualEn": "fire extinguisher",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "경광등",
@@ -4495,7 +4495,7 @@
       "iron"
     ],
     "visualEn": "seatbelt",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "경고삼각대",
@@ -4505,7 +4505,7 @@
       "iron"
     ],
     "visualEn": "road warning triangle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "행거",
@@ -4515,7 +4515,7 @@
       "plastic"
     ],
     "visualEn": "metal clothes rack",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "서랍손잡이",
@@ -4524,7 +4524,7 @@
       "iron"
     ],
     "visualEn": "metal drawer handle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "문고리",
@@ -4533,7 +4533,7 @@
       "iron"
     ],
     "visualEn": "door knob",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "경첩",
@@ -4542,7 +4542,7 @@
       "iron"
     ],
     "visualEn": "metal door hinge",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "네일아트도구",
@@ -4552,7 +4552,7 @@
       "plastic"
     ],
     "visualEn": "nail art tool set",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "면도칼",
@@ -4561,7 +4561,7 @@
       "iron"
     ],
     "visualEn": "straight razor blade",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "손톱깎이",
@@ -4570,7 +4570,7 @@
       "iron"
     ],
     "visualEn": "nail clipper",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "사냥덫",
@@ -4579,7 +4579,7 @@
       "iron"
     ],
     "visualEn": "metal animal trap",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "새장",
@@ -4588,7 +4588,7 @@
       "iron"
     ],
     "visualEn": "metal bird cage",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "목줄",
@@ -4598,7 +4598,7 @@
       "iron"
     ],
     "visualEn": "dog collar and leash",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "말굽",
@@ -4607,7 +4607,7 @@
       "iron"
     ],
     "visualEn": "horseshoe",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "물고기통조림",
@@ -4617,7 +4617,7 @@
       "protein"
     ],
     "visualEn": "canned fish tin",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "바벨",
@@ -4626,7 +4626,7 @@
       "iron"
     ],
     "visualEn": "heavy barbell",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "철제선반",
@@ -4635,7 +4635,7 @@
       "iron"
     ],
     "visualEn": "metal shelf rack",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "가스통",
@@ -4644,7 +4644,7 @@
       "iron"
     ],
     "visualEn": "metal gas canister",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "낫",
@@ -4654,7 +4654,7 @@
       "resin"
     ],
     "visualEn": "iron sickle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "동판화",
@@ -4663,7 +4663,7 @@
       "copper"
     ],
     "visualEn": "copper etching plate",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "알루미늄캡",
@@ -4672,7 +4672,7 @@
       "aluminum"
     ],
     "visualEn": "aluminum bottle cap",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "유리구슬",
@@ -4681,7 +4681,7 @@
       "glass"
     ],
     "visualEn": "glass bead",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "타이어튜브",
@@ -4690,7 +4690,7 @@
       "rubber"
     ],
     "visualEn": "rubber bicycle tube",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "미니어처자동차",
@@ -4700,7 +4700,7 @@
       "iron"
     ],
     "visualEn": "miniature die-cast car",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "나무저울",
@@ -4710,7 +4710,7 @@
       "iron"
     ],
     "visualEn": "wooden balance scale",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "가죽안경집",
@@ -4719,7 +4719,7 @@
       "leather"
     ],
     "visualEn": "leather glasses case",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "목화솜",
@@ -4728,7 +4728,7 @@
       "textile"
     ],
     "visualEn": "raw cotton ball",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "해골모형",
@@ -4738,7 +4738,7 @@
       "plastic"
     ],
     "visualEn": "plastic skull model",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "곤충채집통",
@@ -4748,7 +4748,7 @@
       "chitin"
     ],
     "visualEn": "insect collection jar",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "방울",
@@ -4758,7 +4758,7 @@
       "copper"
     ],
     "visualEn": "small metal bell",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "탁상시계",
@@ -4941,7 +4941,7 @@
       "tin"
     ],
     "visualEn": "tin drinking cup",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "양철통",
@@ -4951,7 +4951,7 @@
       "iron"
     ],
     "visualEn": "tin metal can",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "비스무트위장약",
@@ -5026,7 +5026,7 @@
       "cerium"
     ],
     "visualEn": "cerium oxide polishing compound",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "사마륨코발트자석",
@@ -5036,7 +5036,7 @@
       "cobalt"
     ],
     "visualEn": "samarium cobalt magnet",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "이트륨형광등",
@@ -5046,7 +5046,7 @@
       "glass"
     ],
     "visualEn": "yttrium fluorescent lamp",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "갈륨온도계",
@@ -5055,7 +5055,7 @@
       "gallium"
     ],
     "visualEn": "gallium thermometer",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "게르마늄팔찌",
@@ -5064,7 +5064,7 @@
       "germanium"
     ],
     "visualEn": "germanium health bracelet",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "인듐터치스크린",
@@ -5074,7 +5074,7 @@
       "glass"
     ],
     "visualEn": "indium tin oxide touchscreen panel",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "셀레늄복사드럼",
@@ -5084,7 +5084,7 @@
       "circuit"
     ],
     "visualEn": "selenium photocopier drum",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "텔루륨솔라셀",
@@ -5094,7 +5094,7 @@
       "silicon"
     ],
     "visualEn": "telluride solar cell",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "하프늄원자로부품",
@@ -5104,7 +5104,7 @@
       "iron"
     ],
     "visualEn": "hafnium reactor control rod",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "탄탈럼커패시터",
@@ -5114,7 +5114,7 @@
       "circuit"
     ],
     "visualEn": "tantalum capacitor",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "지르코늄큐빅반지",
@@ -5123,7 +5123,7 @@
       "zirconium"
     ],
     "visualEn": "cubic zirconia ring",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "우라늄유리컵",
@@ -5133,7 +5133,7 @@
       "glass"
     ],
     "visualEn": "vintage uranium glass cup",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "반도체웨이퍼",
@@ -5153,7 +5153,7 @@
       "carbon"
     ],
     "visualEn": "graphene coated plate",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "리튬이온셀",
@@ -5163,7 +5163,7 @@
       "lithium"
     ],
     "visualEn": "lithium ion cell",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "플라즈마램프",
@@ -5173,7 +5173,7 @@
       "glass"
     ],
     "visualEn": "plasma globe lamp",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "시멘트포대",
@@ -5182,7 +5182,7 @@
       "cement"
     ],
     "visualEn": "cement powder bag",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "콘크리트블록",
@@ -5192,7 +5192,7 @@
       "sand"
     ],
     "visualEn": "concrete block",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "화강암돌",
@@ -5201,7 +5201,7 @@
       "granite"
     ],
     "visualEn": "granite stone",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "현무암돌",
@@ -5210,7 +5210,7 @@
       "basalt"
     ],
     "visualEn": "basalt lava rock",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "아스팔트조각",
@@ -5220,7 +5220,7 @@
       "bitumen"
     ],
     "visualEn": "asphalt road chunk",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "성냥갑",
@@ -5230,7 +5230,7 @@
       "resin"
     ],
     "visualEn": "matchbox with matches",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "황온천돌",
@@ -5239,7 +5239,7 @@
       "sulfur"
     ],
     "visualEn": "sulfur hot spring stone",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "소금통",
@@ -5248,7 +5248,7 @@
       "salt"
     ],
     "visualEn": "salt shaker container",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "소다회봉지",
@@ -5257,7 +5257,7 @@
       "sodaash"
     ],
     "visualEn": "soda ash powder bag",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "형광도료통",
@@ -5266,7 +5266,7 @@
       "phosphor"
     ],
     "visualEn": "fluorescent paint can",
-    "tier": "epic"
+    "tier": "legendary"
   },
   {
     "name": "비료봉지",
@@ -5276,7 +5276,7 @@
       "nitrate"
     ],
     "visualEn": "fertilizer bag",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "락스통",
@@ -5285,7 +5285,7 @@
       "chloride"
     ],
     "visualEn": "bleach cleaner bottle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "암모니아청소제",
@@ -5379,7 +5379,7 @@
       "enzyme"
     ],
     "visualEn": "enzyme laundry detergent bottle",
-    "tier": "common"
+    "tier": "uncommon"
   },
   {
     "name": "바이오연료통",
@@ -5398,7 +5398,7 @@
       "magma"
     ],
     "visualEn": "solidified magma rock",
-    "tier": "legendary"
+    "tier": "divine"
   },
   {
     "name": "드라이아이스",
