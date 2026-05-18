@@ -443,7 +443,7 @@ router.post('/exit', requireAuth, async (req, res, next) => {
       coinsEarned = calcDungeonCoins(finalData, !!isDeath);
       if (coinsEarned > 0) {
         const reason = isDeath ? '던전 사망' : '던전 탈출';
-        earnCoins(req.user.id, coinsEarned, reason, 'platform').catch(() => {});
+        earnCoins(req.user.commonUserId || req.user.id, coinsEarned, reason, 'platform').catch(() => {});
       }
     }
 

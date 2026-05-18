@@ -207,7 +207,7 @@ router.post('/sell', requireAuth, async (req, res, next) => {
     });
 
     // 코인 지급 (Common API)
-    earnCoins(req.user.id, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
+    earnCoins(req.user.commonUserId || req.user.id, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
 
     res.json({ sold: sellIds.length, coinsEarned });
   } catch (err) {
