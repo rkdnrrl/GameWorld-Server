@@ -104,7 +104,12 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: { message: '존재하지 않는 사용자입니다.' } });
     }
 
-    req.user = { ...user, isOperator: jwtIsOperator, commonUserId: commonUserId || user.id };
+    const resolvedCommonUserId = commonUserId || user.id;
+    if (resolvedCommonUserId !== user.id) {
+      // Google OAuth: commonUserId와 platform userId가 다름 — 의도된 동작
+      console.log(`[auth] userId=${user.id} commonUserId=${resolvedCommonUserId}`);
+    }
+    req.user = { ...user, isOperator: jwtIsOperator, commonUserId: resolvedCommonUserId };
     next();
   } catch (err) {
     next(err);
