@@ -6,18 +6,18 @@ const nouns = require('../data/baseNouns.json');
 const _entries = nouns
   .filter((n) => Array.isArray(n.smeltProducts) && n.smeltProducts.length > 0)
   .sort((a, b) => b.name.length - a.name.length)
-  .map((n) => [n.name, n.smeltProducts]);
+  .map((n) => [n.name, n.smeltProducts, n.tier || 'common']);
 
 /**
- * itemName 안에서 알려진 명사를 찾아 미리 정의된 smeltProducts 반환.
+ * itemName 안에서 알려진 명사를 찾아 smeltProducts와 noun tier 반환.
  * 없으면 null (키워드 기반 폴백 사용).
  * @param {string} itemName
- * @returns {string[] | null}
+ * @returns {{ products: string[], tier: string } | null}
  */
 function smeltProductsFromNoun(itemName) {
   const name = String(itemName || '');
-  for (const [noun, products] of _entries) {
-    if (name.includes(noun)) return products;
+  for (const [noun, products, tier] of _entries) {
+    if (name.includes(noun)) return { products, tier };
   }
   return null;
 }

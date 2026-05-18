@@ -11,22 +11,16 @@ const {
 const { inferSmeltProductsFromEquipmentNames } = require('../lib/geminiSmeltInference');
 const { logActivity } = require('../lib/activityLog');
 const { smeltProductsFromNoun } = require('../lib/smeltLookup');
-const _adjectives = require('../data/adjectives.json');
-
-// 형용사 → 등급 역방향 맵
-const _adjTierMap = new Map();
-for (const [tier, words] of Object.entries(_adjectives)) {
-  for (const w of words) _adjTierMap.set(w, tier);
-}
-const YIELD_BY_TIER = { common: 1, rare: 2, epic: 3, legendary: 5 };
-
-function detectTierFromName(itemName) {
-  const name = String(itemName || '');
-  for (const [adj, tier] of _adjTierMap) {
-    if (name.startsWith(adj + ' ') || name === adj) return tier;
-  }
-  return 'common';
-}
+// 명사 등급별 재료 수량 — 명사가 무엇인지(noun)가 얼마나 나오는지를 결정
+const YIELD_BY_NOUN_TIER = {
+  common:    1,
+  uncommon:  2,
+  rare:      3,
+  epic:      5,
+  legendary: 8,
+  mythic:    13,
+  divine:    21,
+};
 
 const router = Router();
 const MAX_MELT_PER_REQUEST = 40;
@@ -138,8 +132,9 @@ router.post('/melt', requireAuth, async (req, res, next) => {
           return { err: 'NOT_FOUND' };
         }
         for (const row of catchRows) {
-          const ids = smeltProductsFromNoun(row.itemName) || inferSmeltProductsFromMaterialName(row.itemName);
-          const yieldCount = YIELD_BY_TIER[detectTierFromName(row.itemName)] || 1;
+          const nounResult = smeltProductsFromNoun(row.itemName);
+          const ids = nounResult?.products || inferSmeltProductsFromMaterialName(row.itemName);
+          const yieldCount = YIELD_BY_NOUN_TIER[nounResult?.tier || 'common'] || 1;
           for (const pid of ids) {
             if (!ALLOWED_IDS.has(pid)) continue;
             delta[pid] = (delta[pid] || 0) + yieldCount;
