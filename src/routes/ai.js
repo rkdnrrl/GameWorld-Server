@@ -774,25 +774,22 @@ router.post('/catch', requireAuth, async (req, res) => {
    response: { imageUrl, cached, bonusCoins: 0, coins: null } — 스캔 보너스는 POST /api/ai/fishing-scan-bonus 에서만 지급
 ──────────────────────────────────────────────────────────── */
 
-/** AI 대기 보상 공통 공식: 20초당 100원, 최대 200원 (40초 이상이면 최대값) */
-const SCAN_BONUS_MS_PER_100 = 20_000;
-const SCAN_BONUS_MAX = 200;
+/** AI 스캔 대기 보상: 30초당 5코인, 최대 15코인 (아이템 판매 보조 수준) */
+const SCAN_BONUS_MS_PER_5 = 30_000;
+const SCAN_BONUS_MAX = 15;
 
 function computeFishingScanBonusFromElapsedMs(rawMs) {
   const ms = Math.max(0, Math.floor(Number(rawMs) || 0));
-  return Math.min(SCAN_BONUS_MAX, Math.round((ms / SCAN_BONUS_MS_PER_100) * 100));
+  return Math.min(SCAN_BONUS_MAX, Math.round((ms / SCAN_BONUS_MS_PER_5) * 5));
 }
 
-async function grantFishingScanBonusCoins(userId, amount) {
-  const inc = Math.min(999_999, Math.max(0, Math.floor(Number(amount)) || 0));
+async function grantFishingScanBonusCoins(commonUserId, amount) {
+  const inc = Math.min(999, Math.max(0, Math.floor(Number(amount)) || 0));
   if (inc <= 0) return { bonusCoins: 0, coins: null };
   try {
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { coins: { increment: inc } },
-      select: { coins: true },
-    });
-    return { bonusCoins: inc, coins: updated.coins };
+    const { earnCoins } = require('../lib/commonApi');
+    await earnCoins(commonUserId, inc, '낚시 스캔 대기 보상', 'platform');
+    return { bonusCoins: inc, coins: null };
   } catch (err) {
     console.warn('[AI /fishing-scan-bonus] grant failed:', err.message);
     return { bonusCoins: 0, coins: null };
@@ -801,13 +798,13 @@ async function grantFishingScanBonusCoins(userId, amount) {
 
 /**
  * POST /api/ai/fishing-scan-bonus
- * Singleplay-Game3 심연 스캔 종료 후 1회 호출. body.scanElapsedMs 기준 **20초당 100원**(비례, 180초 상한).
+ * Singleplay-Game3 심연 스캔 종료 후 1회 호출. 30초당 5코인, 최대 15코인.
  */
 router.post('/fishing-scan-bonus', requireAuth, async (req, res) => {
   try {
     const raw = req.body && req.body.scanElapsedMs;
     const amount = computeFishingScanBonusFromElapsedMs(raw);
-    const bonus = await grantFishingScanBonusCoins(req.user.id, amount);
+    const bonus = await grantFishingScanBonusCoins(req.user.commonUserId || req.user.id, amount);
     return res.json(bonus);
   } catch (err) {
     console.warn('[AI /fishing-scan-bonus]', err.message || err);

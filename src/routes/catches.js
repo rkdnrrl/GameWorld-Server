@@ -64,7 +64,8 @@ async function getUnsoldInventoryPayload(userId, page, limit) {
 
 const VALID_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine'];
 const VALID_TYPES = ['fish', 'artifact', 'crystal', 'creature', 'debris', 'cosmic', 'scrap'];
-const MAX_COIN_VALUE = 1000;
+// divine 최대치(~1500) 허용, 클라이언트 조작 방지 상한
+const MAX_COIN_VALUE = 2000;
 
 // 포획 저장 (코인 지급 없음 — 판매 시 지급)
 router.post('/', requireAuth, async (req, res, next) => {

@@ -405,12 +405,12 @@ async function destroyEquippedItems(userId, saveData) {
   });
 }
 
-// 층수·처치 기반 코인 계산
+// 층수·처치 기반 코인 계산 (밸런스: 탈출 10F 20킬 = 100코인)
 function calcDungeonCoins(saveData, isDeath) {
   const floor = Math.max(0, Math.floor(saveData?.floor ?? 0));
   const kills = Math.max(0, Math.floor(saveData?.player?.kills ?? 0));
-  if (isDeath) return Math.floor(floor * 5 + kills * 1);   // 사망: 탈출의 약 1/3
-  return Math.floor(floor * 15 + kills * 3);               // 탈출
+  if (isDeath) return Math.floor(floor * 1);               // 사망: 층수당 1코인만
+  return Math.floor(floor * 8 + kills * 1);               // 탈출: 10F 20킬 = 100코인
 }
 
 router.post('/exit', requireAuth, async (req, res, next) => {
