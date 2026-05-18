@@ -316,6 +316,7 @@ router.get('/fishing-items/status', requireAuth, requireOperator, async (req, re
     const items = baseNouns.map((noun) => ({
       name: noun.name,
       emoji: noun.emoji,
+      tier: noun.tier || 'common',
       hasCache: cachedNounSet.has(noun.name),
     }));
 
