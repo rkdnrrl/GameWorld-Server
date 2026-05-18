@@ -49,6 +49,16 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+/**
+ * Supabase 토큰 → 플랫폼 JWT 교환 (7일 만료)
+ * 소셜 로그인 후 호출하면 자체 JWT 발급 → 만료 관리 단순화
+ */
+router.post('/exchange', requireAuth, (req, res) => {
+  const cuid = req.user.commonUserId || req.user.id;
+  const token = authService.signToken(cuid, !!req.user.isOperator);
+  res.json({ token });
+});
+
 // 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
 router.get('/me', requireAuth, async (req, res) => {
   try {
