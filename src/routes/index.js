@@ -24,5 +24,6 @@ router.use('/announcements', require('./announcements'));
 router.use('/shop', require('./shop'));
 router.use('/leaderboard', require('./leaderboard'));
 router.use('/missions', require('./missions'));
+router.use('/ads', require('./ads'));
 
 module.exports = router;
