@@ -25,6 +25,9 @@ async function signup({ email, nickname, password }) {
     throw new HttpError(res.status, data.error || '회원가입 실패');
   }
 
+  // 🔍 디버그 — Common API register 응답 확인용 (확인 후 제거)
+  console.log('[signup] Common API response:', JSON.stringify(data));
+
   // 이메일 인증 필요 신호 감지 (Common API 응답 형식별 대응)
   // - requiresEmailConfirmation: true
   // - confirmationSent: true
