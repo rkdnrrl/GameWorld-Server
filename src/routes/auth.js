@@ -62,14 +62,24 @@ router.post('/exchange', requireAuth, (req, res) => {
 
 // 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
 router.get('/me', requireAuth, async (req, res) => {
+  const COMMON_API = 'https://api.airnuri.com';
+  const cuid = req.user.commonUserId || req.user.id;
   try {
-    const COMMON_API = 'https://api.airnuri.com';
-    const cuid = req.user.commonUserId || req.user.id;
-    const coinRes = await fetch(`${COMMON_API}/api/coins/${cuid}`).catch(() => null);
+    const [coinRes, subRes] = await Promise.all([
+      fetch(`${COMMON_API}/api/coins/${cuid}`).catch(() => null),
+      fetch(`${COMMON_API}/api/subscriptions/${cuid}`).catch(() => null),
+    ]);
     const coins = coinRes?.ok ? ((await coinRes.json()).coins ?? 0) : 0;
-    res.json({ user: { ...req.user, coins, operatorAccess: userIsOperator(req.user) } });
+    let isSubscribed = false;
+    let subscriptionUntil = null;
+    if (subRes?.ok) {
+      const s = await subRes.json();
+      subscriptionUntil = s.until || s.expiresAt || null;
+      isSubscribed = !!s.active || (subscriptionUntil && new Date(subscriptionUntil) > new Date());
+    }
+    res.json({ user: { ...req.user, coins, isSubscribed, subscriptionUntil, operatorAccess: userIsOperator(req.user) } });
   } catch {
-    res.json({ user: { ...req.user, coins: 0, operatorAccess: userIsOperator(req.user) } });
+    res.json({ user: { ...req.user, coins: 0, isSubscribed: false, operatorAccess: userIsOperator(req.user) } });
   }
 });
 
