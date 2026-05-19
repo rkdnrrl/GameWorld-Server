@@ -12,12 +12,12 @@ class HttpError extends Error {
   }
 }
 
-async function signup({ email, nickname, password }) {
-  // Common API에 회원가입 — 이메일 인증 메일 발송
+async function signup({ email, nickname, password, redirectTo }) {
+  // Common API에 회원가입 — 이메일 인증 메일 발송 (redirectTo 필수)
   const res = await fetch(`${COMMON_API}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, nickname, password }),
+    body: JSON.stringify({ email, nickname, password, redirectTo }),
   });
 
   const data = await res.json();
