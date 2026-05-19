@@ -559,6 +559,34 @@ function _slotFromName(name) {
 }
 
 /**
+ * POST /api/craft/equipment/:id/pixel-art
+ * 제련 성공 후 사용자가 그린 이미지·이름을 사후 적용.
+ * body: { name?: string, pixelArtUrl?: string }
+ */
+router.post('/equipment/:id/pixel-art', requireAuth, async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ error: { message: 'id 필요' } });
+    const equip = await prisma.craftedEquipment.findUnique({ where: { id } });
+    if (!equip || equip.userId !== req.user.id) {
+      return res.status(404).json({ error: { message: '장비를 찾을 수 없습니다.' } });
+    }
+    const data = {};
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    if (name) data.name = name.slice(0, 120);
+    const pixelArtUrl = typeof req.body?.pixelArtUrl === 'string' ? req.body.pixelArtUrl : '';
+    if (pixelArtUrl) data.pixelArt = { imageDataUrl: pixelArtUrl, source: 'user' };
+    if (Object.keys(data).length === 0) {
+      return res.json({ equipment: equip });
+    }
+    const updated = await prisma.craftedEquipment.update({ where: { id }, data });
+    res.json({ equipment: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * POST /api/craft/equip-pixel-art
  * 장비 명사 기반 DB 캐시 조회 전용. AI 생성 없음.
  * 이미지가 없으면 { imageDataUrl: null } 반환.
