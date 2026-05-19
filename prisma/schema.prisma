@@ -32,6 +32,7 @@ model User {
   modules               Module[]
   donations             Donation[]
   dailyMissions         DailyMissionProgress[]
+  adRewards             AdReward[]
 
   @@map("users")
 }
@@ -284,4 +285,17 @@ model AlchemyElementStock {
   @@id([userId, symbol])
   @@index([userId])
   @@map("alchemy_element_stock")
+}
+
+/// 보상형 광고 시청 로그 (쿨다운·일일한도 체크용)
+model AdReward {
+  id           BigInt   @id @default(autoincrement())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardType   String   @db.VarChar(40)
+  coinsGranted Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([userId, rewardType, createdAt])
+  @@map("ad_rewards")
 }
