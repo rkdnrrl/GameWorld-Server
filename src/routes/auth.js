@@ -1,4 +1,4 @@
-const { Router } = require('express');
+﻿const { Router } = require('express');
 const { z } = require('zod');
 const authService = require('../services/auth');
 const { requireAuth } = require('../middleware/auth');
@@ -63,7 +63,7 @@ router.post('/exchange', requireAuth, (req, res) => {
 // 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
 router.get('/me', requireAuth, async (req, res) => {
   try {
-    const COMMON_API = 'https://api.airliveplay.com';
+    const COMMON_API = 'https://api.airnuri.com';
     const cuid = req.user.commonUserId || req.user.id;
     const coinRes = await fetch(`${COMMON_API}/api/coins/${cuid}`).catch(() => null);
     const coins = coinRes?.ok ? ((await coinRes.json()).coins ?? 0) : 0;

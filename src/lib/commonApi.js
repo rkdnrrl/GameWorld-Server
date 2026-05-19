@@ -1,4 +1,4 @@
-const COMMON_API = 'https://api.airliveplay.com';
+﻿const COMMON_API = 'https://api.airnuri.com';
 
 /**
  * 공통 API 유저 연동 — 이메일로 commonUserId 발급

@@ -1,9 +1,9 @@
-const jwt = require('jsonwebtoken');
+﻿const jwt = require('jsonwebtoken');
 const { prisma } = require('../db');
 const config = require('../config');
 const { userIsOperator } = require('../middleware/operatorAuth');
 
-const COMMON_API = 'https://api.airliveplay.com';
+const COMMON_API = 'https://api.airnuri.com';
 
 class HttpError extends Error {
   constructor(status, message) {
