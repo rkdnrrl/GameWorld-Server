@@ -13,7 +13,7 @@ class HttpError extends Error {
 }
 
 async function signup({ email, nickname, password }) {
-  // Common API에 회원가입
+  // Common API에 회원가입 — 이메일 인증 메일 발송
   const res = await fetch(`${COMMON_API}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -25,9 +25,27 @@ async function signup({ email, nickname, password }) {
     throw new HttpError(res.status, data.error || '회원가입 실패');
   }
 
-  const commonUserId = data.userId;
+  // 이메일 인증 필요 신호 감지 (Common API 응답 형식별 대응)
+  // - requiresEmailConfirmation: true
+  // - confirmationSent: true
+  // - emailConfirmedAt가 없음
+  // - session이 null/없음
+  const needsConfirm =
+    data.requiresEmailConfirmation === true ||
+    data.confirmationSent === true ||
+    (data.user && data.user.emailConfirmedAt == null && !data.session) ||
+    (data.userId && !data.token && data.emailConfirmed === false);
 
-  // 플랫폼 DB에 게임 프로필 생성
+  if (needsConfirm) {
+    return {
+      requiresEmailConfirmation: true,
+      email,
+      message: '인증 메일이 전송됐습니다. 메일을 확인한 뒤 로그인하세요.',
+    };
+  }
+
+  // 즉시 활성화된 경우만 게임 프로필 + JWT 발급
+  const commonUserId = data.userId;
   const isOperator = !!data.isOperator;
 
   const user = await prisma.user.create({
