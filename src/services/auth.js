@@ -25,21 +25,9 @@ async function signup({ email, nickname, password }) {
     throw new HttpError(res.status, data.error || '회원가입 실패');
   }
 
-  // 🔍 디버그 — Common API register 응답 확인용 (확인 후 제거)
-  console.log('[signup] Common API response:', JSON.stringify(data));
-
-  // 이메일 인증 필요 신호 감지 (Common API 응답 형식별 대응)
-  // - requiresEmailConfirmation: true
-  // - confirmationSent: true
-  // - emailConfirmedAt가 없음
-  // - session이 null/없음
-  const needsConfirm =
-    data.requiresEmailConfirmation === true ||
-    data.confirmationSent === true ||
-    (data.user && data.user.emailConfirmedAt == null && !data.session) ||
-    (data.userId && !data.token && data.emailConfirmed === false);
-
-  if (needsConfirm) {
+  // Common API 응답에 token이 없으면 = 이메일 인증 대기 상태
+  // (Common API는 인증 메일을 보내고 userId만 반환, 사용자가 메일 클릭해야 활성화됨)
+  if (!data.token && !data.session) {
     return {
       requiresEmailConfirmation: true,
       email,
