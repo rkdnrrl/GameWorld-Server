@@ -161,12 +161,99 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
 });
 
 /**
- * GET /api/games/mine — 내가 올린 게임 목록 (모든 status)
+ * POST /api/games/:slug/files — 기존 게임 파일 재업로드 (덮어쓰기).
+ * 권한: owner 본인 OR operator. official 게임은 operator 만.
+ * 동작: 기존 R2 prefix 비우고 새 zip 풀어서 putObject. version++.
+ */
+router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: { message: 'gamezip 파일 필요' } });
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+
+    const isOwner = g.ownerUserId && g.ownerUserId === req.user.id;
+    const isOperator = !!req.user.isOperator;
+    if (!isOwner && !isOperator) {
+      return res.status(403).json({ error: { message: '권한이 없습니다.' } });
+    }
+    if (g.kind === 'official' && !isOperator) {
+      return res.status(403).json({ error: { message: '공식 게임은 운영자만 업데이트할 수 있습니다.' } });
+    }
+
+    let zip;
+    try {
+      zip = new AdmZip(req.file.buffer);
+    } catch {
+      return res.status(400).json({ error: { message: 'zip 파일이 손상되었습니다.' } });
+    }
+    const entries = zip.getEntries()
+      .filter((e) => !e.isDirectory)
+      .map((e) => ({ raw: e, name: e.entryName.replace(/\\/g, '/') }));
+    if (entries.length === 0) {
+      return res.status(400).json({ error: { message: 'zip 안에 파일이 없습니다.' } });
+    }
+    if (entries.length > MAX_FILES) {
+      return res.status(400).json({ error: { message: `파일이 너무 많습니다 (최대 ${MAX_FILES}개).` } });
+    }
+
+    let rootPrefix = '';
+    if (!entries.some((e) => e.name === 'index.html')) {
+      const firstParts = new Set(entries.map((e) => e.name.split('/')[0]));
+      if (firstParts.size === 1) {
+        const candidate = [...firstParts][0];
+        if (entries.some((e) => e.name === `${candidate}/index.html`)) {
+          rootPrefix = `${candidate}/`;
+        }
+      }
+    }
+    if (!entries.some((e) => e.name === `${rootPrefix}index.html`)) {
+      return res.status(400).json({ error: { message: 'zip 안에 index.html 이 없습니다.' } });
+    }
+
+    // 기존 파일 모두 제거 (orphan 방지) → 새 zip 업로드
+    try { await r2.deletePrefix(g.storagePath); } catch (e) { console.error('r2 deletePrefix:', e.message); }
+
+    let uploadedBytes = 0;
+    for (const entry of entries) {
+      let rel = entry.name;
+      if (rootPrefix && rel.startsWith(rootPrefix)) rel = rel.slice(rootPrefix.length);
+      if (rel.includes('..') || rel.startsWith('/')) continue;
+      const data = entry.raw.getData();
+      uploadedBytes += data.length;
+      await r2.putObject(`${g.storagePath}${rel}`, data);
+    }
+
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: { version: { increment: 1 }, updatedAt: new Date() },
+    });
+
+    res.json({
+      ok: true,
+      game: { slug: updated.slug, version: updated.version, uploadedBytes },
+      message: '업데이트 완료.',
+    });
+  } catch (err) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: { message: `파일이 너무 큽니다 (최대 ${MAX_UPLOAD_BYTES / 1024 / 1024}MB).` } });
+    }
+    console.error('reupload error:', err);
+    next(err);
+  }
+});
+
+/**
+ * GET /api/games/mine — 내가 올린 게임 목록 (모든 status).
+ * 운영자는 official 게임도 함께 표시 (재업로드 가능하도록).
  */
 router.get('/mine', requireAuth, async (req, res, next) => {
   try {
+    const where = req.user.isOperator
+      ? { OR: [{ ownerUserId: req.user.id }, { kind: 'official' }] }
+      : { ownerUserId: req.user.id };
     const games = await prisma.game.findMany({
-      where: { ownerUserId: req.user.id },
+      where,
       orderBy: { createdAt: 'desc' },
     });
     res.json({ games });
