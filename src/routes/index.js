@@ -7,6 +7,8 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/auth', require('./auth'));
+// 서비스 간 webhook (X-Internal-Secret 인증)
+router.use('/internal', require('./internal'));
 // UGC 업로드 + 모더레이션 라우트 (mount 순서 중요: 일반 /games 보다 먼저 등록되도록 분리)
 const gamesUpload = require('./gamesUpload');
 router.use('/games', gamesUpload.router);
