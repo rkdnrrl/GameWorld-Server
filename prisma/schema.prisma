@@ -319,6 +319,14 @@ model Game {
   likeCount     Int      @default(0)
   version       Int      @default(1)
   rejectReason  String?  @db.VarChar(500)
+  /// 검수 대기 중인 재업로드 — R2 staging 경로 (games-staging/{slug}/). null 이면 보류 업데이트 없음.
+  pendingStoragePath String? @db.VarChar(200)
+  /// 보류 업데이트가 승인되면 적용될 버전 (= 현재 version + 1).
+  pendingVersion     Int?
+  /// 보류 업데이트 zip 업로드 시각.
+  pendingUploadedAt  DateTime?
+  /// 보류 업데이트 거절 사유.
+  pendingRejectReason String? @db.VarChar(500)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   publishedAt   DateTime?

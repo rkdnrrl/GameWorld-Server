@@ -161,9 +161,10 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
 });
 
 /**
- * POST /api/games/:slug/files — 기존 게임 파일 재업로드 (덮어쓰기).
+ * POST /api/games/:slug/files — 기존 게임 재업로드 (검수 대기 큐로 진입).
  * 권한: owner 본인 OR operator. official 게임은 operator 만.
- * 동작: 기존 R2 prefix 비우고 새 zip 풀어서 putObject. version++.
+ * 동작: 라이브(production storagePath)는 그대로 두고 R2 staging prefix 에 새 zip 업로드.
+ *      DB 에 pendingStoragePath/pendingVersion 기록. 운영자가 별도 라우트로 승인·거절.
  */
 router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, res, next) => {
   try {
@@ -211,8 +212,9 @@ router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, r
       return res.status(400).json({ error: { message: 'zip 안에 index.html 이 없습니다.' } });
     }
 
-    // 기존 파일 모두 제거 (orphan 방지) → 새 zip 업로드
-    try { await r2.deletePrefix(g.storagePath); } catch (e) { console.error('r2 deletePrefix:', e.message); }
+    // staging prefix — 이전 보류 업데이트가 있으면 먼저 비움
+    const stagingPath = `games-staging/${slug}/`;
+    try { await r2.deletePrefix(stagingPath); } catch (e) { console.error('r2 stage clear:', e.message); }
 
     let uploadedBytes = 0;
     for (const entry of entries) {
@@ -221,18 +223,29 @@ router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, r
       if (rel.includes('..') || rel.startsWith('/')) continue;
       const data = entry.raw.getData();
       uploadedBytes += data.length;
-      await r2.putObject(`${g.storagePath}${rel}`, data);
+      await r2.putObject(`${stagingPath}${rel}`, data);
     }
 
     const updated = await prisma.game.update({
       where: { slug },
-      data: { version: { increment: 1 }, updatedAt: new Date() },
+      data: {
+        pendingStoragePath: stagingPath,
+        pendingVersion: g.version + 1,
+        pendingUploadedAt: new Date(),
+        pendingRejectReason: null,
+      },
     });
 
-    res.json({
+    res.status(202).json({
       ok: true,
-      game: { slug: updated.slug, version: updated.version, uploadedBytes },
-      message: '업데이트 완료.',
+      pending: true,
+      game: {
+        slug: updated.slug,
+        version: updated.version,
+        pendingVersion: updated.pendingVersion,
+        uploadedBytes,
+      },
+      message: '검수 대기 큐에 올렸습니다. 운영자 승인 후 라이브로 반영됩니다.',
     });
   } catch (err) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -365,6 +378,93 @@ operatorRouter.post('/:slug/hide', requireAuth, requireOperator, async (req, res
     });
     res.json({ game: updated });
   } catch (err) { next(err); }
+});
+
+/**
+ * GET /api/operator/games/pending-updates — 검수 대기 중인 재업로드 목록.
+ */
+operatorRouter.get('/pending-updates', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const games = await prisma.game.findMany({
+      where: { pendingStoragePath: { not: null } },
+      orderBy: { pendingUploadedAt: 'asc' },
+    });
+    res.json({ games });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/approve-update — 보류 zip 을 production 으로 교체.
+ * staging → production 복사 후 staging 비움. version = pendingVersion.
+ */
+operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (!g.pendingStoragePath) {
+      return res.status(400).json({ error: { message: '보류 중인 업데이트가 없습니다.' } });
+    }
+
+    // 1) production 비우기 (orphan 방지)
+    try { await r2.deletePrefix(g.storagePath); } catch (e) { console.error('r2 prod clear:', e.message); }
+    // 2) staging → production 복사
+    try {
+      await r2.copyPrefix(g.pendingStoragePath, g.storagePath);
+    } catch (e) {
+      console.error('r2 copy staging→prod:', e);
+      return res.status(500).json({ error: { message: 'staging → production 복사 실패' } });
+    }
+    // 3) staging 비우기
+    try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
+
+    // 4) DB 반영
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        version: g.pendingVersion ?? g.version + 1,
+        pendingStoragePath: null,
+        pendingVersion: null,
+        pendingUploadedAt: null,
+        pendingRejectReason: null,
+        updatedAt: new Date(),
+      },
+    });
+    res.json({ ok: true, game: updated, message: '업데이트가 라이브에 반영됐습니다.' });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/reject-update — 보류 zip 폐기.
+ */
+const rejectUpdateSchema = z.object({ reason: z.string().min(1).max(500) });
+operatorRouter.post('/:slug/reject-update', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const { reason } = rejectUpdateSchema.parse(req.body);
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (!g.pendingStoragePath) {
+      return res.status(400).json({ error: { message: '보류 중인 업데이트가 없습니다.' } });
+    }
+
+    try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        pendingStoragePath: null,
+        pendingVersion: null,
+        pendingUploadedAt: null,
+        pendingRejectReason: reason,
+      },
+    });
+    res.json({ ok: true, game: updated });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ error: { message: '거절 사유 필요' } });
+    }
+    next(err);
+  }
 });
 
 module.exports = { router, operatorRouter };
