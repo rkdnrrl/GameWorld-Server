@@ -101,23 +101,11 @@ router.post('/', requireAuth, async (req, res, next) => {
       });
     }
 
-    const { catchRecord, lifetimeCatchTotal } = await prisma.$transaction(async (tx) => {
-      const created = await tx.catch.create({
-        data: {
-          userId: req.user.id,
-          itemName: itemName.trim(),
-          itemEmoji: emoji,
-          itemType,
-          rarity,
-          size: sizeNum != null && Number.isFinite(sizeNum) ? sizeNum : null,
-          coinValue: coins,
-          sold: false,
-          pixelArt: pixelArtClean,
-        },
-      });
-      // 통합 인벤토리에도 동시 적재 — 다른 게임이 category='material' 로 자동 접근 가능.
-      // catches 와 별개의 row 로 보존 (중복). catches 가 sold 되더라도 인벤토리에 남아 다른 게임이 사용.
-      await tx.inventoryItem.create({
+    // catches 테이블에는 더 이상 INSERT 하지 않음 — 통합 inventory_items 로 일원화.
+    // 응답 모양(`catch.id`, `lifetimeCatchTotal`)은 기존 클라이언트 호환 위해 유지.
+    const sizeFinal = sizeNum != null && Number.isFinite(sizeNum) ? sizeNum : null;
+    const { invItem, lifetimeCatchTotal } = await prisma.$transaction(async (tx) => {
+      const created = await tx.inventoryItem.create({
         data: {
           userId: req.user.id,
           sourceGame: 'space-fishing',
@@ -127,10 +115,10 @@ router.post('/', requireAuth, async (req, res, next) => {
           icon: emoji,
           tags: [rarity, itemType],
           stats: {
-            size: sizeNum != null && Number.isFinite(sizeNum) ? sizeNum : null,
+            size: sizeFinal,
             coinValue: coins,
             rarity,
-            catchId: created.id,
+            pixelArt: pixelArtClean,
           },
           qty: 1,
         },
@@ -140,17 +128,30 @@ router.post('/', requireAuth, async (req, res, next) => {
         data: { lifetimeCatchCount: { increment: 1 } },
         select: { lifetimeCatchCount: true },
       });
-      return { catchRecord: created, lifetimeCatchTotal: u.lifetimeCatchCount };
+      return { invItem: created, lifetimeCatchTotal: u.lifetimeCatchCount };
     });
 
     logActivity(req.user, 'fish_catch', {
-      itemName: catchRecord.itemName,
-      itemEmoji: catchRecord.itemEmoji,
-      rarity: catchRecord.rarity,
-      itemType: catchRecord.itemType,
-      coinValue: catchRecord.coinValue,
+      itemName: itemName.trim(),
+      itemEmoji: emoji,
+      rarity,
+      itemType,
+      coinValue: coins,
     });
-    res.json({ catch: catchRecord, lifetimeCatchTotal });
+    res.json({
+      catch: {
+        id: String(invItem.id),
+        itemName: itemName.trim(),
+        itemEmoji: emoji,
+        itemType,
+        rarity,
+        size: sizeFinal,
+        coinValue: coins,
+        sold: false,
+        pixelArt: pixelArtClean,
+      },
+      lifetimeCatchTotal,
+    });
   } catch (err) {
     next(err);
   }
