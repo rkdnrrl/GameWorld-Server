@@ -21,41 +21,45 @@ function isPixelArtColumnError(err) {
   );
 }
 
-/** 미판매 보관함 페이지 (웹 /inventory · 게임 /in-game/:gameId 공통) */
+/** 미판매 보관함 페이지 (웹 /inventory · 게임 /in-game/:gameId 공통).
+ * 데이터 소스: inventory_items (sourceGame='space-fishing'). catches 테이블은 더 이상 사용 안 함.
+ * 응답 모양은 기존 catches 형식 유지 (클라이언트 호환). */
 async function getUnsoldInventoryPayload(userId, page, limit) {
   const skip = (page - 1) * limit;
-  const [catches, total] = await prisma.$transaction([
-    prisma.catch.findMany({
-      where: { userId, sold: false },
-      orderBy: { caughtAt: 'desc' },
+  const where = { userId, sourceGame: 'space-fishing' };
+  const [items, total] = await prisma.$transaction([
+    prisma.inventoryItem.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
-      select: {
-        id: true,
-        itemName: true,
-        itemEmoji: true,
-        itemType: true,
-        rarity: true,
-        size: true,
-        coinValue: true,
-        caughtAt: true,
-        pixelArt: true,
-      },
     }),
-    prisma.catch.count({ where: { userId, sold: false } }),
+    prisma.inventoryItem.count({ where }),
   ]);
 
-  const resolved = catches.map((row) => {
+  const catches = items.map((row) => {
+    const stats = row.stats || {};
+    const base = {
+      id: String(row.id),
+      itemName: row.name,
+      itemEmoji: row.icon || '❓',
+      itemType: row.kind,
+      rarity: stats.rarity || row.tags?.[0] || 'common',
+      size: stats.size ?? null,
+      coinValue: Number(stats.coinValue) || 0,
+      caughtAt: row.createdAt,
+      pixelArt: stats.pixelArt || null,
+    };
     try {
-      return resolveCatchRowPixelArt(row);
+      return resolveCatchRowPixelArt(base);
     } catch (e) {
       console.error('resolveCatchRowPixelArt', row?.id, e);
-      return { ...row, pixelArt: null };
+      return { ...base, pixelArt: null };
     }
   });
 
   return {
-    catches: resolved,
+    catches,
     total,
     page,
     totalPages: Math.ceil(total / limit),
