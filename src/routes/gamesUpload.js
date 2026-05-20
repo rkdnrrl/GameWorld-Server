@@ -84,7 +84,11 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
     } catch {
       return res.status(400).json({ error: { message: 'zip 파일이 손상되었습니다.' } });
     }
-    const entries = zip.getEntries().filter((e) => !e.isDirectory);
+    // entry 별 경로 정규화 — Windows 에서 만든 zip 이 백슬래시(\) 를 entryName 으로 박는 경우가 있어
+    // R2 키 / HTTP URL 과 매칭되도록 forward slash 로 변환한다.
+    const entries = zip.getEntries()
+      .filter((e) => !e.isDirectory)
+      .map((e) => ({ raw: e, name: e.entryName.replace(/\\/g, '/') }));
     if (entries.length === 0) {
       return res.status(400).json({ error: { message: 'zip 안에 파일이 없습니다.' } });
     }
@@ -94,18 +98,18 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
 
     // index.html 존재 확인 (zip 루트 또는 단일 폴더 안)
     let rootPrefix = '';
-    const hasRoot = entries.some((e) => e.entryName === 'index.html');
+    const hasRoot = entries.some((e) => e.name === 'index.html');
     if (!hasRoot) {
       // 단일 폴더 안에 있는 경우 그 폴더를 root 로 취급
-      const firstParts = new Set(entries.map((e) => e.entryName.split('/')[0]));
+      const firstParts = new Set(entries.map((e) => e.name.split('/')[0]));
       if (firstParts.size === 1) {
         const candidate = [...firstParts][0];
-        if (entries.some((e) => e.entryName === `${candidate}/index.html`)) {
+        if (entries.some((e) => e.name === `${candidate}/index.html`)) {
           rootPrefix = `${candidate}/`;
         }
       }
     }
-    if (!entries.some((e) => e.entryName === `${rootPrefix}index.html`)) {
+    if (!entries.some((e) => e.name === `${rootPrefix}index.html`)) {
       return res.status(400).json({ error: { message: 'zip 안에 index.html 이 없습니다.' } });
     }
 
@@ -113,11 +117,11 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
     const storagePath = `games/${slug}/`;
     let uploadedBytes = 0;
     for (const entry of entries) {
-      let rel = entry.entryName;
+      let rel = entry.name;
       if (rootPrefix && rel.startsWith(rootPrefix)) rel = rel.slice(rootPrefix.length);
       // 보안: 경로 정규화
       if (rel.includes('..') || rel.startsWith('/')) continue;
-      const data = entry.getData();
+      const data = entry.raw.getData();
       uploadedBytes += data.length;
       await r2.putObject(`${storagePath}${rel}`, data);
     }
