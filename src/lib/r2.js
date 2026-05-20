@@ -71,4 +71,25 @@ async function deletePrefix(prefix) {
   } while (token);
 }
 
-module.exports = { putObject, deletePrefix, contentType, BUCKET };
+/** prefix 하위 객체들을 새 prefix 로 복사 (S3 server-side copy — 데이터 다운로드 없이 R2 내부 복사). */
+async function copyPrefix(srcPrefix, dstPrefix) {
+  let token;
+  do {
+    const list = await client().send(new ListObjectsV2Command({
+      Bucket: BUCKET, Prefix: srcPrefix, ContinuationToken: token,
+    }));
+    for (const obj of list.Contents || []) {
+      const rel = obj.Key.slice(srcPrefix.length);
+      const dstKey = dstPrefix + rel;
+      await client().send(new CopyObjectCommand({
+        Bucket: BUCKET,
+        CopySource: `/${BUCKET}/${obj.Key}`,
+        Key: dstKey,
+        ContentType: contentType(dstKey),
+      }));
+    }
+    token = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (token);
+}
+
+module.exports = { putObject, deletePrefix, copyPrefix, contentType, BUCKET };
