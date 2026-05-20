@@ -244,10 +244,24 @@ router.post('/sell', requireAuth, async (req, res, next) => {
 
     await prisma.inventoryItem.deleteMany({ where: { id: { in: sellIds } } });
 
-    // 코인 지급 (Common API)
-    earnCoins(req.user.commonUserId || req.user.id, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
+    // 코인 지급 (Common API). 잔액 재조회를 위해 await.
+    const commonUid = req.user.commonUserId || req.user.id;
+    if (coinsEarned > 0) {
+      try { await earnCoins(commonUid, coinsEarned, '낚시 아이템 판매', 'platform'); } catch {}
+    }
 
-    res.json({ sold: sellIds.length, coinsEarned });
+    // 새 잔액 받아 응답에 포함 — 클라이언트의 totalCoins UI 즉시 갱신용.
+    let totalCoins = null;
+    try {
+      const COMMON_API = 'https://api.airnuri.com';
+      const r = await fetch(`${COMMON_API}/api/coins/${commonUid}`);
+      if (r.ok) {
+        const d = await r.json();
+        totalCoins = Number(d.coins) || 0;
+      }
+    } catch { /* totalCoins 누락은 치명적이지 않음 */ }
+
+    res.json({ sold: sellIds.length, coinsEarned, totalCoins });
   } catch (err) {
     next(err);
   }
