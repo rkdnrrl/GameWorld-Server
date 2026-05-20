@@ -78,29 +78,47 @@ async function requireAuth(req, res, next) {
       const supaUser = userData?.user;
       if (supaUser) {
         const email = supaUser.email || '';
-        const rawNickname = supaUser.user_metadata?.full_name
+        const baseNickname = supaUser.user_metadata?.full_name
           || supaUser.user_metadata?.name
           || email.split('@')[0]
           || `user_${userId.slice(0, 8)}`;
-        let nickname = rawNickname.slice(0, 20);
-        const exists = await prisma.user.findFirst({ where: { nickname } });
-        if (exists) nickname = `${nickname.slice(0, 16)}_${userId.slice(0, 4)}`;
 
-        // Common API 유저 등록 + isOperator 가져오기
+        // Common 이 nickname 의 source of truth — 응답값을 그대로 채택
         const { ensureCommonUser } = require('../lib/commonApi');
-        const commonData = await ensureCommonUser(email, nickname).catch(() => null);
+        const commonData = await ensureCommonUser({
+          id: userId,
+          email,
+          nickname: baseNickname,
+        }).catch(() => null);
         jwtIsOperator = !!commonData?.isOperator;
 
-        user = await prisma.user.create({
-          data: { id: userId, nickname },
-          select: {
-            id: true,
-            nickname: true,
-            smithingProficiency: true,
-            createdAt: true,
-            lifetimeCatchCount: true,
-          },
-        });
+        const nickname = (commonData?.nickname || baseNickname).slice(0, 20);
+
+        // platform DB 의 옛 유령 행과 nickname 충돌 시(드묾) 임시 suffix 로 fallback
+        try {
+          user = await prisma.user.create({
+            data: { id: userId, nickname },
+            select: {
+              id: true,
+              nickname: true,
+              smithingProficiency: true,
+              createdAt: true,
+              lifetimeCatchCount: true,
+            },
+          });
+        } catch {
+          const fallbackNickname = `${nickname.slice(0, 14)}_${userId.slice(0, 5)}`;
+          user = await prisma.user.create({
+            data: { id: userId, nickname: fallbackNickname },
+            select: {
+              id: true,
+              nickname: true,
+              smithingProficiency: true,
+              createdAt: true,
+              lifetimeCatchCount: true,
+            },
+          });
+        }
       }
     }
 
