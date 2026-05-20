@@ -109,7 +109,7 @@ async function requireAuth(req, res, next) {
       // Google OAuth: commonUserId와 platform userId가 다름 — 의도된 동작
       console.log(`[auth] userId=${user.id} commonUserId=${resolvedCommonUserId}`);
     }
-    req.user = { ...user, isOperator: jwtIsOperator, commonUserId: resolvedCommonUserId };
+    req.user = { ...user, isOperator: !!user.isOperator || jwtIsOperator, commonUserId: resolvedCommonUserId };
     next();
   } catch (err) {
     next(err);
