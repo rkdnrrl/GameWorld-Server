@@ -201,36 +201,48 @@ router.get('/in-game/:gameId', requireAuth, async (req, res, next) => {
   }
 });
 
-// 아이템 판매 (코인 지급)
+// 아이템 판매 (코인 지급). inventory_items 의 sourceGame='space-fishing' 행만 대상.
+// 'sold' 플래그 대신 row DELETE (inventory_items 엔 sold 컬럼 없음).
 router.post('/sell', requireAuth, async (req, res, next) => {
   try {
     const { ids, all } = req.body;
 
     let where;
     if (all === true) {
-      where = { userId: req.user.id, sold: false };
+      where = { userId: req.user.id, sourceGame: 'space-fishing' };
     } else if (Array.isArray(ids) && ids.length > 0) {
-      where = { userId: req.user.id, sold: false, id: { in: ids } };
+      // 클라이언트가 string 으로 보냄 — BigInt 로 파싱
+      const bigIds = [];
+      for (const v of ids) {
+        const s = String(v || '').trim();
+        if (/^\d+$/.test(s)) {
+          try { bigIds.push(BigInt(s)); } catch { /* skip */ }
+        }
+      }
+      if (bigIds.length === 0) {
+        return res.status(400).json({ error: { message: '판매할 아이템 ID 가 잘못되었습니다.' } });
+      }
+      where = { userId: req.user.id, sourceGame: 'space-fishing', id: { in: bigIds } };
     } else {
       return res.status(400).json({ error: { message: '판매할 아이템을 선택해 주세요.' } });
     }
 
-    const toSell = await prisma.catch.findMany({
+    const toSell = await prisma.inventoryItem.findMany({
       where,
-      select: { id: true, coinValue: true },
+      select: { id: true, stats: true },
     });
 
     if (toSell.length === 0) {
       return res.status(400).json({ error: { message: '판매할 아이템이 없습니다.' } });
     }
 
-    const coinsEarned = toSell.reduce((sum, c) => sum + c.coinValue, 0);
-    const sellIds = toSell.map(c => c.id);
+    const coinsEarned = toSell.reduce(
+      (sum, it) => sum + (Number(it.stats?.coinValue) || 0),
+      0,
+    );
+    const sellIds = toSell.map((it) => it.id);
 
-    await prisma.catch.updateMany({
-      where: { id: { in: sellIds } },
-      data: { sold: true, soldAt: new Date() },
-    });
+    await prisma.inventoryItem.deleteMany({ where: { id: { in: sellIds } } });
 
     // 코인 지급 (Common API)
     earnCoins(req.user.commonUserId || req.user.id, coinsEarned, '낚시 아이템 판매', 'platform').catch(() => {});
