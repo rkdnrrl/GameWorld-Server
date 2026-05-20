@@ -47,7 +47,11 @@ async function requireAuth(req, res, next) {
         const email = data.user.email;
         if (email) {
           const { ensureCommonUser } = require('../lib/commonApi');
-          const commonData = await ensureCommonUser(email, data.user.user_metadata?.name || email.split('@')[0]).catch(() => null);
+          const commonData = await ensureCommonUser({
+            id: data.user.id,
+            email,
+            nickname: data.user.user_metadata?.name || email.split('@')[0],
+          }).catch(() => null);
           jwtIsOperator = !!commonData?.isOperator;
           if (commonData?.userId) commonUserId = commonData.userId;
         }
