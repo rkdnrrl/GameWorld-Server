@@ -15,6 +15,7 @@ router.use('/games', gamesUpload.router);
 router.use('/operator/games', gamesUpload.operatorRouter);
 router.use('/games', require('./games'));
 router.use('/coins', require('./coins'));
+router.use('/inventory', require('./inventory'));
 router.use('/catches', require('./catches'));
 router.use('/craft', require('./craft'));
 router.use('/alchemy', require('./alchemy'));
