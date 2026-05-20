@@ -27,49 +27,55 @@ async function fetchStatus(statusUrl) {
 
 /**
  * GET /api/games
- *   - 정적 config 의 공식(official) 게임 + DB 의 published community 게임 합쳐 반환
+ *   - DB 의 published 게임 (official + community 모두) 반환
+ *   - STATIC_GAMES 는 옛 Lightsail 폐기에 맞춰 비워둠 — 코드 폴백용으로만 합쳐줌
  *   - 각 게임의 statusUrl 로 실시간 접속자 수 가져옴
  */
 router.get('/', async (req, res, next) => {
   try {
-    // 1) 정적 official 게임 (기존 routes/games.js 동작 유지)
+    // 옛 정적 config (보통 빈 배열)
     const staticGames = STATIC_GAMES.map((g) => ({ ...g, kind: 'official' }));
 
-    // 2) DB 의 community 게임 — published 만 노출
-    let communityGames = [];
+    // DB 의 published 게임 (official + community 둘 다)
+    let dbGames = [];
     try {
-      const dbCommunity = await prisma.game.findMany({
-        where: { kind: 'community', status: 'published' },
-        orderBy: { publishedAt: 'desc' },
+      const rows = await prisma.game.findMany({
+        where: { status: 'published' },
+        orderBy: [{ kind: 'asc' }, { publishedAt: 'desc' }],
         select: {
           slug: true, title: true, description: true, emoji: true, category: true,
-          tags: true, thumbnailUrl: true, playCount: true, likeCount: true,
+          kind: true, tags: true, thumbnailUrl: true, externalUrl: true,
+          playCount: true, likeCount: true, statusUrl: true, maxPlayers: true,
         },
       });
-      communityGames = dbCommunity.map((g) => ({
-        id: g.slug,
-        title: g.title,
-        description: g.description || '',
-        url: `https://play.airliveplay.com/${g.slug}/`,
-        emoji: g.emoji,
-        tags: Array.isArray(g.tags) ? g.tags : [],
-        category: g.category,
-        kind: 'community',
-        thumbnailUrl: g.thumbnailUrl || null,
-        maxPlayers: null,
-        players: null,
-        rooms: null,
-        playCount: g.playCount,
-        likeCount: g.likeCount,
-      }));
+      dbGames = rows.map((g) => {
+        // 옛 13.125 Lightsail URL 은 무시하고 play.airliveplay.com 으로 강제 (인스턴스 폐기됨)
+        const ext = g.externalUrl && !/13\.125\.187\.132/.test(g.externalUrl) ? g.externalUrl : null;
+        return {
+          id: g.slug,
+          title: g.title,
+          description: g.description || '',
+          url: ext || `https://play.airliveplay.com/${g.slug}/`,
+          emoji: g.emoji,
+          tags: Array.isArray(g.tags) ? g.tags : [],
+          category: g.category,
+          kind: g.kind,
+          thumbnailUrl: g.thumbnailUrl || null,
+          maxPlayers: g.maxPlayers ?? null,
+          players: null,
+          rooms: null,
+          playCount: g.playCount,
+          likeCount: g.likeCount,
+          statusUrl: g.statusUrl || undefined,
+        };
+      });
     } catch (err) {
-      // DB 조회 실패해도 정적 게임은 노출 (그라데이션 폴백)
-      console.error('community games DB query failed:', err.message);
+      console.error('games DB query failed:', err.message);
     }
 
-    // 3) 실시간 접속자 수 (statusUrl 있는 것만)
+    // 실시간 접속자 수 (statusUrl 있는 것만)
     const gamesWithStatus = await Promise.all(
-      [...staticGames, ...communityGames].map(async (g) => {
+      [...staticGames, ...dbGames].map(async (g) => {
         const { statusUrl, ...info } = g;
         if (!statusUrl) {
           return { ...info, players: info.players ?? null, rooms: info.rooms ?? null };
@@ -115,7 +121,7 @@ router.get('/:slug', async (req, res, next) => {
           playCount: g.playCount,
           likeCount: g.likeCount,
           version: g.version,
-          url: g.externalUrl || `https://play.airliveplay.com/${g.slug}/`,
+          url: (g.externalUrl && !/13\.125\.187\.132/.test(g.externalUrl) ? g.externalUrl : null) || `https://play.airliveplay.com/${g.slug}/`,
           publishedAt: g.publishedAt,
         },
       });
