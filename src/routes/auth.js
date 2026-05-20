@@ -55,8 +55,10 @@ router.post('/login', async (req, res, next) => {
  * 소셜 로그인 후 호출하면 자체 JWT 발급 → 만료 관리 단순화
  */
 router.post('/exchange', requireAuth, (req, res) => {
-  const cuid = req.user.commonUserId || req.user.id;
-  const token = authService.signToken(cuid, !!req.user.isOperator);
+  // sub 는 platform DB users.id (= Supabase Auth user_id) 로 고정.
+  // requireAuth 가 sub → prisma.user.findUnique({ id }) 로 조회하므로
+  // 여기서 commonUserId 를 박으면 platform user 와 ID 가 어긋나 401 이 남.
+  const token = authService.signToken(req.user.id, !!req.user.isOperator);
   res.json({ token });
 });
 
