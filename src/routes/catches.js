@@ -115,6 +115,26 @@ router.post('/', requireAuth, async (req, res, next) => {
           pixelArt: pixelArtClean,
         },
       });
+      // 통합 인벤토리에도 동시 적재 — 다른 게임이 category='material' 로 자동 접근 가능.
+      // catches 와 별개의 row 로 보존 (중복). catches 가 sold 되더라도 인벤토리에 남아 다른 게임이 사용.
+      await tx.inventoryItem.create({
+        data: {
+          userId: req.user.id,
+          sourceGame: 'space-fishing',
+          kind: itemType,
+          category: 'material',
+          name: itemName.trim(),
+          icon: emoji,
+          tags: [rarity, itemType],
+          stats: {
+            size: sizeNum != null && Number.isFinite(sizeNum) ? sizeNum : null,
+            coinValue: coins,
+            rarity,
+            catchId: created.id,
+          },
+          qty: 1,
+        },
+      });
       const u = await tx.user.update({
         where: { id: req.user.id },
         data: { lifetimeCatchCount: { increment: 1 } },
