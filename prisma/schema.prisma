@@ -34,6 +34,7 @@ model User {
   dailyMissions         DailyMissionProgress[]
   adRewards             AdReward[]
   uploadedGames         Game[]
+  inventoryItems        InventoryItem[]
 
   @@map("users")
 }
@@ -355,6 +356,38 @@ model CommunityGameData {
   @@id([gameSlug, userId])
   @@index([userId])
   @@map("community_game_data")
+}
+
+/// 범용 인벤토리 — 게임 간 자유롭게 공유되는 아이템 저장소.
+/// 어떤 게임이든 자기가 생산한 아이템을 여기에 담고, 다른 게임은 category/tags 로 필터해 조회.
+/// 기존 도메인 테이블 (catches, crafted_equipment 등) 과 무관하게 별도 운영.
+model InventoryItem {
+  id          BigInt   @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 어느 게임이 생성했는지 (slug 또는 'system'). 감사·필터용.
+  sourceGame  String   @db.VarChar(60)
+  /// 게임 내부 식별자. 예: 'salmon_grilled', 'iron_sword'. 생산 게임이 자기 아이템 인지용.
+  kind        String   @db.VarChar(80)
+  /// 소비자 게임이 보는 1차 분류. 예: 'food', 'weapon', 'material', 'consumable', 'decoration'.
+  category    String   @db.VarChar(40)
+  /// 표시용 이름.
+  name        String   @db.VarChar(120)
+  /// 표시용 이모지/아이콘 (선택).
+  icon        String?  @db.VarChar(16)
+  /// 자유 태그 배열. 예: ['hp_recovery', 'rare']. 소비자 게임이 추가 필터에 사용.
+  tags        String[] @default([])
+  /// 능력치·메타데이터 자유 JSON. 예: { attack: 5, hpHeal: 30 }.
+  stats       Json     @default("{}")
+  /// 스택형 수량. 무기처럼 개별이면 1.
+  qty         Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, category])
+  @@index([userId, sourceGame])
+  @@index([userId, kind])
+  @@map("inventory_items")
 }
 
 /// 보상형 광고 시청 로그 (쿨다운·일일한도 체크용)
