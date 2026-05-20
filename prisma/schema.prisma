@@ -33,6 +33,7 @@ model User {
   donations             Donation[]
   dailyMissions         DailyMissionProgress[]
   adRewards             AdReward[]
+  uploadedGames         Game[]
 
   @@map("users")
 }
@@ -285,6 +286,75 @@ model AlchemyElementStock {
   @@id([userId, symbol])
   @@index([userId])
   @@map("alchemy_element_stock")
+}
+
+/// UGC 게임 (공식 + 커뮤니티)
+/// - official: 운영자/신뢰 개발자 — Common API 사용 가능 (코인/인벤토리)
+/// - community: 누구나 업로드 — Common API 차단, 자체 데이터만 (localStorage 등)
+model Game {
+  slug          String   @id @db.VarChar(60)
+  ownerUserId   String?
+  owner         User?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  title         String   @db.VarChar(120)
+  description   String?  @db.VarChar(2000)
+  emoji         String   @default("🎮") @db.VarChar(16)
+  /// 'official' | 'community'
+  kind          String   @default("community") @db.VarChar(20)
+  /// 'pending' | 'published' | 'rejected' | 'hidden'
+  status        String   @default("pending") @db.VarChar(20)
+  /// 'earn' | 'multiplay' | 'decorate' | 'other'
+  category      String   @default("other") @db.VarChar(20)
+  /// R2 경로 prefix — 보통 games/{slug}/
+  storagePath   String   @db.VarChar(200)
+  /// 공식 게임은 외부 URL 가능 (마이그레이션 호환); 커뮤니티는 항상 null
+  externalUrl   String?  @db.VarChar(400)
+  thumbnailUrl  String?  @db.VarChar(400)
+  screenshots   Json?
+  tags          Json?
+  /// 멀티플레이 상태 조회용 (있으면 표시)
+  statusUrl     String?  @db.VarChar(400)
+  maxPlayers    Int?
+  playCount     Int      @default(0)
+  likeCount     Int      @default(0)
+  version       Int      @default(1)
+  rejectReason  String?  @db.VarChar(500)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  publishedAt   DateTime?
+
+  reports       GameReport[]
+
+  @@index([status, kind])
+  @@index([ownerUserId])
+  @@map("games")
+}
+
+/// 신고 — 누적되면 운영자 검토
+model GameReport {
+  id              BigInt   @id @default(autoincrement())
+  gameSlug        String   @db.VarChar(60)
+  game            Game     @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
+  reporterUserId  String?
+  reason          String   @db.VarChar(60)
+  detail          String?  @db.VarChar(1000)
+  resolved        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([gameSlug, resolved])
+  @@map("game_reports")
+}
+
+/// 커뮤니티 게임의 격리된 유저 데이터 저장소 (코인 아님 — 단순 KV)
+/// 각 게임별로 분리되어 다른 게임 데이터에 접근 불가
+model CommunityGameData {
+  gameSlug  String   @db.VarChar(60)
+  userId    String
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@id([gameSlug, userId])
+  @@index([userId])
+  @@map("community_game_data")
 }
 
 /// 보상형 광고 시청 로그 (쿨다운·일일한도 체크용)
