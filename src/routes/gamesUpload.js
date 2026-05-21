@@ -470,4 +470,16 @@ operatorRouter.post('/:slug/reject-update', requireAuth, requireOperator, async 
   }
 });
 
+/**
+ * GET /api/operator/games/all — 모든 게임 목록 (상태·종류 무관, 관리용).
+ */
+operatorRouter.get('/all', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const games = await prisma.game.findMany({
+      orderBy: [{ kind: 'asc' }, { createdAt: 'desc' }],
+    });
+    res.json({ games });
+  } catch (err) { next(err); }
+});
+
 module.exports = { router, operatorRouter };
