@@ -22,11 +22,11 @@ function isPixelArtColumnError(err) {
 }
 
 /** 미판매 보관함 페이지 (웹 /inventory · 게임 /in-game/:gameId 공통).
- * 데이터 소스: inventory_items (sourceGame='space-fishing'). catches 테이블은 더 이상 사용 안 함.
+ * 데이터 소스: inventory_items 전체 (sourceGame 무관) — 모든 게임 아이템 통합 표시.
  * 응답 모양은 기존 catches 형식 유지 (클라이언트 호환). */
 async function getUnsoldInventoryPayload(userId, page, limit) {
   const skip = (page - 1) * limit;
-  const where = { userId, sourceGame: 'space-fishing' };
+  const where = { userId };
   const [items, total] = await prisma.$transaction([
     prisma.inventoryItem.findMany({
       where,
