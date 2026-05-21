@@ -209,7 +209,7 @@ router.post('/sell', requireAuth, async (req, res, next) => {
 
     let where;
     if (all === true) {
-      where = { userId: req.user.id, sourceGame: 'space-fishing' };
+      where = { userId: req.user.id };
     } else if (Array.isArray(ids) && ids.length > 0) {
       // 클라이언트가 string 으로 보냄 — BigInt 로 파싱
       const bigIds = [];
@@ -222,7 +222,7 @@ router.post('/sell', requireAuth, async (req, res, next) => {
       if (bigIds.length === 0) {
         return res.status(400).json({ error: { message: '판매할 아이템 ID 가 잘못되었습니다.' } });
       }
-      where = { userId: req.user.id, sourceGame: 'space-fishing', id: { in: bigIds } };
+      where = { userId: req.user.id, id: { in: bigIds } };
     } else {
       return res.status(400).json({ error: { message: '판매할 아이템을 선택해 주세요.' } });
     }
