@@ -257,16 +257,13 @@ router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, r
 });
 
 /**
- * GET /api/games/mine — 내가 올린 게임 목록 (모든 status).
- * 운영자는 official 게임도 함께 표시 (재업로드 가능하도록).
+ * GET /api/games/mine — 내가 owner 로 등록된 게임 목록 (모든 status).
+ * official 게임도 본인이 owner 면 표시됨.
  */
 router.get('/mine', requireAuth, async (req, res, next) => {
   try {
-    const where = req.user.isOperator
-      ? { OR: [{ ownerUserId: req.user.id }, { kind: 'official' }] }
-      : { ownerUserId: req.user.id };
     const games = await prisma.game.findMany({
-      where,
+      where: { ownerUserId: req.user.id },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ games });
