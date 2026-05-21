@@ -304,14 +304,20 @@ router.delete('/:slug', requireAuth, async (req, res, next) => {
     const slug = String(req.params.slug || '').toLowerCase();
     const g = await prisma.game.findUnique({ where: { slug } });
     if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
-    if (g.ownerUserId !== req.user.id && !req.user.isOperator) {
+    const isOwner = g.ownerUserId && g.ownerUserId === req.user.id;
+    const isOperator = !!req.user.isOperator;
+    if (!isOwner && !isOperator) {
       return res.status(403).json({ error: { message: '권한이 없습니다.' } });
     }
-    if (g.kind === 'official') {
-      return res.status(403).json({ error: { message: '공식 게임은 삭제할 수 없습니다.' } });
+    // official 게임은 운영자만 삭제 가능 (실수 방지)
+    if (g.kind === 'official' && !isOperator) {
+      return res.status(403).json({ error: { message: '공식 게임은 운영자만 삭제할 수 있습니다.' } });
     }
-    // R2 파일들도 정리
-    try { await r2.deletePrefix(g.storagePath); } catch (e) { console.error('r2 delete:', e.message); }
+    // R2 파일들도 정리 (production + staging 모두)
+    try { await r2.deletePrefix(g.storagePath); } catch (e) { console.error('r2 delete prod:', e.message); }
+    if (g.pendingStoragePath) {
+      try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 delete staging:', e.message); }
+    }
     await prisma.game.delete({ where: { slug } });
     res.json({ ok: true });
   } catch (err) {
