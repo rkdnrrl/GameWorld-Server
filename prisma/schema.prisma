@@ -35,6 +35,7 @@ model User {
   adRewards             AdReward[]
   uploadedGames         Game[]
   inventoryItems        InventoryItem[]
+  gameStates            GameState[]
 
   @@map("users")
 }
@@ -396,6 +397,21 @@ model InventoryItem {
   @@index([userId, sourceGame])
   @@index([userId, kind])
   @@map("inventory_items")
+}
+
+/// 게임별 내부 상태 저장소 — official 게임마다 자유로운 JSON 진행도/설정 보관.
+/// 예: 낚시 스킬 레벨, 던전 클리어 보스 목록, 게임 내 설정.
+/// community 게임은 community_game_data 를 사용 (token 미발급 정책).
+model GameState {
+  userId    String
+  gameSlug  String   @db.VarChar(60)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, gameSlug])
+  @@index([gameSlug])
+  @@map("game_state")
 }
 
 /// 보상형 광고 시청 로그 (쿨다운·일일한도 체크용)
