@@ -172,7 +172,7 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
  * 동작: 라이브(production storagePath)는 그대로 두고 R2 staging prefix 에 새 zip 업로드.
  *      DB 에 pendingStoragePath/pendingVersion 기록. 운영자가 별도 라우트로 승인·거절.
  */
-router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, res, next) => {
+router.post('/:slug/files', requireAuth, uploadUnlimited.single('gamezip'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: { message: 'gamezip 파일 필요' } });
     const slug = String(req.params.slug || '').toLowerCase();
@@ -186,6 +186,10 @@ router.post('/:slug/files', requireAuth, upload.single('gamezip'), async (req, r
     }
     if (g.kind === 'official' && !isOperator) {
       return res.status(403).json({ error: { message: '공식 게임은 운영자만 업데이트할 수 있습니다.' } });
+    }
+    // 일반 유저는 50MB 제한, 운영자는 무제한
+    if (!isOperator && req.file.size > MAX_UPLOAD_BYTES) {
+      return res.status(413).json({ error: { message: `파일이 너무 큽니다 (최대 ${MAX_UPLOAD_BYTES / 1024 / 1024}MB).` } });
     }
 
     let zip;
