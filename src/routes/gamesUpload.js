@@ -36,6 +36,12 @@ const upload = multer({
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
 });
 
+// 운영자 전용 — 파일 크기 제한 없음 (size 검사는 라우트 핸들러에서 수행 안 함)
+const uploadUnlimited = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: 1 },
+});
+
 const uploadSchema = z.object({
   slug: z.string().min(2).max(60).regex(ALLOWED_SLUG_RE, 'slug 형식 잘못됨 (소문자/숫자/하이픈)'),
   title: z.string().min(1).max(120),
