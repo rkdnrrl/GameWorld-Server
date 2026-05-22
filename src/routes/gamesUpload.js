@@ -696,6 +696,22 @@ operatorRouter.post('/:slug/hide', requireAuth, requireOperator, async (req, res
       where: { slug },
       data: { status: 'hidden' },
     });
+    logActivity(req.user, 'game_hide', { slug: updated.slug, title: updated.title });
+    res.json({ game: updated });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/unhide — 비공개 → 공개 (published) 복원
+ */
+operatorRouter.post('/:slug/unhide', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: { status: 'published', publishedAt: new Date() },
+    });
+    logActivity(req.user, 'game_unhide', { slug: updated.slug, title: updated.title });
     res.json({ game: updated });
   } catch (err) { next(err); }
 });
