@@ -148,6 +148,17 @@ router.post('/:slug/rate', requireAuth, async (req, res, next) => {
 });
 
 /**
+ * POST /api/games/:slug/play — 플레이 카운트 +1 (인증 불필요)
+ */
+router.post('/:slug/play', async (req, res) => {
+  const slug = String(req.params.slug || '').trim().toLowerCase();
+  try {
+    await prisma.game.update({ where: { slug }, data: { playCount: { increment: 1 } } });
+  } catch { /* 실패해도 무시 */ }
+  res.json({ ok: true });
+});
+
+/**
  * GET /api/games/:slug/comments
  */
 router.get('/:slug/comments', async (req, res, next) => {
