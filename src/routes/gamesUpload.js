@@ -480,6 +480,7 @@ operatorRouter.post('/:slug/reject-update', requireAuth, requireOperator, async 
         pendingRejectReason: reason,
       },
     });
+    logActivity(req.user, 'game_update_reject', { slug: updated.slug, title: updated.title, reason });
     res.json({ ok: true, game: updated });
   } catch (err) {
     if (err.name === 'ZodError') {
