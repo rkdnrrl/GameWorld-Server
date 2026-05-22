@@ -179,6 +179,9 @@ router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (re
       await r2.putObject(`${storagePath}${rel}`, data);
     }
 
+    // 미디어 업로드 (썸네일, 데모영상)
+    const media = await saveMedia(slug, req.files).catch(() => ({}));
+
     // DB INSERT
     const game = await prisma.game.create({
       data: {
@@ -188,11 +191,12 @@ router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (re
         description: parsed.description,
         emoji: parsed.emoji || '🎮',
         kind: 'community',
-        status: 'pending', // 운영자 승인 대기
+        status: 'pending',
         category: parsed.category,
         storagePath,
         tags: tags.length > 0 ? tags : undefined,
         version: 1,
+        ...media,
       },
     });
 
@@ -221,9 +225,11 @@ router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (re
  * 동작: 라이브(production storagePath)는 그대로 두고 R2 staging prefix 에 새 zip 업로드.
  *      DB 에 pendingStoragePath/pendingVersion 기록. 운영자가 별도 라우트로 승인·거절.
  */
-router.post('/:slug/files', requireAuth, uploadUnlimited.single('gamezip'), async (req, res, next) => {
+router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: { message: 'gamezip 파일 필요' } });
+    const zipFile = req.files?.gamezip?.[0];
+    if (!zipFile) return res.status(400).json({ error: { message: 'gamezip 파일 필요' } });
+    req.file = zipFile;
     const slug = String(req.params.slug || '').toLowerCase();
     const g = await prisma.game.findUnique({ where: { slug } });
     if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
