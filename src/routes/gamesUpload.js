@@ -421,6 +421,63 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
 });
 
 /**
+ * GET /api/games/mine/stats — 내 게임 전체 통계 (플레이·좋아요·평점·댓글).
+ */
+router.get('/mine/stats', requireAuth, async (req, res, next) => {
+  try {
+    const games = await prisma.game.findMany({
+      where: { ownerUserId: req.user.id },
+      orderBy: { playCount: 'desc' },
+      select: {
+        slug: true, title: true, emoji: true, category: true, status: true,
+        thumbnailUrl: true, playCount: true, likeCount: true, publishedAt: true,
+        _count: { select: { ratings: true, comments: true } },
+      },
+    });
+
+    const slugs = games.map((g) => g.slug);
+    const ratingRows = slugs.length > 0
+      ? await prisma.gameRating.groupBy({
+          by: ['gameSlug'],
+          where: { gameSlug: { in: slugs } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        })
+      : [];
+    const rMap = new Map(ratingRows.map((r) => [
+      r.gameSlug,
+      { avg: Math.round((r._avg.rating ?? 0) * 10) / 10, count: r._count.rating },
+    ]));
+
+    const result = games.map((g) => ({
+      slug:         g.slug,
+      title:        g.title,
+      emoji:        g.emoji,
+      category:     g.category,
+      status:       g.status,
+      thumbnailUrl: g.thumbnailUrl,
+      playCount:    g.playCount,
+      likeCount:    g.likeCount,
+      ratingAvg:    rMap.get(g.slug)?.avg   ?? 0,
+      ratingCount:  rMap.get(g.slug)?.count ?? 0,
+      commentCount: g._count.comments,
+      publishedAt:  g.publishedAt,
+    }));
+
+    const summary = {
+      totalGames:     games.length,
+      publishedGames: games.filter((g) => g.status === 'published').length,
+      totalPlays:     games.reduce((s, g) => s + g.playCount, 0),
+      totalLikes:     games.reduce((s, g) => s + g.likeCount, 0),
+      totalRatings:   [...rMap.values()].reduce((s, r) => s + r.count, 0),
+      totalComments:  games.reduce((s, g) => s + g._count.comments, 0),
+    };
+
+    res.json({ summary, games: result });
+  } catch (err) { next(err); }
+});
+
+/**
  * GET /api/games/mine — 내가 owner 로 등록된 게임 목록 (모든 status).
  * official 게임도 본인이 owner 면 표시됨.
  */
