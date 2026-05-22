@@ -62,6 +62,84 @@ const uploadMediaOnly = multer({
   limits: { fileSize: MAX_VIDEO_BYTES, files: 7 },
 });
 
+/** staging URL → R2 key */
+function urlToKey(url) { return url.replace(`${CDN_BASE}/`, ''); }
+/** staging key → live key (media/staging/... → media/...) */
+function stagingToLiveKey(key) { return key.replace('media/staging/', 'media/'); }
+
+/** staging R2에 미디어 업로드 → pendingXxx URL 반환 */
+async function saveMediaStaging(slug, files) {
+  const result = {};
+  const th = files?.thumbnail?.[0];
+  const vd = files?.demoVideo?.[0];
+  if (th && IMG_MIME.has(th.mimetype) && th.size <= MAX_THUMBNAIL_BYTES) {
+    const key = `media/staging/thumbnails/${slug}.${IMG_MIME.get(th.mimetype)}`;
+    await r2.putObject(key, th.buffer, { contentType: th.mimetype });
+    result.pendingThumbnailUrl = `${CDN_BASE}/${key}`;
+  }
+  if (vd && VID_MIME.has(vd.mimetype) && vd.size <= MAX_VIDEO_BYTES) {
+    const key = `media/staging/videos/${slug}.${VID_MIME.get(vd.mimetype)}`;
+    await r2.putObject(key, vd.buffer, { contentType: vd.mimetype });
+    result.pendingDemoVideoUrl = `${CDN_BASE}/${key}`;
+  }
+  const ssFiles = files?.screenshots ?? [];
+  if (ssFiles.length > 0) {
+    const urls = [];
+    for (let i = 0; i < ssFiles.length; i++) {
+      const ss = ssFiles[i];
+      if (IMG_MIME.has(ss.mimetype) && ss.size <= MAX_THUMBNAIL_BYTES) {
+        const key = `media/staging/screenshots/${slug}-${i}.${IMG_MIME.get(ss.mimetype)}`;
+        await r2.putObject(key, ss.buffer, { contentType: ss.mimetype });
+        urls.push(`${CDN_BASE}/${key}`);
+      }
+    }
+    if (urls.length > 0) result.pendingScreenshots = urls;
+  }
+  return result;
+}
+
+/** staging 미디어를 live로 복사. live DB 필드값 반환 */
+async function applyPendingMedia(g) {
+  const liveData = {};
+  async function moveFile(stagingUrl, liveField) {
+    if (!stagingUrl) return;
+    const sk = urlToKey(stagingUrl);
+    const lk = stagingToLiveKey(sk);
+    const data = await r2.getObject(sk);
+    await r2.putObject(lk, data);
+    try { await r2.deleteKeys([sk]); } catch {}
+    liveData[liveField] = `${CDN_BASE}/${lk}`;
+  }
+  await moveFile(g.pendingThumbnailUrl, 'thumbnailUrl');
+  await moveFile(g.pendingDemoVideoUrl, 'demoVideoUrl');
+  if (Array.isArray(g.pendingScreenshots) && g.pendingScreenshots.length > 0) {
+    const urls = [];
+    for (const su of g.pendingScreenshots) {
+      const sk = urlToKey(su);
+      const lk = stagingToLiveKey(sk);
+      const data = await r2.getObject(sk);
+      await r2.putObject(lk, data);
+      try { await r2.deleteKeys([sk]); } catch {}
+      urls.push(`${CDN_BASE}/${lk}`);
+    }
+    liveData.screenshots = urls;
+  }
+  return liveData;
+}
+
+/** staging 미디어 파일 R2에서 삭제 */
+async function deletePendingMediaFiles(g) {
+  const toDelete = [];
+  if (g.pendingThumbnailUrl) toDelete.push(urlToKey(g.pendingThumbnailUrl));
+  if (g.pendingDemoVideoUrl) toDelete.push(urlToKey(g.pendingDemoVideoUrl));
+  if (Array.isArray(g.pendingScreenshots)) {
+    for (const su of g.pendingScreenshots) toDelete.push(urlToKey(su));
+  }
+  if (toDelete.length > 0) {
+    try { await r2.deleteKeys(toDelete); } catch (e) { console.error('media staging delete:', e.message); }
+  }
+}
+
 /** R2에 미디어 업로드 후 URL 반환. files = req.files 객체 */
 async function saveMedia(slug, files) {
   const result = {};
