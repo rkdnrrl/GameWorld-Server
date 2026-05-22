@@ -150,6 +150,8 @@ router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, n
       },
     });
 
+    logActivity(req.user, 'game_upload', { slug: game.slug, title: game.title, kind: game.kind });
+
     res.status(201).json({
       ok: true,
       game: { slug: game.slug, status: game.status, storagePath, uploadedBytes },
