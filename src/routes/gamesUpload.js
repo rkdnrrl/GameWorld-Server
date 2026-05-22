@@ -663,8 +663,6 @@ operatorRouter.get('/all', requireAuth, requireOperator, async (req, res, next) 
 operatorRouter.post('/:slug/feature', requireAuth, requireOperator, async (req, res, next) => {
   try {
     const slug = String(req.params.slug || '').toLowerCase();
-    // 모두 해제 후 이 게임만 설정
-    await prisma.game.updateMany({ data: { isFeatured: false } });
     const updated = await prisma.game.update({ where: { slug }, data: { isFeatured: true } });
     res.json({ ok: true, slug: updated.slug, isFeatured: updated.isFeatured });
   } catch (err) { next(err); }
