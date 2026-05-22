@@ -85,6 +85,7 @@ router.get('/', async (req, res, next) => {
           likeCount:   g.likeCount,
           ratingAvg:   ratingMap.get(g.slug)?.avg   ?? null,
           ratingCount: ratingMap.get(g.slug)?.count ?? 0,
+          isFeatured:  !!g.isFeatured,
           statusUrl: g.statusUrl || undefined,
         };
       });
