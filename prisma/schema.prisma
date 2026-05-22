@@ -312,6 +312,7 @@ model Game {
   externalUrl   String?  @db.VarChar(400)
   thumbnailUrl  String?  @db.VarChar(400)
   demoVideoUrl  String?  @db.VarChar(400)
+  isFeatured    Boolean  @default(false)
   screenshots   Json?
   tags          Json?
   /// 멀티플레이 상태 조회용 (있으면 표시)
