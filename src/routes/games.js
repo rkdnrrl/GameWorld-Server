@@ -155,7 +155,7 @@ router.get('/developer/:nickname', async (req, res, next) => {
     const nickname = String(req.params.nickname || '').trim();
     const user = await prisma.user.findUnique({
       where: { nickname },
-      select: { id: true, nickname: true },
+      select: { id: true, nickname: true, bio: true, profileImageUrl: true, websiteUrl: true },
     });
     if (!user) return res.status(404).json({ error: '개발자를 찾을 수 없습니다.' });
 
