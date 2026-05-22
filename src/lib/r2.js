@@ -124,4 +124,4 @@ async function getObject(key) {
   return Buffer.concat(chunks);
 }
 
-module.exports = { putObject, deletePrefix, copyPrefix, listObjects, getObject, contentType, BUCKET };
+module.exports = { putObject, deletePrefix, deleteKeys, copyPrefix, listObjects, getObject, contentType, BUCKET };
