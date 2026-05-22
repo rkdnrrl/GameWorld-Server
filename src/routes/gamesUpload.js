@@ -334,6 +334,7 @@ router.delete('/:slug', requireAuth, async (req, res, next) => {
       try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 delete staging:', e.message); }
     }
     await prisma.game.delete({ where: { slug } });
+    logActivity(req.user, 'game_delete', { slug: g.slug, title: g.title, kind: g.kind });
     res.json({ ok: true });
   } catch (err) {
     next(err);
