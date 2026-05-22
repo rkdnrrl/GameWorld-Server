@@ -314,6 +314,37 @@ router.patch('/:slug', requireAuth, async (req, res, next) => {
   }
 });
 
+/**
+ * DELETE /api/games/:slug/pending-update — 보류 중인 업데이트 취소 (owner/operator).
+ * staging R2 파일 삭제 + pending 필드 초기화. 라이브 버전은 유지.
+ */
+router.delete('/:slug/pending-update', requireAuth, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+
+    const isOwner = g.ownerUserId && g.ownerUserId === req.user.id;
+    if (!isOwner && !req.user.isOperator) {
+      return res.status(403).json({ error: { message: '권한이 없습니다.' } });
+    }
+    if (!g.pendingStoragePath) {
+      return res.status(400).json({ error: { message: '취소할 업데이트가 없습니다.' } });
+    }
+
+    try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
+
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: { pendingStoragePath: null, pendingVersion: null, pendingUploadedAt: null, pendingRejectReason: null },
+    });
+    logActivity(req.user, 'game_update_cancel', { slug: updated.slug, title: updated.title });
+    res.json({ ok: true, game: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/:slug', requireAuth, async (req, res, next) => {
   try {
     const slug = String(req.params.slug || '').toLowerCase();
