@@ -131,4 +131,33 @@ router.delete('/me', requireAuth, async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/auth/profile — 내 프로필 조회
+ * PATCH /api/auth/profile — bio / websiteUrl 수정
+ */
+router.get('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { nickname: true, bio: true, profileImageUrl: true, websiteUrl: true },
+    });
+    res.json({ profile: user });
+  } catch (err) { next(err); }
+});
+
+router.patch('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const { bio, websiteUrl } = req.body;
+    const data = {};
+    if (typeof bio        === 'string') data.bio        = bio.trim().slice(0, 300);
+    if (typeof websiteUrl === 'string') data.websiteUrl = websiteUrl.trim().slice(0, 200);
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data,
+      select: { nickname: true, bio: true, profileImageUrl: true, websiteUrl: true },
+    });
+    res.json({ profile: updated });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
