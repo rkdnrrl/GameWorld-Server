@@ -37,6 +37,22 @@ router.get('/', async (req, res, next) => {
     // 옛 정적 config (보통 빈 배열)
     const staticGames = STATIC_GAMES.map((g) => ({ ...g, kind: 'official' }));
 
+    // 게임별 평점 집계
+    let ratingMap = new Map();
+    try {
+      const ratings = await prisma.gameRating.groupBy({
+        by: ['gameSlug'],
+        _avg: { rating: true },
+        _count: { rating: true },
+      });
+      for (const r of ratings) {
+        ratingMap.set(r.gameSlug, {
+          avg:   Math.round((r._avg.rating ?? 0) * 10) / 10,
+          count: r._count.rating,
+        });
+      }
+    } catch {}
+
     // DB 의 published 게임 (official + community 둘 다)
     let dbGames = [];
     try {
