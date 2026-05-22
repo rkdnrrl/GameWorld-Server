@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { prisma } = require('../db');
+const { requireAuth } = require('../middleware/auth');
 
 const router = Router();
 const STATIC_GAMES = require('../config/games');
