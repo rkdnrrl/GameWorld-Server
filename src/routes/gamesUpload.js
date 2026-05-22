@@ -291,6 +291,9 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
       await r2.putObject(`${stagingPath}${rel}`, data);
     }
 
+    // 미디어는 검수 없이 즉시 반영
+    const media = await saveMedia(slug, req.files).catch(() => ({}));
+
     const updated = await prisma.game.update({
       where: { slug },
       data: {
@@ -298,6 +301,7 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
         pendingVersion: g.version + 1,
         pendingUploadedAt: new Date(),
         pendingRejectReason: null,
+        ...media,
       },
     });
 
