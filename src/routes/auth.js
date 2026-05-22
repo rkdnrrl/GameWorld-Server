@@ -171,4 +171,28 @@ router.patch('/profile', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * POST /api/auth/profile/image — 프로필 이미지 업로드 (즉시 반영)
+ */
+router.post('/profile/image', requireAuth, uploadProfileImg.single('profileImage'), async (req, res, next) => {
+  try {
+    const img = req.file;
+    if (!img || !IMG_MIME.has(img.mimetype)) {
+      return res.status(400).json({ error: { message: 'JPG/PNG/WebP 이미지를 첨부해주세요.' } });
+    }
+    if (img.size > MAX_PROFILE_IMG_BYTES) {
+      return res.status(400).json({ error: { message: '이미지는 5MB 이하여야 합니다.' } });
+    }
+    const ext = IMG_MIME.get(img.mimetype);
+    const key = `media/profiles/${req.user.id}.${ext}`;
+    await r2.putObject(key, img.buffer, { contentType: img.mimetype });
+    const profileImageUrl = `${CDN_BASE}/${key}`;
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { profileImageUrl },
+    });
+    res.json({ ok: true, profileImageUrl });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
