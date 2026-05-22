@@ -451,6 +451,7 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
         updatedAt: new Date(),
       },
     });
+    logActivity(req.user, 'game_update_approve', { slug: updated.slug, title: updated.title, version: updated.version });
     res.json({ ok: true, game: updated, message: '업데이트가 라이브에 반영됐습니다.' });
   } catch (err) { next(err); }
 });
