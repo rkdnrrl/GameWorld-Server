@@ -491,6 +491,36 @@ operatorRouter.post('/:slug/reject-update', requireAuth, requireOperator, async 
 });
 
 /**
+ * GET /api/operator/games/:slug/download — 게임 파일 전체를 zip으로 다운로드.
+ */
+operatorRouter.get('/:slug/download', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+
+    const keys = await r2.listObjects(g.storagePath);
+    if (keys.length === 0) return res.status(404).json({ error: { message: '게임 파일이 없습니다.' } });
+
+    const zip = new AdmZip();
+    for (const key of keys) {
+      const rel = key.slice(g.storagePath.length); // 'games/{slug}/' 이후 상대경로
+      if (!rel) continue;
+      const data = await r2.getObject(key);
+      zip.addFile(rel, data);
+    }
+
+    const buf = zip.toBuffer();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}.zip"`);
+    res.setHeader('Content-Length', buf.length);
+    res.send(buf);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * GET /api/operator/games/all — 모든 게임 목록 (상태·종류 무관, 관리용).
  */
 operatorRouter.get('/all', requireAuth, requireOperator, async (req, res, next) => {
