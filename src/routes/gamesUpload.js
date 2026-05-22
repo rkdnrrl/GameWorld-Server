@@ -371,6 +371,29 @@ router.patch('/:slug', requireAuth, async (req, res, next) => {
 });
 
 /**
+ * POST /api/games/:slug/media — 썸네일/데모영상 단독 업데이트 (zip 불필요).
+ */
+router.post('/:slug/media', requireAuth, uploadMediaOnly.fields([
+  { name: 'thumbnail', maxCount: 1 },
+  { name: 'demoVideo', maxCount: 1 },
+]), async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g    = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (g.ownerUserId !== req.user.id && !req.user.isOperator) {
+      return res.status(403).json({ error: { message: '권한이 없습니다.' } });
+    }
+    const media = await saveMedia(slug, req.files);
+    if (Object.keys(media).length === 0) {
+      return res.status(400).json({ error: { message: '썸네일(JPG/PNG/WebP 5MB↓) 또는 영상(MP4/WebM 200MB↓)을 첨부해주세요.' } });
+    }
+    const updated = await prisma.game.update({ where: { slug }, data: media });
+    res.json({ ok: true, game: { thumbnailUrl: updated.thumbnailUrl, demoVideoUrl: updated.demoVideoUrl } });
+  } catch (err) { next(err); }
+});
+
+/**
  * DELETE /api/games/:slug/pending-update — 보류 중인 업데이트 취소 (owner/operator).
  * staging R2 파일 삭제 + pending 필드 초기화. 라이브 버전은 유지.
  */
