@@ -364,6 +364,7 @@ operatorRouter.post('/:slug/approve', requireAuth, requireOperator, async (req, 
       where: { slug },
       data: { status: 'published', publishedAt: new Date(), rejectReason: null },
     });
+    logActivity(req.user, 'game_approve', { slug: updated.slug, title: updated.title });
     res.json({ game: updated });
   } catch (err) { next(err); }
 });
