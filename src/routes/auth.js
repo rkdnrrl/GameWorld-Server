@@ -1,9 +1,20 @@
 ﻿const { Router } = require('express');
 const { z } = require('zod');
+const multer = require('multer');
 const authService = require('../services/auth');
 const { requireAuth } = require('../middleware/auth');
 const { userIsOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
+const r2 = require('../lib/r2');
+
+const CDN_BASE = 'https://play.airliveplay.com';
+const IMG_MIME = new Map([['image/jpeg','jpg'],['image/png','png'],['image/webp','webp']]);
+const MAX_PROFILE_IMG_BYTES = 5 * 1024 * 1024; // 5MB
+
+const uploadProfileImg = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_PROFILE_IMG_BYTES, files: 1 },
+});
 
 const router = Router();
 
