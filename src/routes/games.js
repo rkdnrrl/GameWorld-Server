@@ -148,6 +148,50 @@ router.post('/:slug/rate', requireAuth, async (req, res, next) => {
 });
 
 /**
+ * GET /api/developer/:nickname — 개발자 프로필 + 게임 목록
+ */
+router.get('/developer/:nickname', async (req, res, next) => {
+  try {
+    const nickname = String(req.params.nickname || '').trim();
+    const user = await prisma.user.findUnique({
+      where: { nickname },
+      select: { id: true, nickname: true },
+    });
+    if (!user) return res.status(404).json({ error: '개발자를 찾을 수 없습니다.' });
+
+    const rows = await prisma.game.findMany({
+      where: { ownerUserId: user.id, status: 'published' },
+      orderBy: { publishedAt: 'desc' },
+      select: {
+        slug: true, title: true, description: true, emoji: true,
+        category: true, thumbnailUrl: true, playCount: true, likeCount: true, publishedAt: true,
+      },
+    });
+
+    // 평점 집계
+    const slugs = rows.map((g) => g.slug);
+    const ratings = await prisma.gameRating.groupBy({
+      by: ['gameSlug'],
+      where: { gameSlug: { in: slugs } },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+    const rMap = new Map(ratings.map((r) => [r.gameSlug, { avg: Math.round((r._avg.rating ?? 0) * 10) / 10, count: r._count.rating }]));
+
+    const games = rows.map((g) => ({
+      id: g.slug, title: g.title, description: g.description, emoji: g.emoji,
+      category: g.category, thumbnailUrl: g.thumbnailUrl,
+      playCount: g.playCount, likeCount: g.likeCount,
+      ratingAvg: rMap.get(g.slug)?.avg ?? 0,
+      ratingCount: rMap.get(g.slug)?.count ?? 0,
+      publishedAt: g.publishedAt,
+    }));
+
+    res.json({ nickname: user.nickname, games });
+  } catch (err) { next(err); }
+});
+
+/**
  * POST /api/games/:slug/like   — 좋아요 +1 (auth)
  * DELETE /api/games/:slug/like — 좋아요 취소 (auth)
  */
