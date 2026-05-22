@@ -334,10 +334,26 @@ model Game {
 
   reports       GameReport[]
   ratings       GameRating[]
+  comments      GameComment[]
 
   @@index([status, kind])
   @@index([ownerUserId])
   @@map("games")
+}
+
+/// 게임 댓글
+model GameComment {
+  id        BigInt   @id @default(autoincrement())
+  userId    String
+  gameSlug  String   @db.VarChar(60)
+  nickname  String   @db.VarChar(100)
+  content   String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  game      Game     @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
+
+  @@index([gameSlug, createdAt])
+  @@map("game_comments")
 }
 
 /// 게임 별점 (유저당 1개, upsert)
