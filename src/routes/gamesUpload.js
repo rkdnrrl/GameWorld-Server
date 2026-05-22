@@ -458,19 +458,30 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
       return res.status(400).json({ error: { message: '보류 중인 업데이트가 없습니다.' } });
     }
 
-    // 1) production 비우기 (orphan 방지)
-    try { await r2.deletePrefix(g.storagePath); } catch (e) { console.error('r2 prod clear:', e.message); }
-    // 2) staging → production 복사
-    try {
-      await r2.copyPrefix(g.pendingStoragePath, g.storagePath);
-    } catch (e) {
-      console.error('r2 copy staging→prod:', e);
-      return res.status(500).json({ error: { message: 'staging → production 복사 실패' } });
+    // 1) staging 파일 목록 확인 — 비어 있으면 에러
+    const stagingKeys = await r2.listObjects(g.pendingStoragePath);
+    if (stagingKeys.length === 0) {
+      return res.status(400).json({ error: { message: '스테이징에 파일이 없습니다. 다시 업로드해주세요.' } });
     }
-    // 3) staging 비우기
-    try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
 
-    // 4) DB 반영
+    // 2) staging → production 복사 (기존 production 파일 덮어쓰기)
+    //    production 을 먼저 지우지 않으므로, 복사 실패 시 기존 파일 유지
+    const stagingRelPaths = new Set(stagingKeys.map((k) => k.slice(g.pendingStoragePath.length)));
+    for (const key of stagingKeys) {
+      const rel     = key.slice(g.pendingStoragePath.length);
+      const dstKey  = g.storagePath + rel;
+      const data    = await r2.getObject(key);
+      await r2.putObject(dstKey, data);
+    }
+
+    // 3) production 에서 새 버전에 없는 파일(orphan) 삭제
+    const prodKeys   = await r2.listObjects(g.storagePath);
+    const orphanKeys = prodKeys.filter((k) => !stagingRelPaths.has(k.slice(g.storagePath.length)));
+    if (orphanKeys.length > 0) {
+      await r2.deleteKeys(orphanKeys);
+    }
+
+    // 4) DB 반영 (복사 완료 후에만)
     const updated = await prisma.game.update({
       where: { slug },
       data: {
@@ -482,6 +493,10 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
         updatedAt: new Date(),
       },
     });
+
+    // 5) staging 정리 (cleanup — 실패해도 무방)
+    try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
+
     logActivity(req.user, 'game_update_approve', { slug: updated.slug, title: updated.title, version: updated.version });
     res.json({ ok: true, game: updated, message: '업데이트가 라이브에 반영됐습니다.' });
   } catch (err) { next(err); }
