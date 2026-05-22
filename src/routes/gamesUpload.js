@@ -249,6 +249,8 @@ router.post('/:slug/files', requireAuth, uploadUnlimited.single('gamezip'), asyn
       },
     });
 
+    logActivity(req.user, 'game_update', { slug: updated.slug, title: g.title, pendingVersion: updated.pendingVersion });
+
     res.status(202).json({
       ok: true,
       pending: true,
