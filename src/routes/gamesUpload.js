@@ -56,10 +56,10 @@ const uploadUnlimited = multer({
   limits: { files: 1 },
 });
 
-// 미디어 전용 (썸네일 + 영상)
+// 미디어 전용 (썸네일 + 영상 + 스크린샷)
 const uploadMediaOnly = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_VIDEO_BYTES, files: 2 },
+  limits: { fileSize: MAX_VIDEO_BYTES, files: 7 },
 });
 
 /** R2에 미디어 업로드 후 URL 반환. files = req.files 객체 */
