@@ -657,4 +657,28 @@ operatorRouter.get('/all', requireAuth, requireOperator, async (req, res, next) 
   } catch (err) { next(err); }
 });
 
+/**
+ * POST /api/operator/games/:slug/feature — 피처드 게임 설정 (나머지는 해제)
+ */
+operatorRouter.post('/:slug/feature', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    // 모두 해제 후 이 게임만 설정
+    await prisma.game.updateMany({ data: { isFeatured: false } });
+    const updated = await prisma.game.update({ where: { slug }, data: { isFeatured: true } });
+    res.json({ ok: true, slug: updated.slug, isFeatured: updated.isFeatured });
+  } catch (err) { next(err); }
+});
+
+/**
+ * DELETE /api/operator/games/:slug/feature — 피처드 해제
+ */
+operatorRouter.delete('/:slug/feature', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    await prisma.game.update({ where: { slug }, data: { isFeatured: false } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = { router, operatorRouter };
