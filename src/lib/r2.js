@@ -92,4 +92,26 @@ async function copyPrefix(srcPrefix, dstPrefix) {
   } while (token);
 }
 
-module.exports = { putObject, deletePrefix, copyPrefix, contentType, BUCKET };
+/** prefix 하위 오브젝트 키 목록 반환 */
+async function listObjects(prefix) {
+  const keys = [];
+  let token;
+  do {
+    const list = await client().send(new ListObjectsV2Command({
+      Bucket: BUCKET, Prefix: prefix, ContinuationToken: token,
+    }));
+    for (const obj of (list.Contents || [])) keys.push(obj.Key);
+    token = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (token);
+  return keys;
+}
+
+/** 단일 오브젝트를 Buffer로 다운로드 */
+async function getObject(key) {
+  const res = await client().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  const chunks = [];
+  for await (const chunk of res.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
+
+module.exports = { putObject, deletePrefix, copyPrefix, listObjects, getObject, contentType, BUCKET };
