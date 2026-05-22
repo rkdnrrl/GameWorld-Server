@@ -232,6 +232,7 @@ router.get('/:slug', async (req, res, next) => {
           category: g.category,
           tags: Array.isArray(g.tags) ? g.tags : [],
           thumbnailUrl: g.thumbnailUrl,
+          demoVideoUrl: g.demoVideoUrl ?? null,
           screenshots: Array.isArray(g.screenshots) ? g.screenshots : [],
           playCount: g.playCount,
           likeCount: g.likeCount,
