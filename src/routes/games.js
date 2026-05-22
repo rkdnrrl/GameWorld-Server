@@ -220,8 +220,18 @@ router.get('/:slug', async (req, res, next) => {
     }
 
     // DB 우선 조회
-    const g = await prisma.game.findUnique({ where: { slug } });
+    const g = await prisma.game.findUnique({
+      where: { slug },
+      include: { owner: { select: { nickname: true } } },
+    });
     if (g && g.status === 'published') {
+      // 평점 집계
+      const ratingAgg = await prisma.gameRating.aggregate({
+        where: { gameSlug: slug },
+        _avg:   { rating: true },
+        _count: { rating: true },
+      });
+
       return res.json({
         game: {
           id: g.slug,
@@ -240,6 +250,9 @@ router.get('/:slug', async (req, res, next) => {
           version: g.version,
           url: (g.externalUrl && !/13\.125\.187\.132/.test(g.externalUrl) ? g.externalUrl : null) || `https://play.airliveplay.com/${g.slug}/`,
           publishedAt: g.publishedAt,
+          ownerNickname: g.owner?.nickname ?? null,
+          ratingAvg:   Math.round((ratingAgg._avg.rating ?? 0) * 10) / 10,
+          ratingCount: ratingAgg._count.rating,
         },
       });
     }
