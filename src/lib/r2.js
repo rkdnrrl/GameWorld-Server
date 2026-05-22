@@ -55,6 +55,19 @@ async function putObject(key, body, opts = {}) {
   }));
 }
 
+/** 특정 키 목록을 한 번에 삭제 */
+async function deleteKeys(keys) {
+  if (!keys || keys.length === 0) return;
+  // DeleteObjects 는 최대 1000개 — 청크 분할
+  for (let i = 0; i < keys.length; i += 1000) {
+    const chunk = keys.slice(i, i + 1000);
+    await client().send(new DeleteObjectsCommand({
+      Bucket: BUCKET,
+      Delete: { Objects: chunk.map((k) => ({ Key: k })) },
+    }));
+  }
+}
+
 async function deletePrefix(prefix) {
   // R2 에서 prefix 하위 객체들 전부 삭제 (게임 파일 교체/제거 시)
   let token = undefined;
