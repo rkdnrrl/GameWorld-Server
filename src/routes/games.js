@@ -147,6 +147,66 @@ router.post('/:slug/rate', requireAuth, async (req, res, next) => {
 });
 
 /**
+ * GET /api/games/:slug/comments
+ */
+router.get('/:slug/comments', async (req, res, next) => {
+  const slug = String(req.params.slug || '').trim().toLowerCase();
+  try {
+    const rows = await prisma.gameComment.findMany({
+      where:   { gameSlug: slug },
+      orderBy: { createdAt: 'desc' },
+      take:    100,
+      select:  { id: true, userId: true, nickname: true, content: true, createdAt: true },
+    });
+    res.json({ comments: rows });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/games/:slug/comments  (auth required)
+ *   body: { content }
+ */
+router.post('/:slug/comments', requireAuth, async (req, res, next) => {
+  const slug    = String(req.params.slug || '').trim().toLowerCase();
+  const content = String(req.body.content || '').trim();
+  const userId  = req.user.id;
+
+  if (!content || content.length > 500) {
+    return res.status(400).json({ error: '댓글은 1~500자 이내여야 합니다.' });
+  }
+
+  try {
+    // 닉네임 조회
+    const user     = await prisma.user.findUnique({ where: { id: userId }, select: { nickname: true } });
+    const nickname = user?.nickname ?? '익명';
+
+    const comment = await prisma.gameComment.create({
+      data:   { userId, gameSlug: slug, nickname, content },
+      select: { id: true, userId: true, nickname: true, content: true, createdAt: true },
+    });
+    res.status(201).json({ comment });
+  } catch (err) { next(err); }
+});
+
+/**
+ * DELETE /api/games/:slug/comments/:id  (owner 또는 operator)
+ */
+router.delete('/:slug/comments/:id', requireAuth, async (req, res, next) => {
+  const id     = BigInt(req.params.id || '0');
+  const userId = req.user.id;
+
+  try {
+    const row = await prisma.gameComment.findUnique({ where: { id } });
+    if (!row) return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
+    if (row.userId !== userId && !req.user.isOperator) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
+    await prisma.gameComment.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/**
  * GET /api/games/:slug
  *   - 단일 게임 상세 (community 게임 페이지에서 사용)
  *   - 운영자는 status 무관하게 조회 가능 (TODO)
