@@ -816,6 +816,82 @@ operatorRouter.post('/:slug/feature', requireAuth, requireOperator, async (req, 
 });
 
 /**
+ * GET /api/operator/games/pending-media — 미디어 단독 검수 대기 목록
+ * (zip 없이 썸네일/영상만 수정 신청한 것)
+ */
+operatorRouter.get('/pending-media', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const games = await prisma.game.findMany({
+      where: { pendingMediaAt: { not: null }, pendingStoragePath: null },
+      orderBy: { pendingMediaAt: 'asc' },
+    });
+    res.json({ games });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/approve-media — staging 미디어 → live 반영
+ */
+operatorRouter.post('/:slug/approve-media', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (!g.pendingMediaAt) {
+      return res.status(400).json({ error: { message: '대기 중인 미디어 업데이트가 없습니다.' } });
+    }
+    const liveMedia = await applyPendingMedia(g);
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        ...liveMedia,
+        pendingThumbnailUrl: null,
+        pendingDemoVideoUrl: null,
+        pendingScreenshots: null,
+        pendingMediaAt: null,
+        pendingMediaRejectReason: null,
+      },
+    });
+    logActivity(req.user, 'game_media_approve', { slug: updated.slug, title: updated.title });
+    res.json({ ok: true, game: updated });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/reject-media — staging 미디어 폐기
+ */
+const rejectMediaSchema = z.object({ reason: z.string().min(1).max(500) });
+operatorRouter.post('/:slug/reject-media', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const { reason } = rejectMediaSchema.parse(req.body);
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (!g.pendingMediaAt) {
+      return res.status(400).json({ error: { message: '대기 중인 미디어 업데이트가 없습니다.' } });
+    }
+    await deletePendingMediaFiles(g);
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        pendingThumbnailUrl: null,
+        pendingDemoVideoUrl: null,
+        pendingScreenshots: null,
+        pendingMediaAt: null,
+        pendingMediaRejectReason: reason,
+      },
+    });
+    logActivity(req.user, 'game_media_reject', { slug: updated.slug, title: updated.title, reason });
+    res.json({ ok: true, game: updated });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ error: { message: '거절 사유 필요' } });
+    }
+    next(err);
+  }
+});
+
+/**
  * DELETE /api/operator/games/:slug/feature — 피처드 해제
  */
 operatorRouter.delete('/:slug/feature', requireAuth, requireOperator, async (req, res, next) => {
