@@ -81,8 +81,10 @@ router.get('/', async (req, res, next) => {
           maxPlayers: g.maxPlayers ?? null,
           players: null,
           rooms: null,
-          playCount: g.playCount,
-          likeCount: g.likeCount,
+          playCount:   g.playCount,
+          likeCount:   g.likeCount,
+          ratingAvg:   ratingMap.get(g.slug)?.avg   ?? null,
+          ratingCount: ratingMap.get(g.slug)?.count ?? 0,
           statusUrl: g.statusUrl || undefined,
         };
       });
