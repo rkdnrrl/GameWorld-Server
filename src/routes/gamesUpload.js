@@ -464,11 +464,14 @@ router.patch('/:slug', requireAuth, async (req, res, next) => {
 });
 
 /**
- * POST /api/games/:slug/media — 썸네일/데모영상 단독 업데이트 (zip 불필요).
+ * POST /api/games/:slug/media — 썸네일/데모영상/스크린샷 단독 업데이트 (zip 불필요).
+ * 운영자: 즉시 live 반영.
+ * 일반 유저: staging 저장 → 운영자 검수 후 반영.
  */
 router.post('/:slug/media', requireAuth, uploadMediaOnly.fields([
-  { name: 'thumbnail', maxCount: 1 },
-  { name: 'demoVideo', maxCount: 1 },
+  { name: 'thumbnail',   maxCount: 1 },
+  { name: 'demoVideo',   maxCount: 1 },
+  { name: 'screenshots', maxCount: 5 },
 ]), async (req, res, next) => {
   try {
     const slug = String(req.params.slug || '').toLowerCase();
@@ -477,12 +480,48 @@ router.post('/:slug/media', requireAuth, uploadMediaOnly.fields([
     if (g.ownerUserId !== req.user.id && !req.user.isOperator) {
       return res.status(403).json({ error: { message: '권한이 없습니다.' } });
     }
-    const media = await saveMedia(slug, req.files);
+
+    // 운영자는 바로 live 반영
+    if (req.user.isOperator) {
+      const media = await saveMedia(slug, req.files);
+      if (Object.keys(media).length === 0) {
+        return res.status(400).json({ error: { message: '파일을 첨부해주세요.' } });
+      }
+      const updated = await prisma.game.update({ where: { slug }, data: media });
+      return res.json({ ok: true, instant: true, game: { thumbnailUrl: updated.thumbnailUrl, demoVideoUrl: updated.demoVideoUrl } });
+    }
+
+    // 일반 유저: staging → 검수 대기
+    const media = await saveMediaStaging(slug, req.files);
     if (Object.keys(media).length === 0) {
       return res.status(400).json({ error: { message: '썸네일(JPG/PNG/WebP 5MB↓) 또는 영상(MP4/WebM 200MB↓)을 첨부해주세요.' } });
     }
-    const updated = await prisma.game.update({ where: { slug }, data: media });
-    res.json({ ok: true, game: { thumbnailUrl: updated.thumbnailUrl, demoVideoUrl: updated.demoVideoUrl } });
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: { ...media, pendingMediaAt: new Date(), pendingMediaRejectReason: null },
+    });
+    res.json({ ok: true, pending: true, game: { pendingThumbnailUrl: updated.pendingThumbnailUrl } });
+  } catch (err) { next(err); }
+});
+
+/**
+ * DELETE /api/games/:slug/pending-media — 대기 중인 미디어 취소 (owner/operator).
+ */
+router.delete('/:slug/pending-media', requireAuth, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    const isOwner = g.ownerUserId && g.ownerUserId === req.user.id;
+    if (!isOwner && !req.user.isOperator) {
+      return res.status(403).json({ error: { message: '권한이 없습니다.' } });
+    }
+    await deletePendingMediaFiles(g);
+    await prisma.game.update({
+      where: { slug },
+      data: { pendingThumbnailUrl: null, pendingDemoVideoUrl: null, pendingScreenshots: null, pendingMediaAt: null, pendingMediaRejectReason: null },
+    });
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
@@ -653,7 +692,10 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
       await r2.deleteKeys(orphanKeys);
     }
 
-    // 4) DB 반영 (복사 완료 후에만)
+    // 4) 함께 대기 중인 미디어가 있으면 live로 이동
+    const liveMedia = await applyPendingMedia(g).catch(() => ({}));
+
+    // 5) DB 반영 (복사 완료 후에만)
     const updated = await prisma.game.update({
       where: { slug },
       data: {
@@ -662,6 +704,12 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
         pendingVersion: null,
         pendingUploadedAt: null,
         pendingRejectReason: null,
+        pendingThumbnailUrl: null,
+        pendingDemoVideoUrl: null,
+        pendingScreenshots: null,
+        pendingMediaAt: null,
+        pendingMediaRejectReason: null,
+        ...liveMedia,
         updatedAt: new Date(),
       },
     });
