@@ -63,6 +63,7 @@ router.get('/', async (req, res, next) => {
           slug: true, title: true, description: true, emoji: true, category: true,
           kind: true, tags: true, thumbnailUrl: true, externalUrl: true,
           playCount: true, likeCount: true, statusUrl: true, maxPlayers: true, isFeatured: true,
+          owner: { select: { nickname: true } },
         },
       });
       dbGames = rows.map((g) => {
@@ -81,12 +82,13 @@ router.get('/', async (req, res, next) => {
           maxPlayers: g.maxPlayers ?? null,
           players: null,
           rooms: null,
-          playCount:   g.playCount,
-          likeCount:   g.likeCount,
-          ratingAvg:   ratingMap.get(g.slug)?.avg   ?? null,
-          ratingCount: ratingMap.get(g.slug)?.count ?? 0,
-          isFeatured:  !!g.isFeatured,
-          statusUrl: g.statusUrl || undefined,
+          playCount:    g.playCount,
+          likeCount:    g.likeCount,
+          ratingAvg:    ratingMap.get(g.slug)?.avg   ?? null,
+          ratingCount:  ratingMap.get(g.slug)?.count ?? 0,
+          isFeatured:   !!g.isFeatured,
+          statusUrl:    g.statusUrl || undefined,
+          ownerNickname: g.owner?.nickname ?? null,
         };
       });
     } catch (err) {
