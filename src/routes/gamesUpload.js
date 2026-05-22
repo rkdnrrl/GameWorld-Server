@@ -737,6 +737,7 @@ operatorRouter.post('/:slug/reject-update', requireAuth, requireOperator, async 
     }
 
     try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
+    await deletePendingMediaFiles(g);
     const updated = await prisma.game.update({
       where: { slug },
       data: {
@@ -744,6 +745,11 @@ operatorRouter.post('/:slug/reject-update', requireAuth, requireOperator, async 
         pendingVersion: null,
         pendingUploadedAt: null,
         pendingRejectReason: reason,
+        pendingThumbnailUrl: null,
+        pendingDemoVideoUrl: null,
+        pendingScreenshots: null,
+        pendingMediaAt: null,
+        pendingMediaRejectReason: null,
       },
     });
     logActivity(req.user, 'game_update_reject', { slug: updated.slug, title: updated.title, reason });
