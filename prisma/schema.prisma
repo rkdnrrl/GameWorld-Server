@@ -333,6 +333,12 @@ model Game {
   pendingUploadedAt  DateTime?
   /// 보류 업데이트 거절 사유.
   pendingRejectReason String? @db.VarChar(500)
+  /// 검수 대기 중인 미디어 — staging R2 경로에 저장됨. null 이면 보류 없음.
+  pendingThumbnailUrl      String?   @db.VarChar(400)
+  pendingDemoVideoUrl      String?   @db.VarChar(400)
+  pendingScreenshots       Json?
+  pendingMediaAt           DateTime?
+  pendingMediaRejectReason String?   @db.VarChar(500)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   publishedAt   DateTime?
