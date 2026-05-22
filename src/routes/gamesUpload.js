@@ -104,9 +104,18 @@ function parseTags(v) {
  *   fields: slug, title, description, emoji, category, tags
  *   file:   gamezip   (game.zip — index.html 포함된 게임 파일들)
  */
-router.post('/upload', requireAuth, upload.single('gamezip'), async (req, res, next) => {
+const UPLOAD_FIELDS = [
+  { name: 'gamezip',   maxCount: 1 },
+  { name: 'thumbnail', maxCount: 1 },
+  { name: 'demoVideo', maxCount: 1 },
+];
+
+router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: { message: 'gamezip 파일 필요' } });
+    const zipFile = req.files?.gamezip?.[0];
+    if (!zipFile) return res.status(400).json({ error: { message: 'gamezip 파일 필요' } });
+    // req.file 을 zipFile 로 대체 — 아래 코드 호환을 위해 주입
+    req.file = zipFile;
 
     const parsed = uploadSchema.parse(req.body);
     const slug = parsed.slug.toLowerCase();
