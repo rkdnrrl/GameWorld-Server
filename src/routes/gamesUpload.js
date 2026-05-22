@@ -77,6 +77,19 @@ async function saveMedia(slug, files) {
     await r2.putObject(key, vd.buffer, { contentType: vd.mimetype });
     result.demoVideoUrl = `${CDN_BASE}/${key}`;
   }
+  const ssFiles = files?.screenshots ?? [];
+  if (ssFiles.length > 0) {
+    const urls = [];
+    for (let i = 0; i < ssFiles.length; i++) {
+      const ss = ssFiles[i];
+      if (IMG_MIME.has(ss.mimetype) && ss.size <= MAX_THUMBNAIL_BYTES) {
+        const key = `media/screenshots/${slug}-${i}.${IMG_MIME.get(ss.mimetype)}`;
+        await r2.putObject(key, ss.buffer, { contentType: ss.mimetype });
+        urls.push(`${CDN_BASE}/${key}`);
+      }
+    }
+    if (urls.length > 0) result.screenshots = urls;
+  }
   return result;
 }
 
