@@ -111,6 +111,42 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
+ * POST /api/games/:slug/rate  (auth required)
+ *   body: { rating: 1-5 }
+ *   → upsert 후 갱신된 avg/count 반환
+ */
+router.post('/:slug/rate', requireAuth, async (req, res, next) => {
+  const slug   = String(req.params.slug || '').trim().toLowerCase();
+  const rating = Number(req.body.rating);
+  const userId = req.user.id;
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'rating must be 1–5' });
+  }
+
+  try {
+    await prisma.gameRating.upsert({
+      where:  { userId_gameSlug: { userId, gameSlug: slug } },
+      update: { rating },
+      create: { userId, gameSlug: slug, rating },
+    });
+
+    const agg = await prisma.gameRating.aggregate({
+      where: { gameSlug: slug },
+      _avg:   { rating: true },
+      _count: { rating: true },
+    });
+
+    res.json({
+      avg:   Math.round((agg._avg.rating ?? 0) * 10) / 10,
+      count: agg._count.rating,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * GET /api/games/:slug
  *   - 단일 게임 상세 (community 게임 페이지에서 사용)
  *   - 운영자는 status 무관하게 조회 가능 (TODO)
