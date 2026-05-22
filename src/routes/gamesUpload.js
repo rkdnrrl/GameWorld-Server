@@ -105,9 +105,10 @@ function parseTags(v) {
  *   file:   gamezip   (game.zip — index.html 포함된 게임 파일들)
  */
 const UPLOAD_FIELDS = [
-  { name: 'gamezip',   maxCount: 1 },
-  { name: 'thumbnail', maxCount: 1 },
-  { name: 'demoVideo', maxCount: 1 },
+  { name: 'gamezip',     maxCount: 1 },
+  { name: 'thumbnail',   maxCount: 1 },
+  { name: 'demoVideo',   maxCount: 1 },
+  { name: 'screenshots', maxCount: 5 },
 ];
 
 router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (req, res, next) => {
