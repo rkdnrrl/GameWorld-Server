@@ -10,6 +10,9 @@ datasource db {
 model User {
   id                  String             @id  // = commonUserId (Common API)
   nickname            String             @unique
+  bio                 String?            @db.VarChar(300)
+  profileImageUrl     String?            @db.VarChar(400)
+  websiteUrl          String?            @db.VarChar(200)
   /// 운영 콘솔 접근
   isOperator          Boolean            @default(false)
   /// 낚시 등으로 포획해 서버에 저장한 횟수 누적
