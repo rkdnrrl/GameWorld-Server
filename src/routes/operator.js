@@ -213,7 +213,12 @@ router.get('/activity-logs', requireAuth, requireOperator, async (req, res, next
     const nickname = typeof req.query.nickname === 'string' && req.query.nickname.trim()    ? req.query.nickname.trim()  : undefined;
 
     const where = {
-      ...(action   ? { action }                                      : {}),
+      // game_deploy 는 game_* 액션 전체를 묶어서 조회하는 특수 필터
+      ...(action === 'game_deploy'
+        ? { action: { startsWith: 'game_' } }
+        : action
+          ? { action }
+          : {}),
       ...(nickname ? { nickname: { contains: nickname, mode: 'insensitive' } } : {}),
     };
 
