@@ -27,21 +27,58 @@ const { logActivity } = require('../lib/activityLog');
 
 const router = Router();
 
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_UPLOAD_BYTES    = 50  * 1024 * 1024; // 50MB (zip)
+const MAX_THUMBNAIL_BYTES = 5   * 1024 * 1024; // 5MB
+const MAX_VIDEO_BYTES     = 200 * 1024 * 1024; // 200MB
 const MAX_FILES = 500;
 const ALLOWED_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/;
 const RESERVED_SLUGS = new Set(['admin', 'api', 'operator', 'develop', 'games', 'auth', 'login', 'signup', 'play']);
 
+const CDN_BASE = 'https://play.airliveplay.com';
+const IMG_MIME = new Map([['image/jpeg','jpg'],['image/png','png'],['image/webp','webp']]);
+const VID_MIME = new Map([['video/mp4','mp4'],['video/webm','webm']]);
+
+// zip 단독 (제한 50MB)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
 });
 
-// 운영자 전용 — 파일 크기 제한 없음 (size 검사는 라우트 핸들러에서 수행 안 함)
+// zip + 미디어 (파일당 200MB, 최대 3개)
+const uploadMulti = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_VIDEO_BYTES, files: 3 },
+});
+
+// 운영자 전용 — 파일 크기 제한 없음
 const uploadUnlimited = multer({
   storage: multer.memoryStorage(),
   limits: { files: 1 },
 });
+
+// 미디어 전용 (썸네일 + 영상)
+const uploadMediaOnly = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_VIDEO_BYTES, files: 2 },
+});
+
+/** R2에 미디어 업로드 후 URL 반환. files = req.files 객체 */
+async function saveMedia(slug, files) {
+  const result = {};
+  const th = files?.thumbnail?.[0];
+  const vd = files?.demoVideo?.[0];
+  if (th && IMG_MIME.has(th.mimetype) && th.size <= MAX_THUMBNAIL_BYTES) {
+    const key = `media/thumbnails/${slug}.${IMG_MIME.get(th.mimetype)}`;
+    await r2.putObject(key, th.buffer, { contentType: th.mimetype });
+    result.thumbnailUrl = `${CDN_BASE}/${key}`;
+  }
+  if (vd && VID_MIME.has(vd.mimetype) && vd.size <= MAX_VIDEO_BYTES) {
+    const key = `media/videos/${slug}.${VID_MIME.get(vd.mimetype)}`;
+    await r2.putObject(key, vd.buffer, { contentType: vd.mimetype });
+    result.demoVideoUrl = `${CDN_BASE}/${key}`;
+  }
+  return result;
+}
 
 const uploadSchema = z.object({
   slug: z.string().min(2).max(60).regex(ALLOWED_SLUG_RE, 'slug 형식 잘못됨 (소문자/숫자/하이픈)'),
