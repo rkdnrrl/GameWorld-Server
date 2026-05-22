@@ -187,7 +187,13 @@ router.get('/developer/:nickname', async (req, res, next) => {
       publishedAt: g.publishedAt,
     }));
 
-    res.json({ nickname: user.nickname, games });
+    res.json({
+      nickname: user.nickname,
+      bio: user.bio ?? null,
+      profileImageUrl: user.profileImageUrl ?? null,
+      websiteUrl: user.websiteUrl ?? null,
+      games,
+    });
   } catch (err) { next(err); }
 });
 
