@@ -714,7 +714,7 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
       },
     });
 
-    // 5) staging 정리 (cleanup — 실패해도 무방)
+    // 6) staging 정리 (cleanup — 실패해도 무방)
     try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }
 
     logActivity(req.user, 'game_update_approve', { slug: updated.slug, title: updated.title, version: updated.version });
