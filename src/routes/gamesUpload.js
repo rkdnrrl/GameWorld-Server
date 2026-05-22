@@ -23,6 +23,7 @@ const { prisma } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const r2 = require('../lib/r2');
+const { logActivity } = require('../lib/activityLog');
 
 const router = Router();
 
