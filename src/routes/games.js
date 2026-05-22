@@ -148,6 +148,21 @@ router.post('/:slug/rate', requireAuth, async (req, res, next) => {
 });
 
 /**
+ * POST /api/games/:slug/like   — 좋아요 +1 (auth)
+ * DELETE /api/games/:slug/like — 좋아요 취소 (auth)
+ */
+router.post('/:slug/like', requireAuth, async (req, res) => {
+  const slug = String(req.params.slug || '').trim().toLowerCase();
+  try { await prisma.game.update({ where: { slug }, data: { likeCount: { increment: 1 } } }); } catch {}
+  res.json({ ok: true });
+});
+router.delete('/:slug/like', requireAuth, async (req, res) => {
+  const slug = String(req.params.slug || '').trim().toLowerCase();
+  try { await prisma.game.update({ where: { slug }, data: { likeCount: { decrement: 1 } } }); } catch {}
+  res.json({ ok: true });
+});
+
+/**
  * POST /api/games/:slug/play — 플레이 카운트 +1 (인증 불필요)
  */
 router.post('/:slug/play', async (req, res) => {
