@@ -71,25 +71,22 @@ async function deletePrefix(prefix) {
   } while (token);
 }
 
-/** prefix 하위 객체들을 새 prefix 로 복사 (S3 server-side copy — 데이터 다운로드 없이 R2 내부 복사). */
+/**
+ * prefix 하위 객체들을 새 prefix 로 복사.
+ * CopyObjectCommand(서버사이드 복사)는 R2에서 묵시적 실패 가능성이 있어
+ * getObject → putObject 방식으로 확실하게 처리한다.
+ */
 async function copyPrefix(srcPrefix, dstPrefix) {
-  let token;
-  do {
-    const list = await client().send(new ListObjectsV2Command({
-      Bucket: BUCKET, Prefix: srcPrefix, ContinuationToken: token,
-    }));
-    for (const obj of list.Contents || []) {
-      const rel = obj.Key.slice(srcPrefix.length);
-      const dstKey = dstPrefix + rel;
-      await client().send(new CopyObjectCommand({
-        Bucket: BUCKET,
-        CopySource: `/${BUCKET}/${obj.Key}`,
-        Key: dstKey,
-        ContentType: contentType(dstKey),
-      }));
-    }
-    token = list.IsTruncated ? list.NextContinuationToken : undefined;
-  } while (token);
+  const keys = await listObjects(srcPrefix);
+  if (keys.length === 0) {
+    throw new Error(`copyPrefix: ${srcPrefix} 에서 파일을 찾지 못했습니다.`);
+  }
+  for (const key of keys) {
+    const data = await getObject(key);
+    const rel    = key.slice(srcPrefix.length);
+    const dstKey = dstPrefix + rel;
+    await putObject(dstKey, data);
+  }
 }
 
 /** prefix 하위 오브젝트 키 목록 반환 */
