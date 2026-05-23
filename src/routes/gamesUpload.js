@@ -340,9 +340,6 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
     if (!isOwner && !isOperator) {
       return res.status(403).json({ error: { message: '권한이 없습니다.' } });
     }
-    if (g.kind === 'official' && !isOperator) {
-      return res.status(403).json({ error: { message: '공식 게임은 운영자만 업데이트할 수 있습니다.' } });
-    }
     // 일반 유저는 50MB 제한, 운영자는 무제한
     if (!isOperator && req.file.size > MAX_UPLOAD_BYTES) {
       return res.status(413).json({ error: { message: `파일이 너무 큽니다 (최대 ${MAX_UPLOAD_BYTES / 1024 / 1024}MB).` } });
