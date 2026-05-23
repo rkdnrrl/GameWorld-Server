@@ -40,8 +40,8 @@ async function requireOfficialGame(req, res, next) {
       return res.status(403).json({ error: { message: '공식(official) 게임에서만 아이템을 생성·수정할 수 있습니다.' } });
     }
     const isOfficial = game.kind === 'official' && (game.status === 'published' || game.status === 'hidden');
-    const isOwnerTest = game.ownerUserId === req.user.id; // 소유자는 테스트 목적으로 허용
-    if (!isOfficial && !isOwnerTest) {
+    const isPendingTest = game.status === 'pending' || game.status === 'review'; // 검수 대기 중 → 누구든 테스트 허용
+    if (!isOfficial && !isPendingTest) {
       return res.status(403).json({ error: { message: '공식(official) 게임에서만 아이템을 생성·수정할 수 있습니다.' } });
     }
     req.gameSlug = slug;
