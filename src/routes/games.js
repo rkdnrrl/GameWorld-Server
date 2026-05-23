@@ -88,6 +88,8 @@ router.get('/', async (req, res, next) => {
           ratingCount:  ratingMap.get(g.slug)?.count ?? 0,
           isFeatured:   !!g.isFeatured,
           featuredText: g.featuredText || null,
+          featuredTextX: g.featuredTextX ?? 75,
+          featuredTextY: g.featuredTextY ?? 50,
           statusUrl:    g.statusUrl || undefined,
           ownerNickname: g.owner?.nickname ?? null,
         };
