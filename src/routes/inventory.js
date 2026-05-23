@@ -96,11 +96,11 @@ function parseBigIntParam(raw) {
 }
 
 /**
- * POST /api/inventory
+ * POST /api/inventory  (공식 게임만)
  *   body: 단일 아이템 객체 또는 { items: [...] } 배열
- *   응답: { items: [...] }
+ *   sourceGame 은 X-Game-Slug 에서 자동 설정됨
  */
-router.post('/', requireAuth, async (req, res, next) => {
+router.post('/', requireAuth, requireOfficialGame, async (req, res, next) => {
   try {
     const body = req.body;
     const rawList = Array.isArray(body?.items)
@@ -118,7 +118,7 @@ router.post('/', requireAuth, async (req, res, next) => {
     const validated = rawList.map((it) => itemCreateSchema.parse(it));
     const data = validated.map((it) => ({
       userId:     req.user.id,
-      sourceGame: it.sourceGame,
+      sourceGame: req.gameSlug,   // X-Game-Slug 에서 자동 주입 (클라이언트 위조 불가)
       kind:       it.kind,
       category:   it.category,
       name:       it.name,
