@@ -1028,12 +1028,14 @@ router.patch('/:slug/pending-meta', requireAuth, async (req, res, next) => {
     const updated = await prisma.game.update({
       where: { slug },
       data: {
-        pendingTitle:       data.title       ?? null,
-        pendingDescription: data.description ?? null,
-        pendingEmoji:       data.emoji       ?? null,
-        pendingCategory:    data.category    ?? null,
-        pendingTags:        data.tags        ?? null,
-        pendingMetaAt:      new Date(),
+        pendingTitle:            data.title            ?? null,
+        pendingDescription:      data.description      ?? null,
+        pendingEmoji:            data.emoji            ?? null,
+        pendingCategory:         data.category         ?? null,
+        pendingTags:             data.tags             ?? null,
+        pendingTitlesI18n:       data.titlesI18n       ?? null,
+        pendingDescriptionsI18n: data.descriptionsI18n ?? null,
+        pendingMetaAt:           new Date(),
         pendingMetaRejectReason: null,
       },
     });
