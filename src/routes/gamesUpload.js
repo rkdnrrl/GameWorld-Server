@@ -1092,6 +1092,10 @@ operatorRouter.post('/:slug/approve-meta', requireAuth, requireOperator, async (
     const g = await prisma.game.findUnique({ where: { slug } });
     if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
     if (!g.pendingMetaAt) return res.status(400).json({ error: { message: '대기 중인 메타 수정이 없습니다.' } });
+
+    // 메타 수정과 함께 미디어(썸네일 등)도 대기 중이면 함께 적용
+    const liveMedia = g.pendingMediaAt ? await applyPendingMedia(g) : {};
+
     const updated = await prisma.game.update({
       where: { slug },
       data: {
@@ -1102,10 +1106,19 @@ operatorRouter.post('/:slug/approve-meta', requireAuth, requireOperator, async (
         tags:             g.pendingTags             ?? g.tags,
         titlesI18n:       g.pendingTitlesI18n       ?? g.titlesI18n,
         descriptionsI18n: g.pendingDescriptionsI18n ?? g.descriptionsI18n,
+        ...liveMedia,
         pendingTitle: null, pendingDescription: null, pendingEmoji: null,
         pendingCategory: null, pendingTags: null,
         pendingTitlesI18n: null, pendingDescriptionsI18n: null,
         pendingMetaAt: null, pendingMetaRejectReason: null,
+        // 함께 제출된 미디어도 클리어
+        ...(g.pendingMediaAt ? {
+          pendingThumbnailUrl: null,
+          pendingDemoVideoUrl: null,
+          pendingScreenshots:  null,
+          pendingMediaAt:      null,
+          pendingMediaRejectReason: null,
+        } : {}),
       },
     });
     logActivity(req.user, 'game_meta_approve', { slug: updated.slug, title: updated.title });
