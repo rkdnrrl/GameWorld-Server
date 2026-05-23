@@ -1009,8 +1009,8 @@ const metaSchema = z.object({
   emoji:            z.string().max(16).optional(),
   category:         z.string().max(30).optional(),
   tags:             z.array(z.string().max(30)).max(10).optional(),
-  titlesI18n:       z.record(z.string()).optional(),
-  descriptionsI18n: z.record(z.string()).optional(),
+  titlesI18n:       z.union([z.record(z.string()), z.string().transform((s) => { try { return JSON.parse(s); } catch { return {}; } })]).optional(),
+  descriptionsI18n: z.union([z.record(z.string()), z.string().transform((s) => { try { return JSON.parse(s); } catch { return {}; } })]).optional(),
 });
 const rejectMetaSchema = z.object({ reason: z.string().min(1).max(500) });
 
