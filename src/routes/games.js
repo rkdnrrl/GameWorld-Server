@@ -62,7 +62,9 @@ router.get('/', async (req, res, next) => {
         select: {
           slug: true, title: true, description: true, emoji: true, category: true,
           kind: true, tags: true, thumbnailUrl: true, externalUrl: true,
-          playCount: true, likeCount: true, statusUrl: true, maxPlayers: true, isFeatured: true, featuredText: true, featuredTextX: true, featuredTextY: true,
+          playCount: true, likeCount: true, statusUrl: true, maxPlayers: true,
+          isFeatured: true, featuredText: true, featuredTextX: true, featuredTextY: true, featuredTextsI18n: true,
+          titlesI18n: true, descriptionsI18n: true,
           owner: { select: { nickname: true } },
         },
       });
