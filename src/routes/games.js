@@ -92,6 +92,9 @@ router.get('/', async (req, res, next) => {
           featuredText: g.featuredText || null,
           featuredTextX: g.featuredTextX ?? 75,
           featuredTextY: g.featuredTextY ?? 50,
+          featuredTextsI18n: g.featuredTextsI18n || null,
+          titlesI18n: g.titlesI18n || null,
+          descriptionsI18n: g.descriptionsI18n || null,
           statusUrl:    g.statusUrl || undefined,
           ownerNickname: g.owner?.nickname ?? null,
         };
