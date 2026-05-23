@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { z } = require('zod');
 const { requireAuth } = require('../middleware/auth');
-const { requireOperator } = require('../middleware/operator');
+const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
 
 const router = Router();
