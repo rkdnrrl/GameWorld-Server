@@ -1123,8 +1123,9 @@ operatorRouter.post('/:slug/reject-meta', requireAuth, requireOperator, async (r
       where: { slug },
       data: {
         pendingTitle: null, pendingDescription: null, pendingEmoji: null,
-        pendingCategory: null, pendingTags: null, pendingMetaAt: null,
-        pendingMetaRejectReason: reason,
+        pendingCategory: null, pendingTags: null,
+        pendingTitlesI18n: null, pendingDescriptionsI18n: null,
+        pendingMetaAt: null, pendingMetaRejectReason: reason,
       },
     });
     logActivity(req.user, 'game_meta_reject', { slug: updated.slug, title: updated.title, reason });
