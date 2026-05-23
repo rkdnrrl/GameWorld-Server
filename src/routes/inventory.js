@@ -48,7 +48,7 @@ const MAX_BATCH = 50;
 const MAX_LIMIT = 200;
 
 const itemCreateSchema = z.object({
-  sourceGame: z.string().min(1).max(60),
+  // sourceGame 은 서버가 X-Game-Slug 에서 자동 주입 — 클라이언트 값 무시
   kind:       z.string().min(1).max(80),
   category:   z.string().min(1).max(40),
   name:       z.string().min(1).max(120),
