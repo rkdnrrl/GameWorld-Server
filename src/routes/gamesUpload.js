@@ -322,7 +322,7 @@ router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (re
 
 /**
  * POST /api/games/:slug/files — 기존 게임 재업로드 (검수 대기 큐로 진입).
- * 권한: owner 본인 OR operator. official 게임은 operator 만.
+ * 권한: owner 본인 OR operator (official 포함).
  * 동작: 라이브(production storagePath)는 그대로 두고 R2 staging prefix 에 새 zip 업로드.
  *      DB 에 pendingStoragePath/pendingVersion 기록. 운영자가 별도 라우트로 승인·거절.
  */
