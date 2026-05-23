@@ -19,6 +19,7 @@ router.use('/operator/categories', categories.operatorRouter);
 router.use('/games', require('./games'));
 router.use('/coins', require('./coins'));
 router.use('/alp-coins', require('./alpCoins'));
+router.use('/seafood-market', require('./seafoodMarket'));
 router.use('/inventory', require('./inventory'));
 router.use('/game-state', require('./gameState'));
 router.use('/catches', require('./catches'));
