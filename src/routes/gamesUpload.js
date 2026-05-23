@@ -72,13 +72,14 @@ async function saveMediaStaging(slug, files) {
   const result = {};
   const th = files?.thumbnail?.[0];
   const vd = files?.demoVideo?.[0];
+  const ts = Date.now(); // 타임스탬프로 캐시 무효화
   if (th && IMG_MIME.has(th.mimetype) && th.size <= MAX_THUMBNAIL_BYTES) {
-    const key = `media/staging/thumbnails/${slug}.${IMG_MIME.get(th.mimetype)}`;
+    const key = `media/staging/thumbnails/${slug}-${ts}.${IMG_MIME.get(th.mimetype)}`;
     await r2.putObject(key, th.buffer, { contentType: th.mimetype });
     result.pendingThumbnailUrl = `${CDN_BASE}/${key}`;
   }
   if (vd && VID_MIME.has(vd.mimetype) && vd.size <= MAX_VIDEO_BYTES) {
-    const key = `media/staging/videos/${slug}.${VID_MIME.get(vd.mimetype)}`;
+    const key = `media/staging/videos/${slug}-${ts}.${VID_MIME.get(vd.mimetype)}`;
     await r2.putObject(key, vd.buffer, { contentType: vd.mimetype });
     result.pendingDemoVideoUrl = `${CDN_BASE}/${key}`;
   }
@@ -145,13 +146,14 @@ async function saveMedia(slug, files) {
   const result = {};
   const th = files?.thumbnail?.[0];
   const vd = files?.demoVideo?.[0];
+  const ts = Date.now(); // 타임스탬프로 캐시 무효화
   if (th && IMG_MIME.has(th.mimetype) && th.size <= MAX_THUMBNAIL_BYTES) {
-    const key = `media/thumbnails/${slug}.${IMG_MIME.get(th.mimetype)}`;
+    const key = `media/thumbnails/${slug}-${ts}.${IMG_MIME.get(th.mimetype)}`;
     await r2.putObject(key, th.buffer, { contentType: th.mimetype });
     result.thumbnailUrl = `${CDN_BASE}/${key}`;
   }
   if (vd && VID_MIME.has(vd.mimetype) && vd.size <= MAX_VIDEO_BYTES) {
-    const key = `media/videos/${slug}.${VID_MIME.get(vd.mimetype)}`;
+    const key = `media/videos/${slug}-${ts}.${VID_MIME.get(vd.mimetype)}`;
     await r2.putObject(key, vd.buffer, { contentType: vd.mimetype });
     result.demoVideoUrl = `${CDN_BASE}/${key}`;
   }
