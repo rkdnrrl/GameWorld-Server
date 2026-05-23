@@ -171,7 +171,11 @@ async function saveMedia(slug, files) {
   return result;
 }
 
-const i18nSchema = z.record(z.string().max(30)).optional();
+// FormData는 모든 필드를 문자열로 보내므로 JSON 문자열도 허용
+const i18nSchema = z.union([
+  z.record(z.string().max(500)),
+  z.string().transform((s) => { try { return JSON.parse(s); } catch { return {}; } }),
+]).optional();
 const uploadSchema = z.object({
   slug: z.string().min(2).max(60).regex(ALLOWED_SLUG_RE, 'slug 형식 잘못됨 (소문자/숫자/하이픈)'),
   title: z.string().min(1).max(120),
