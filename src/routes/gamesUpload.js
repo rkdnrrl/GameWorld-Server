@@ -1059,7 +1059,7 @@ router.delete('/:slug/pending-meta', requireAuth, async (req, res, next) => {
     }
     const updated = await prisma.game.update({
       where: { slug },
-      data: { pendingTitle: null, pendingDescription: null, pendingEmoji: null, pendingCategory: null, pendingTags: null, pendingMetaAt: null, pendingMetaRejectReason: null },
+      data: { pendingTitle: null, pendingDescription: null, pendingEmoji: null, pendingCategory: null, pendingTags: null, pendingTitlesI18n: null, pendingDescriptionsI18n: null, pendingMetaAt: null, pendingMetaRejectReason: null },
     });
     res.json({ ok: true, game: updated });
   } catch (err) { next(err); }
