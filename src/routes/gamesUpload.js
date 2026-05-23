@@ -899,7 +899,11 @@ operatorRouter.get('/all', requireAuth, requireOperator, async (req, res, next) 
 operatorRouter.post('/:slug/feature', requireAuth, requireOperator, async (req, res, next) => {
   try {
     const slug = String(req.params.slug || '').toLowerCase();
-    const updated = await prisma.game.update({ where: { slug }, data: { isFeatured: true } });
+    const featuredText = typeof req.body.text === 'string' ? req.body.text.trim().slice(0, 300) : undefined;
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: { isFeatured: true, ...(featuredText !== undefined && { featuredText }) },
+    });
     res.json({ ok: true, slug: updated.slug, isFeatured: updated.isFeatured });
   } catch (err) { next(err); }
 });
