@@ -176,7 +176,7 @@ const uploadSchema = z.object({
   title: z.string().min(1).max(120),
   description: z.string().max(2000).optional().default(''),
   emoji: z.string().max(16).optional().default('🎮'),
-  category: z.enum(['earn', 'multiplay', 'decorate', 'other']).optional().default('other'),
+  category: z.string().max(30).optional().default('other'),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
