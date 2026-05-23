@@ -230,6 +230,105 @@ router.post('/listings/:id/buy', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── 진열대 임대 현황 ─────────────────────────────────────────────────────────
+router.get('/rentals', async (req, res, next) => {
+  try {
+    const channel = parseInt(req.query.channel) || 1;
+    const rows = await prisma.inventoryItem.findMany({
+      where:   { category:'stall_rental', qty:{ gt:0 } },
+      include: { user:{ select:{ nickname:true } } },
+    });
+    const rentals = rows
+      .filter(r => r.stats?.channel === channel)
+      .map(r => ({
+        stallId:  r.stats?.stallId,
+        userId:   r.userId,
+        nickname: r.user.nickname,
+        stallName:r.stats?.stallName || r.user.nickname,
+        itemId:   String(r.id),
+      }));
+    res.json({ rentals });
+  } catch (err) { next(err); }
+});
+
+// ─── 진열대 임대 ──────────────────────────────────────────────────────────────
+router.post('/rent-stall', requireAuth, async (req, res, next) => {
+  try {
+    const schema = z.object({
+      stallId:   z.string().min(1).max(10),
+      channel:   z.number().int().min(1).max(5),
+      stallName: z.string().min(1).max(30),
+      rentFee:   z.number().int().positive(),
+    });
+    const d = schema.parse(req.body);
+
+    // 이미 임대 중인지 확인
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { category:'stall_rental', qty:{ gt:0 },
+               stats:{ path:['stallId'], equals:d.stallId } },
+    });
+    if (existing) return res.status(409).json({ error:{ message:'이미 임대 중인 자리입니다.' } });
+
+    // 내가 이 채널에서 이미 다른 자리를 임대 중인지 (1인 1자리)
+    const myRental = await prisma.inventoryItem.findFirst({
+      where: { userId:req.user.id, category:'stall_rental', qty:{ gt:0 } },
+    });
+    if (myRental && myRental.stats?.channel === d.channel) {
+      return res.status(409).json({ error:{ message:'이미 이 채널에 자리가 있습니다.' } });
+    }
+
+    const ok = await spendAlp(req.user.id, d.rentFee);
+    if (!ok) return res.status(400).json({ error:{ message:`ALP 코인 ${d.rentFee}개가 필요합니다.` } });
+
+    await prisma.inventoryItem.create({
+      data:{
+        userId:    req.user.id,
+        sourceGame:'seafood-market',
+        kind:      'stall_rental',
+        category:  'stall_rental',
+        name:      `자리 ${d.stallId}`,
+        icon:      '🏪',
+        qty:       1,
+        stats:     { stallId:d.stallId, channel:d.channel, stallName:d.stallName, rentedAt:new Date().toISOString() },
+      },
+    });
+
+    const u = await prisma.user.findUnique({ where:{ id:req.user.id }, select:{ alpCoins:true } });
+    res.json({ ok:true, alpCoins: Number(u?.alpCoins ?? 0) });
+  } catch (err) {
+    if (err.name === 'ZodError') return res.status(400).json({ error:{ message:err.issues?.[0]?.message } });
+    next(err);
+  }
+});
+
+// ─── 자리 반납 ────────────────────────────────────────────────────────────────
+router.post('/leave-stall', requireAuth, async (req, res, next) => {
+  try {
+    const { channel } = z.object({ channel:z.number().int().min(1).max(5) }).parse(req.body);
+    const rental = await prisma.inventoryItem.findFirst({
+      where:{ userId:req.user.id, category:'stall_rental', qty:{ gt:0 } },
+    });
+    if (!rental || rental.stats?.channel !== channel)
+      return res.status(404).json({ error:{ message:'임대 중인 자리가 없습니다.' } });
+
+    // 해당 자리의 진열 아이템도 모두 회수
+    const listings = await prisma.inventoryItem.findMany({
+      where:{ userId:req.user.id, category:'seafood_listing', qty:{ gt:0 } },
+    });
+    const myListings = listings.filter(l => l.stats?.channel===channel && l.stats?.stallId===rental.stats?.stallId);
+    for (const l of myListings) {
+      await prisma.inventoryItem.delete({ where:{ id:l.id } });
+      await prisma.inventoryItem.create({
+        data:{ userId:req.user.id, sourceGame:'fishing', kind:l.stats?.originalKind||l.kind,
+               category:'seafood', name:l.name, icon:l.icon, qty:1,
+               stats:{ ...(l.stats?.originalStats||{}), rarity:l.stats?.rarity, restoredFrom:'market' } },
+      });
+    }
+    await prisma.inventoryItem.delete({ where:{ id:rental.id } });
+    res.json({ ok:true });
+  } catch (err) { next(err); }
+});
+
 // ─── 즉시판매 ─────────────────────────────────────────────────────────────────
 router.post('/quick-sell', requireAuth, async (req, res, next) => {
   try {
