@@ -717,6 +717,22 @@ operatorRouter.post('/:slug/unhide', requireAuth, requireOperator, async (req, r
 });
 
 /**
+ * POST /api/operator/games/:slug/set-kind — community ↔ official 전환
+ */
+operatorRouter.post('/:slug/set-kind', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const { kind } = req.body;
+    if (kind !== 'official' && kind !== 'community') {
+      return res.status(400).json({ error: { message: 'kind는 official 또는 community 만 허용됩니다.' } });
+    }
+    const updated = await prisma.game.update({ where: { slug }, data: { kind } });
+    logActivity(req.user, 'game_set_kind', { slug: updated.slug, title: updated.title, kind });
+    res.json({ ok: true, game: updated });
+  } catch (err) { next(err); }
+});
+
+/**
  * GET /api/operator/games/pending-updates — 검수 대기 중인 재업로드 목록.
  */
 operatorRouter.get('/pending-updates', requireAuth, requireOperator, async (req, res, next) => {
