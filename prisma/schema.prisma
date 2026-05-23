@@ -41,6 +41,7 @@ model User {
   uploadedGames         Game[]
   inventoryItems        InventoryItem[]
   gameStates            GameState[]
+  seafoodStalls         SeafoodMarketStall[]
 
   @@map("users")
 }
@@ -470,6 +471,46 @@ model InventoryItem {
   @@index([userId, sourceGame])
   @@index([userId, kind])
   @@map("inventory_items")
+}
+
+/// 수산시장 — 채널별 가게 (유저당 채널당 1개)
+model SeafoodMarketStall {
+  id        String   @id @default(cuid())
+  channel   Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @db.VarChar(30)
+  desc      String?  @db.VarChar(100)
+  listings  SeafoodMarketListing[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([channel, userId])
+  @@index([channel])
+  @@map("seafood_market_stalls")
+}
+
+/// 수산시장 — 개별 판매 등록 (진열대 슬롯)
+model SeafoodMarketListing {
+  id        String    @id @default(cuid())
+  stallId   String
+  stall     SeafoodMarketStall @relation(fields: [stallId], references: [id], onDelete: Cascade)
+  sellerId  String
+  slot      Int       @default(0)
+  itemKind  String    @db.VarChar(80)
+  itemIcon  String    @db.VarChar(16)
+  itemName  String    @db.VarChar(120)
+  rarity    String?   @db.VarChar(20)
+  caughtAt  DateTime?
+  stats     Json      @default("{}")
+  price     Int
+  soldAt    DateTime?
+  buyerId   String?
+  createdAt DateTime  @default(now())
+
+  @@index([stallId])
+  @@index([sellerId])
+  @@map("seafood_market_listings")
 }
 
 /// 게임별 내부 상태 저장소 — official 게임마다 자유로운 JSON 진행도/설정 보관.
