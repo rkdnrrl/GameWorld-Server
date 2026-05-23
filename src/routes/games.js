@@ -339,6 +339,8 @@ router.get('/:slug', async (req, res, next) => {
           ownerNickname: g.owner?.nickname ?? null,
           ratingAvg:   Math.round((ratingAgg._avg.rating ?? 0) * 10) / 10,
           ratingCount: ratingAgg._count.rating,
+          titlesI18n:       g.titlesI18n       ?? null,
+          descriptionsI18n: g.descriptionsI18n ?? null,
         },
       });
     }
