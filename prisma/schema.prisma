@@ -313,6 +313,8 @@ model Game {
   status        String   @default("pending") @db.VarChar(20)
   /// 'earn' | 'multiplay' | 'decorate' | 'other'
   category      String   @default("other") @db.VarChar(20)
+  /// game_genres.slug — 운영자가 관리하는 장르 (nullable)
+  genre         String?  @db.VarChar(50)
   /// R2 경로 prefix — 보통 games/{slug}/
   storagePath   String   @db.VarChar(200)
   /// 공식 게임은 외부 URL 가능 (마이그레이션 호환); 커뮤니티는 항상 null
@@ -372,7 +374,7 @@ model Game {
   @@map("games")
 }
 
-/// 게임 카테고리 (운영자가 관리)
+/// 게임 유형 (운영자가 관리 — earn/multiplay/decorate/other 등)
 model GameCategory {
   slug      String   @id @db.VarChar(30)
   labelKo   String   @db.VarChar(50)
@@ -381,6 +383,17 @@ model GameCategory {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   @@map("game_categories")
+}
+
+/// 게임 카테고리 (운영자가 관리 — RPG/액션/퍼즐 등 장르)
+model GameGenre {
+  slug      String   @id @db.VarChar(50)
+  labelKo   String   @db.VarChar(50)
+  labelEn   String   @db.VarChar(50)
+  emoji     String   @default("🎮") @db.VarChar(10)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  @@map("game_genres")
 }
 
 /// 게임 댓글
