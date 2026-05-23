@@ -998,11 +998,13 @@ operatorRouter.post('/:slug/reject-media', requireAuth, requireOperator, async (
    메타데이터 수정 검수 흐름
    ═══════════════════════════════════════════════════════════ */
 const metaSchema = z.object({
-  title:       z.string().min(1).max(120).optional(),
-  description: z.string().max(2000).optional(),
-  emoji:       z.string().max(16).optional(),
-  category:    z.string().max(30).optional(),
-  tags:        z.array(z.string().max(30)).max(10).optional(),
+  title:            z.string().min(1).max(120).optional(),
+  description:      z.string().max(2000).optional(),
+  emoji:            z.string().max(16).optional(),
+  category:         z.string().max(30).optional(),
+  tags:             z.array(z.string().max(30)).max(10).optional(),
+  titlesI18n:       z.record(z.string()).optional(),
+  descriptionsI18n: z.record(z.string()).optional(),
 });
 const rejectMetaSchema = z.object({ reason: z.string().min(1).max(500) });
 
