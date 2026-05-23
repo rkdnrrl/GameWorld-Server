@@ -317,6 +317,8 @@ model Game {
   demoVideoUrl  String?  @db.VarChar(400)
   isFeatured    Boolean  @default(false)
   featuredText  String?  @db.VarChar(300)
+  featuredTextX Float?   @default(75)
+  featuredTextY Float?   @default(50)
   screenshots   Json?
   tags          Json?
   /// 멀티플레이 상태 조회용 (있으면 표시)
