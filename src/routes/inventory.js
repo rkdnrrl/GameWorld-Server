@@ -20,6 +20,30 @@ const { prisma } = require('../db');
 
 const router = Router();
 
+/**
+ * 공식 게임 검증 미들웨어.
+ * - X-Game-Slug 헤더 필수
+ * - 해당 slug의 게임이 kind=official, status=published 이어야 통과
+ * - req.gameSlug 에 slug 주입
+ */
+async function requireOfficialGame(req, res, next) {
+  const slug = String(req.headers['x-game-slug'] || '').trim().toLowerCase();
+  if (!slug) {
+    return res.status(400).json({ error: { message: '아이템 생성/수정은 공식 게임에서만 가능합니다. (X-Game-Slug 헤더 필요)' } });
+  }
+  try {
+    const game = await prisma.game.findUnique({
+      where: { slug },
+      select: { kind: true, status: true },
+    });
+    if (!game || game.kind !== 'official' || game.status !== 'published') {
+      return res.status(403).json({ error: { message: '공식(official) 게임에서만 아이템을 생성·수정할 수 있습니다.' } });
+    }
+    req.gameSlug = slug;
+    next();
+  } catch (err) { next(err); }
+}
+
 const MAX_BATCH = 50;
 const MAX_LIMIT = 200;
 
