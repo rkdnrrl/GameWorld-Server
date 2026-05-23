@@ -34,13 +34,13 @@ async function requireOfficialGame(req, res, next) {
   try {
     const game = await prisma.game.findUnique({
       where: { slug },
-      select: { kind: true, status: true, ownerId: true },
+      select: { kind: true, status: true, ownerUserId: true },
     });
     if (!game) {
       return res.status(403).json({ error: { message: '공식(official) 게임에서만 아이템을 생성·수정할 수 있습니다.' } });
     }
     const isOfficial = game.kind === 'official' && (game.status === 'published' || game.status === 'hidden');
-    const isOwnerTest = game.ownerId === req.user.id; // 소유자는 테스트 목적으로 허용
+    const isOwnerTest = game.ownerUserId === req.user.id; // 소유자는 테스트 목적으로 허용
     if (!isOfficial && !isOwnerTest) {
       return res.status(403).json({ error: { message: '공식(official) 게임에서만 아이템을 생성·수정할 수 있습니다.' } });
     }
