@@ -189,17 +189,20 @@ router.get('/:id', requireAuth, async (req, res, next) => {
   }
 });
 
-/** PATCH /api/inventory/:id */
-router.patch('/:id', requireAuth, async (req, res, next) => {
+/** PATCH /api/inventory/:id  (공식 게임 + 생성한 게임만) */
+router.patch('/:id', requireAuth, requireOfficialGame, async (req, res, next) => {
   try {
     const id = parseBigIntParam(req.params.id);
     if (id == null) return res.status(404).json({ error: { message: '아이템을 찾을 수 없습니다.' } });
     const patch = itemPatchSchema.parse(req.body || {});
     const existing = await prisma.inventoryItem.findFirst({
       where: { id, userId: req.user.id },
-      select: { id: true },
+      select: { id: true, sourceGame: true },
     });
     if (!existing) return res.status(404).json({ error: { message: '아이템을 찾을 수 없습니다.' } });
+    if (existing.sourceGame !== req.gameSlug) {
+      return res.status(403).json({ error: { message: '아이템을 생성한 게임만 수정할 수 있습니다.' } });
+    }
 
     // qty=0 이면 삭제
     if (patch.qty === 0) {
