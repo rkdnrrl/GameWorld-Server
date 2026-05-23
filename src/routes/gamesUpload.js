@@ -171,6 +171,7 @@ async function saveMedia(slug, files) {
   return result;
 }
 
+const i18nSchema = z.record(z.string().max(30)).optional();
 const uploadSchema = z.object({
   slug: z.string().min(2).max(60).regex(ALLOWED_SLUG_RE, 'slug 형식 잘못됨 (소문자/숫자/하이픈)'),
   title: z.string().min(1).max(120),
@@ -178,6 +179,8 @@ const uploadSchema = z.object({
   emoji: z.string().max(16).optional().default('🎮'),
   category: z.string().max(30).optional().default('other'),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
+  titlesI18n: i18nSchema,
+  descriptionsI18n: i18nSchema,
 });
 
 function parseTags(v) {
