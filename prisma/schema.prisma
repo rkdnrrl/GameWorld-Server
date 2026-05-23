@@ -41,6 +41,8 @@ model User {
   uploadedGames         Game[]
   inventoryItems        InventoryItem[]
   gameStates            GameState[]
+  communityPosts        CommunityPost[]
+  communityComments     CommunityComment[]
 
   @@map("users")
 }
@@ -485,6 +487,41 @@ model GameState {
   @@id([userId, gameSlug])
   @@index([gameSlug])
   @@map("game_state")
+}
+
+/// 자유게시판 게시물
+model CommunityPost {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String             @db.VarChar(200)
+  content   String             @db.Text
+  /// free | qna | tips | showcase
+  category  String             @default("free") @db.VarChar(20)
+  views     Int                @default(0)
+  isPinned  Boolean            @default(false)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  comments  CommunityComment[]
+
+  @@index([userId])
+  @@index([category, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("community_posts")
+}
+
+/// 자유게시판 댓글
+model CommunityComment {
+  id        BigInt        @id @default(autoincrement())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String        @db.VarChar(500)
+  createdAt DateTime      @default(now())
+
+  @@index([postId, createdAt])
+  @@map("community_comments")
 }
 
 /// 보상형 광고 시청 로그 (쿨다운·일일한도 체크용)
