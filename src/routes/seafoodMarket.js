@@ -333,19 +333,40 @@ router.post('/leave-stall', requireAuth, async (req, res, next) => {
 router.post('/quick-sell', requireAuth, async (req, res, next) => {
   try {
     const schema = z.object({
-      rarity:   z.string().max(20).optional(),
-      caughtAt: z.string().optional(),
-      itemName: z.string().optional(),
+      val:       z.number().int().positive().optional(), // item.stats.val (무게 보정된 기준 판매가)
+      caughtAt:  z.string().optional(),
+      expiresAt: z.string().optional(),
+      // 하위 호환 (val 없을 때 fallback)
+      rarity:    z.string().max(20).optional(),
+      itemName:  z.string().optional(),
     });
-    const { rarity, caughtAt } = schema.parse(req.body);
+    const { val, caughtAt, expiresAt, rarity } = schema.parse(req.body);
 
-    const base   = BASE_PRICE[rarity ?? 'n'] ?? 50;
-    const fresh  = freshFactor(caughtAt);
-    const earned = Math.max(1, Math.round(base * fresh));
+    let earned, freshPct;
+
+    if (val != null && caughtAt && expiresAt) {
+      // item.stats.val + expiresAt 기반 신선도 계산
+      const now = Date.now();
+      const ca  = new Date(caughtAt).getTime();
+      const ex  = new Date(expiresAt).getTime();
+      if (now >= ex) {
+        earned = 0; freshPct = 0;
+      } else {
+        const freshness = (ex - now) / (ex - ca); // 0.0 ~ 1.0
+        freshPct = Math.round(freshness * 100);
+        earned   = Math.max(1, Math.round(val * freshness));
+      }
+    } else {
+      // fallback: 기존 희귀도 기반 계산
+      const base = BASE_PRICE[rarity ?? 'n'] ?? 50;
+      const fresh = freshFactor(caughtAt);
+      freshPct = Math.round(fresh * 100);
+      earned   = Math.max(1, Math.round(base * fresh));
+    }
 
     await earnAlp(req.user.id, earned);
     const u = await prisma.user.findUnique({ where:{ id:req.user.id }, select:{ alpCoins:true } });
-    res.json({ ok:true, earned, freshPct: Math.round(fresh * 100), alpCoins: Number(u?.alpCoins ?? 0) });
+    res.json({ ok:true, earned, freshPct, alpCoins: Number(u?.alpCoins ?? 0) });
   } catch (err) {
     if (err.name === 'ZodError') return res.status(400).json({ error:{ message:err.issues?.[0]?.message } });
     next(err);
