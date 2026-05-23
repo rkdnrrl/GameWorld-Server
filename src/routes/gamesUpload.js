@@ -1091,13 +1091,17 @@ operatorRouter.post('/:slug/approve-meta', requireAuth, requireOperator, async (
     const updated = await prisma.game.update({
       where: { slug },
       data: {
-        title:       g.pendingTitle       ?? g.title,
-        description: g.pendingDescription ?? g.description,
-        emoji:       g.pendingEmoji       ?? g.emoji,
-        category:    g.pendingCategory    ?? g.category,
-        tags:        g.pendingTags        ?? g.tags,
+        title:            g.pendingTitle            ?? g.title,
+        description:      g.pendingDescription      ?? g.description,
+        emoji:            g.pendingEmoji            ?? g.emoji,
+        category:         g.pendingCategory         ?? g.category,
+        tags:             g.pendingTags             ?? g.tags,
+        titlesI18n:       g.pendingTitlesI18n       ?? g.titlesI18n,
+        descriptionsI18n: g.pendingDescriptionsI18n ?? g.descriptionsI18n,
         pendingTitle: null, pendingDescription: null, pendingEmoji: null,
-        pendingCategory: null, pendingTags: null, pendingMetaAt: null, pendingMetaRejectReason: null,
+        pendingCategory: null, pendingTags: null,
+        pendingTitlesI18n: null, pendingDescriptionsI18n: null,
+        pendingMetaAt: null, pendingMetaRejectReason: null,
       },
     });
     logActivity(req.user, 'game_meta_approve', { slug: updated.slug, title: updated.title });
