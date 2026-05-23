@@ -905,6 +905,7 @@ operatorRouter.post('/:slug/feature', requireAuth, requireOperator, async (req, 
     const featuredText = typeof req.body.text === 'string' ? req.body.text.trim().slice(0, 300) : undefined;
     const featuredTextX = typeof req.body.x === 'number' ? Math.max(0, Math.min(100, req.body.x)) : undefined;
     const featuredTextY = typeof req.body.y === 'number' ? Math.max(0, Math.min(100, req.body.y)) : undefined;
+    const featuredTextsI18n = req.body.textsI18n && typeof req.body.textsI18n === 'object' ? req.body.textsI18n : undefined;
     const updated = await prisma.game.update({
       where: { slug },
       data: {
@@ -912,6 +913,7 @@ operatorRouter.post('/:slug/feature', requireAuth, requireOperator, async (req, 
         ...(featuredText !== undefined && { featuredText }),
         ...(featuredTextX !== undefined && { featuredTextX }),
         ...(featuredTextY !== undefined && { featuredTextY }),
+        ...(featuredTextsI18n !== undefined && { featuredTextsI18n }),
       },
     });
     res.json({ ok: true, slug: updated.slug, isFeatured: updated.isFeatured });
