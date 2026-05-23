@@ -90,9 +90,11 @@ router.get('/me', requireAuth, async (req, res) => {
       subscriptionUntil = s.until || s.expiresAt || null;
       isSubscribed = !!s.active || (subscriptionUntil && new Date(subscriptionUntil) > new Date());
     }
-    res.json({ user: { ...req.user, coins, isSubscribed, subscriptionUntil, operatorAccess: userIsOperator(req.user) } });
+    const alpUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { alpCoins: true } });
+    const alpCoins = Number(alpUser?.alpCoins ?? 0);
+    res.json({ user: { ...req.user, coins, alpCoins, isSubscribed, subscriptionUntil, operatorAccess: userIsOperator(req.user) } });
   } catch {
-    res.json({ user: { ...req.user, coins: 0, isSubscribed: false, operatorAccess: userIsOperator(req.user) } });
+    res.json({ user: { ...req.user, coins: 0, alpCoins: 0, isSubscribed: false, operatorAccess: userIsOperator(req.user) } });
   }
 });
 
