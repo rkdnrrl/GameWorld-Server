@@ -971,7 +971,7 @@ const metaSchema = z.object({
   title:       z.string().min(1).max(120).optional(),
   description: z.string().max(2000).optional(),
   emoji:       z.string().max(16).optional(),
-  category:    z.enum(['earn','multiplay','decorate','other']).optional(),
+  category:    z.string().max(30).optional(),
   tags:        z.array(z.string().max(30)).max(10).optional(),
 });
 const rejectMetaSchema = z.object({ reason: z.string().min(1).max(500) });
