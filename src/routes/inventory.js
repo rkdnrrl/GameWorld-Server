@@ -36,7 +36,8 @@ async function requireOfficialGame(req, res, next) {
       where: { slug },
       select: { kind: true, status: true },
     });
-    if (!game || game.kind !== 'official' || game.status !== 'published') {
+    const statusOk = game?.status === 'published' || game?.status === 'hidden';
+    if (!game || game.kind !== 'official' || !statusOk) {
       return res.status(403).json({ error: { message: '공식(official) 게임에서만 아이템을 생성·수정할 수 있습니다.' } });
     }
     req.gameSlug = slug;
