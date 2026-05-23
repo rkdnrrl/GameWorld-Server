@@ -351,6 +351,8 @@ model Game {
   pendingEmoji             String?   @db.VarChar(16)
   pendingCategory          String?   @db.VarChar(20)
   pendingTags              Json?
+  pendingTitlesI18n        Json?
+  pendingDescriptionsI18n  Json?
   pendingMetaAt            DateTime?
   pendingMetaRejectReason  String?   @db.VarChar(500)
   createdAt     DateTime @default(now())
