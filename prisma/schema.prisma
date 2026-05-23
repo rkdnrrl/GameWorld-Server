@@ -339,6 +339,14 @@ model Game {
   pendingScreenshots       Json?
   pendingMediaAt           DateTime?
   pendingMediaRejectReason String?   @db.VarChar(500)
+  /// 검수 대기 중인 메타데이터
+  pendingTitle             String?   @db.VarChar(120)
+  pendingDescription       String?   @db.VarChar(2000)
+  pendingEmoji             String?   @db.VarChar(16)
+  pendingCategory          String?   @db.VarChar(20)
+  pendingTags              Json?
+  pendingMetaAt            DateTime?
+  pendingMetaRejectReason  String?   @db.VarChar(500)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   publishedAt   DateTime?
@@ -350,6 +358,17 @@ model Game {
   @@index([status, kind])
   @@index([ownerUserId])
   @@map("games")
+}
+
+/// 게임 카테고리 (운영자가 관리)
+model GameCategory {
+  slug      String   @id @db.VarChar(30)
+  labelKo   String   @db.VarChar(50)
+  labelEn   String   @db.VarChar(50)
+  emoji     String   @default("🎮") @db.VarChar(10)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  @@map("game_categories")
 }
 
 /// 게임 댓글

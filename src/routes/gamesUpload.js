@@ -964,6 +964,156 @@ operatorRouter.post('/:slug/reject-media', requireAuth, requireOperator, async (
   }
 });
 
+/* ═══════════════════════════════════════════════════════════
+   메타데이터 수정 검수 흐름
+   ═══════════════════════════════════════════════════════════ */
+const metaSchema = z.object({
+  title:       z.string().min(1).max(120).optional(),
+  description: z.string().max(2000).optional(),
+  emoji:       z.string().max(16).optional(),
+  category:    z.enum(['earn','multiplay','decorate','other']).optional(),
+  tags:        z.array(z.string().max(30)).max(10).optional(),
+});
+const rejectMetaSchema = z.object({ reason: z.string().min(1).max(500) });
+
+/**
+ * PATCH /api/games/:slug/pending-meta — 유저가 메타데이터 수정 신청 (검수 대기 등록)
+ */
+router.patch('/:slug/pending-meta', requireAuth, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (g.ownerUserId !== req.user.id) {
+      return res.status(403).json({ error: { message: '권한이 없습니다.' } });
+    }
+    const data = metaSchema.parse(req.body);
+    if (!Object.keys(data).length) {
+      return res.status(400).json({ error: { message: '변경할 내용이 없습니다.' } });
+    }
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        pendingTitle:       data.title       ?? null,
+        pendingDescription: data.description ?? null,
+        pendingEmoji:       data.emoji       ?? null,
+        pendingCategory:    data.category    ?? null,
+        pendingTags:        data.tags        ?? null,
+        pendingMetaAt:      new Date(),
+        pendingMetaRejectReason: null,
+      },
+    });
+    res.json({ ok: true, game: updated });
+  } catch (err) {
+    if (err.name === 'ZodError') return res.status(400).json({ error: { message: err.issues?.[0]?.message || '입력 오류' } });
+    next(err);
+  }
+});
+
+/**
+ * DELETE /api/games/:slug/pending-meta — 유저가 메타 수정 신청 취소
+ */
+router.delete('/:slug/pending-meta', requireAuth, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (g.ownerUserId !== req.user.id && !req.user.isOperator) {
+      return res.status(403).json({ error: { message: '권한이 없습니다.' } });
+    }
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: { pendingTitle: null, pendingDescription: null, pendingEmoji: null, pendingCategory: null, pendingTags: null, pendingMetaAt: null, pendingMetaRejectReason: null },
+    });
+    res.json({ ok: true, game: updated });
+  } catch (err) { next(err); }
+});
+
+/**
+ * GET /api/operator/games/pending-meta — 메타 검수 대기 목록
+ */
+operatorRouter.get('/pending-meta', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const games = await prisma.game.findMany({
+      where: { pendingMetaAt: { not: null } },
+      include: { owner: { select: { nickname: true } } },
+      orderBy: { pendingMetaAt: 'asc' },
+    });
+    res.json({ games });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/approve-meta — 메타 수정 승인 (pending → live)
+ */
+operatorRouter.post('/:slug/approve-meta', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (!g.pendingMetaAt) return res.status(400).json({ error: { message: '대기 중인 메타 수정이 없습니다.' } });
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        title:       g.pendingTitle       ?? g.title,
+        description: g.pendingDescription ?? g.description,
+        emoji:       g.pendingEmoji       ?? g.emoji,
+        category:    g.pendingCategory    ?? g.category,
+        tags:        g.pendingTags        ?? g.tags,
+        pendingTitle: null, pendingDescription: null, pendingEmoji: null,
+        pendingCategory: null, pendingTags: null, pendingMetaAt: null, pendingMetaRejectReason: null,
+      },
+    });
+    logActivity(req.user, 'game_meta_approve', { slug: updated.slug, title: updated.title });
+    res.json({ ok: true, game: updated });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/operator/games/:slug/reject-meta — 메타 수정 거부
+ */
+operatorRouter.post('/:slug/reject-meta', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const { reason } = rejectMetaSchema.parse(req.body);
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    if (!g.pendingMetaAt) return res.status(400).json({ error: { message: '대기 중인 메타 수정이 없습니다.' } });
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        pendingTitle: null, pendingDescription: null, pendingEmoji: null,
+        pendingCategory: null, pendingTags: null, pendingMetaAt: null,
+        pendingMetaRejectReason: reason,
+      },
+    });
+    logActivity(req.user, 'game_meta_reject', { slug: updated.slug, title: updated.title, reason });
+    res.json({ ok: true, game: updated });
+  } catch (err) {
+    if (err.name === 'ZodError') return res.status(400).json({ error: { message: '거절 사유 필요' } });
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/operator/games/:slug/meta — 운영자 직접 메타 수정 (검수 없이 즉시 반영)
+ */
+operatorRouter.patch('/:slug/meta', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+    const data = metaSchema.parse(req.body);
+    if (!Object.keys(data).length) return res.status(400).json({ error: { message: '변경할 내용이 없습니다.' } });
+    const updated = await prisma.game.update({ where: { slug }, data });
+    logActivity(req.user, 'game_meta_operator_edit', { slug: updated.slug, title: updated.title });
+    res.json({ ok: true, game: updated });
+  } catch (err) {
+    if (err.name === 'ZodError') return res.status(400).json({ error: { message: err.issues?.[0]?.message || '입력 오류' } });
+    next(err);
+  }
+});
+
 /**
  * DELETE /api/operator/games/:slug/feature — 피처드 해제
  */
