@@ -19,6 +19,8 @@ model User {
   lifetimeCatchCount  Int                @default(0)
   /// 대장간 숙련도 수치
   smithingProficiency Float              @default(0)
+  /// ALP 플랫폼 전용 코인 (Airnuri 코인과 별개)
+  alpCoins            BigInt             @default(0)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   catches             Catch[]
