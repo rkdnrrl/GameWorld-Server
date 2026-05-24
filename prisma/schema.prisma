@@ -7,545 +7,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                  String             @id  // = commonUserId (Common API)
-  nickname            String             @unique
-  bio                 String?            @db.VarChar(300)
-  profileImageUrl     String?            @db.VarChar(400)
-  websiteUrl          String?            @db.VarChar(200)
-  /// 운영 콘솔 접근
-  isOperator          Boolean            @default(false)
-  /// 낚시 등으로 포획해 서버에 저장한 횟수 누적
-  lifetimeCatchCount  Int                @default(0)
-  /// 대장간 숙련도 수치
-  smithingProficiency Float              @default(0)
-  /// ALP 플랫폼 전용 코인 (Airnuri 코인과 별개)
-  alpCoins            BigInt             @default(0)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  catches             Catch[]
-  craftedEquipment CraftedEquipment[]
-  furnitureItems   FurnitureItem[]
-  voxelObjects     VoxelObject[]
-  voxelPlacements  VoxelPlacement[]
-  smeltStock            SmeltStock[]
-  alchemyElementStocks  AlchemyElementStock[]
-  dungeonSave           DungeonSave?
-  userRecord            UserRecord?
-  activityLogs          ActivityLog[]
-  enhancementStocks     EnhancementStock[]
-  modules               Module[]
-  donations             Donation[]
-  dailyMissions         DailyMissionProgress[]
-  adRewards             AdReward[]
-  uploadedGames         Game[]
-  inventoryItems        InventoryItem[]
-  gameStates            GameState[]
-  communityPosts        CommunityPost[]
-  communityComments     CommunityComment[]
+/// 유저 프로필 (Supabase auth.users.id 와 연결)
+model Profile {
+  id         String    @id          // = Supabase auth.users.id
+  username   String    @unique @db.VarChar(30)
+  isOperator Boolean   @default(false)
+  createdAt  DateTime  @default(now())
 
-  @@map("users")
+  character  Character?
+  worlds     World[]
+  assets     Asset[]
+
+  @@map("profiles")
 }
 
-model VoxelObject {
-  id         String           @id @default(cuid())
-  userId     String
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name       String           @db.VarChar(50)
-  price      Int
-  voxels     Json             // [{x,y,z,color}, ...]
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  placements VoxelPlacement[]
-
-  @@index([userId])
-  @@map("voxel_objects")
-}
-
-model VoxelPlacement {
-  id            String      @id @default(cuid())
-  userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  voxelObjectId String
-  voxelObject   VoxelObject @relation(fields: [voxelObjectId], references: [id], onDelete: Cascade)
-  posX          Float       @default(0)
-  posZ          Float       @default(0)
-  rotY          Float       @default(0)
-  placedAt      DateTime    @default(now())
-
-  @@index([userId])
-  @@map("voxel_placements")
-}
-
-model FurnitureItem {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  catId       String    // sofa, plant, lamp, table, tv, rug, clock, art
-  placed      Boolean   @default(false)
-  posX        Float?
-  posZ        Float?
-  rotY        Float?
-  purchasedAt DateTime  @default(now())
-  placedAt    DateTime?
-
-  @@index([userId])
-  @@index([userId, placed])
-  @@map("furniture_items")
-}
-
-/// 일반·희귀 아이템의 AI 픽셀아트 공유 캐시 (이름이 키)
-model SharedPixelArt {
-  name      String   @id @db.VarChar(100)
-  imageData String   @db.Text         // data:image/png;base64,...
-  rarity    String   @db.VarChar(20)
-  type      String   @db.VarChar(20)
-  createdAt DateTime @default(now())
-
-  @@map("shared_pixel_arts")
-}
-
-model Catch {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  itemName  String
-  itemEmoji String    @default("❓")
-  itemType  String    // fish, artifact, crystal, creature, debris, cosmic, scrap
-  rarity    String    // common, epic, legendary (신규는 rare 없음 — 레거시 행만 rare 가능)
-  size      Float?
-  coinValue Int
-  /// 픽셀 스프라이트 { w, h, palette: string[], cells: number[] } — 클라이언트가 표시용으로 저장
-  pixelArt  Json?
-  sold      Boolean   @default(false)
-  soldAt    DateTime?
-  caughtAt  DateTime  @default(now())
-
-  @@index([userId])
-  @@index([userId, caughtAt])
-  @@index([userId, sold])
-  @@map("catches")
-}
-
-/// 대장간(Singleplay-Game5) 제작 장비 — 재료 Catch 삭제 후 생성
-model CraftedEquipment {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipeId       String   @db.VarChar(64)
-  name           String   @db.VarChar(120)
-  itemEmoji      String   @default("⚔️") @db.VarChar(16)
-  tier           String   @default("common") @db.VarChar(20)
-  desc           String?  @db.VarChar(400)
-  /// { attackBonus, defenseBonus, speedBonus, durabilityMax, durability? }
-  stats          Json
-  /// 제작에 소모된 재료 [{ kind: "catch"|"equipment", id }] (레거시: catch id 문자열 배열)
-  sourceCatchIds Json
-  /// 절차적 {cells,palette,...} 또는 PixelLab { imageDataUrl, source }
-  pixelArt       Json?
-  createdAt      DateTime @default(now())
-
-  @@index([userId])
-  @@map("crafted_equipment")
-}
-
-/// 대장간 용광로 녹인 산출물 (유리액·철괴 등) — 유저별 집계
-model SmeltStock {
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String   @db.VarChar(32)
-  count     Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  @@id([userId, productId])
-  @@index([userId])
-  @@map("smelt_stock")
-}
-
-/// 던전 탐험 (Singleplay-Game7) 세이브 — 유저당 1개
-model DungeonSave {
-  userId  String   @id
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  data    Json
-  savedAt DateTime @updatedAt
-
-  @@map("dungeon_saves")
-}
-
-/// 공지사항 / 패치노트
-model Announcement {
-  id        String   @id @default(cuid())
-  title     String   @db.VarChar(120)
-  body      String   @db.Text
-  /// notice | patch
-  kind      String   @default("notice") @db.VarChar(20)
-  pinned    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([createdAt(sort: Desc)])
-  @@map("announcements")
-}
-
-/// 게임별 개인 최고 기록
-model UserRecord {
-  userId          String   @id
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dungeonMaxFloor Int      @default(0)
-  dungeonMaxKills Int      @default(0)
-  skillPoints     Int      @default(0)
-  skillData       Json     @default("{}")
-  updatedAt       DateTime @updatedAt
-
-  @@map("user_records")
-}
-
-/// 활동 로그 — 낚시·용광로·제련 이벤트 기록
-model ActivityLog {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nickname  String   @db.VarChar(64)
-  action    String   @db.VarChar(32)   // fish_catch | smelt_melt | forge_craft
-  detail    Json     @default("{}")
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt(sort: Desc)])
-  @@map("activity_logs")
-}
-
-/// 던전에서 획득한 강화 아이템 재고 (유저별·아이템 타입별 집계)
-model EnhancementStock {
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// stone_common | stone_rare | crystal_magic | shard_legend
-  itemType  String   @db.VarChar(32)
-  count     Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  @@id([userId, itemType])
-  @@index([userId])
-  @@map("enhancement_stock")
-}
-
-/// 장비 개조 모듈 (대장간에서 제작, 장비 슬롯에 장착)
-model Module {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String   @db.VarChar(80)
-  moduleType    String   @db.VarChar(32)
-  tier          String   @default("common") @db.VarChar(20)
-  keywords      Json
-  stats         Json
-  durability    Int      @default(25)
-  durabilityMax Int      @default(25)
-  equippedTo    String?  @db.VarChar(50)
-  equippedSlot  String?  @db.VarChar(32)
-  createdAt     DateTime @default(now())
-
-  @@index([userId])
-  @@index([equippedTo])
-  @@map("modules")
-}
-
-/// 일일 미션 진행 상황 (유저·날짜·미션ID 복합키)
-model DailyMissionProgress {
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date       DateTime @db.Date           // KST 기준 날짜
-  missionId  String   @db.VarChar(32)
-  progress   Int      @default(0)
-  completed  Boolean  @default(false)
-  rewardPaid Boolean  @default(false)
-
-  @@id([userId, date, missionId])
-  @@index([userId, date])
-  @@map("daily_mission_progress")
-}
-
-/// 토스페이먼츠 후원 내역
-model Donation {
+/// 캐릭터 외형 (유저당 1개)
+model Character {
   id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId    String   @unique @db.VarChar(64)
-  paymentKey String   @db.VarChar(200)
-  amount     Int      // 결제 금액 (원)
-  coins      Int      // 지급 코인
-  status     String   @default("done") @db.VarChar(20)
+  userId     String   @unique
+  user       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String   @db.VarChar(30)
+  /// { bodyColor, skinColor, hairColor, eyeColor, hairStyle }
+  appearance Json     @default("{}")
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([userId])
-  @@map("donations")
+  @@map("characters")
 }
 
-/// 연금술 분해로 얻은 주기율표 원소 (유저별 집계)
-model AlchemyElementStock {
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  symbol       String   @db.VarChar(8)
-  nameKo       String?  @db.VarChar(40)
-  atomicNumber Int?
-  count        Int      @default(0)
+/// 유저가 만든 3D 맵/월드
+model World {
+  id           String   @id @default(cuid())
+  creatorId    String
+  creator      Profile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  name         String   @db.VarChar(100)
+  description  String?  @db.VarChar(500)
+  thumbnailUrl String?  @db.VarChar(400)
+  /// { objects: [{ assetId, x, y, z, rx, ry, rz, sx, sy, sz }], terrain: {} }
+  mapData      Json     @default("{\"objects\":[]}")
+  isPublic     Boolean  @default(false)
+  playCount    Int      @default(0)
+  createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@id([userId, symbol])
-  @@index([userId])
-  @@map("alchemy_element_stock")
+  @@index([isPublic, playCount(sort: Desc)])
+  @@index([creatorId])
+  @@map("worlds")
 }
 
-/// UGC 게임 (공식 + 커뮤니티)
-/// - official: 운영자/신뢰 개발자 — Common API 사용 가능 (코인/인벤토리)
-/// - community: 누구나 업로드 — Common API 차단, 자체 데이터만 (localStorage 등)
-model Game {
-  slug          String   @id @db.VarChar(60)
-  ownerUserId   String?
-  owner         User?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  title         String   @db.VarChar(120)
-  description   String?  @db.VarChar(2000)
-  emoji         String   @default("🎮") @db.VarChar(16)
-  /// 'official' | 'community'
-  kind          String   @default("community") @db.VarChar(20)
-  /// 'pending' | 'published' | 'rejected' | 'hidden'
-  status        String   @default("pending") @db.VarChar(20)
-  /// 'earn' | 'multiplay' | 'decorate' | 'other'
-  category      String   @default("other") @db.VarChar(20)
-  /// game_genres.slug — 운영자가 관리하는 장르 (nullable)
-  genre         String?  @db.VarChar(50)
-  /// R2 경로 prefix — 보통 games/{slug}/
-  storagePath   String   @db.VarChar(200)
-  /// 공식 게임은 외부 URL 가능 (마이그레이션 호환); 커뮤니티는 항상 null
-  externalUrl   String?  @db.VarChar(400)
-  thumbnailUrl  String?  @db.VarChar(400)
-  demoVideoUrl  String?  @db.VarChar(400)
-  isFeatured    Boolean  @default(false)
-  featuredText  String?  @db.VarChar(300)
-  featuredTextX Float?   @default(75)
-  featuredTextY Float?   @default(50)
-  titlesI18n         Json?
-  descriptionsI18n   Json?
-  featuredTextsI18n  Json?
-  screenshots   Json?
-  tags          Json?
-  /// 멀티플레이 상태 조회용 (있으면 표시)
-  statusUrl     String?  @db.VarChar(400)
-  maxPlayers    Int?
-  playCount     Int      @default(0)
-  likeCount     Int      @default(0)
-  version       Int      @default(1)
-  rejectReason  String?  @db.VarChar(500)
-  /// 검수 대기 중인 재업로드 — R2 staging 경로 (games-staging/{slug}/). null 이면 보류 업데이트 없음.
-  pendingStoragePath String? @db.VarChar(200)
-  /// 보류 업데이트가 승인되면 적용될 버전 (= 현재 version + 1).
-  pendingVersion     Int?
-  /// 보류 업데이트 zip 업로드 시각.
-  pendingUploadedAt  DateTime?
-  /// 보류 업데이트 거절 사유.
-  pendingRejectReason String? @db.VarChar(500)
-  /// 검수 대기 중인 미디어 — staging R2 경로에 저장됨. null 이면 보류 없음.
-  pendingThumbnailUrl      String?   @db.VarChar(400)
-  pendingDemoVideoUrl      String?   @db.VarChar(400)
-  pendingScreenshots       Json?
-  pendingMediaAt           DateTime?
-  pendingMediaRejectReason String?   @db.VarChar(500)
-  /// 검수 대기 중인 메타데이터
-  pendingTitle             String?   @db.VarChar(120)
-  pendingDescription       String?   @db.VarChar(2000)
-  pendingEmoji             String?   @db.VarChar(16)
-  pendingCategory          String?   @db.VarChar(20)
-  pendingTags              Json?
-  pendingTitlesI18n        Json?
-  pendingDescriptionsI18n  Json?
-  pendingMetaAt            DateTime?
-  pendingMetaRejectReason  String?   @db.VarChar(500)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  publishedAt   DateTime?
-
-  reports       GameReport[]
-  ratings       GameRating[]
-  comments      GameComment[]
-
-  @@index([status, kind])
-  @@index([ownerUserId])
-  @@map("games")
-}
-
-/// 게임 유형 (운영자가 관리 — earn/multiplay/decorate/other 등)
-model GameCategory {
-  slug      String   @id @db.VarChar(30)
-  labelKo   String   @db.VarChar(50)
-  labelEn   String   @db.VarChar(50)
-  emoji     String   @default("🎮") @db.VarChar(10)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  @@map("game_categories")
-}
-
-/// 게임 카테고리 (운영자가 관리 — RPG/액션/퍼즐 등 장르)
-model GameGenre {
-  slug      String   @id @db.VarChar(50)
-  labelKo   String   @db.VarChar(50)
-  labelEn   String   @db.VarChar(50)
-  emoji     String   @default("🎮") @db.VarChar(10)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  @@map("game_genres")
-}
-
-/// 게임 댓글
-model GameComment {
-  id        BigInt   @id @default(autoincrement())
-  userId    String
-  gameSlug  String   @db.VarChar(60)
-  nickname  String   @db.VarChar(100)
-  content   String   @db.VarChar(500)
-  createdAt DateTime @default(now())
-
-  game      Game     @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
-
-  @@index([gameSlug, createdAt])
-  @@map("game_comments")
-}
-
-/// 게임 별점 (유저당 1개, upsert)
-model GameRating {
-  id        BigInt   @id @default(autoincrement())
-  userId    String
-  gameSlug  String   @db.VarChar(60)
-  rating    Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  game      Game     @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
-
-  @@unique([userId, gameSlug])
-  @@index([gameSlug])
-  @@map("game_ratings")
-}
-
-/// 신고 — 누적되면 운영자 검토
-model GameReport {
-  id              BigInt   @id @default(autoincrement())
-  gameSlug        String   @db.VarChar(60)
-  game            Game     @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
-  reporterUserId  String?
-  reason          String   @db.VarChar(60)
-  detail          String?  @db.VarChar(1000)
-  resolved        Boolean  @default(false)
-  createdAt       DateTime @default(now())
-
-  @@index([gameSlug, resolved])
-  @@map("game_reports")
-}
-
-/// 커뮤니티 게임의 격리된 유저 데이터 저장소 (코인 아님 — 단순 KV)
-/// 각 게임별로 분리되어 다른 게임 데이터에 접근 불가
-model CommunityGameData {
-  gameSlug  String   @db.VarChar(60)
-  userId    String
-  data      Json
-  updatedAt DateTime @updatedAt
-
-  @@id([gameSlug, userId])
-  @@index([userId])
-  @@map("community_game_data")
-}
-
-/// 범용 인벤토리 — 게임 간 자유롭게 공유되는 아이템 저장소.
-/// 어떤 게임이든 자기가 생산한 아이템을 여기에 담고, 다른 게임은 category/tags 로 필터해 조회.
-/// 기존 도메인 테이블 (catches, crafted_equipment 등) 과 무관하게 별도 운영.
-model InventoryItem {
-  id          BigInt   @id @default(autoincrement())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// 어느 게임이 생성했는지 (slug 또는 'system'). 감사·필터용.
-  sourceGame  String   @db.VarChar(60)
-  /// 게임 내부 식별자. 예: 'salmon_grilled', 'iron_sword'. 생산 게임이 자기 아이템 인지용.
-  kind        String   @db.VarChar(80)
-  /// 소비자 게임이 보는 1차 분류. 예: 'food', 'weapon', 'material', 'consumable', 'decoration'.
-  category    String   @db.VarChar(40)
-  /// 표시용 이름.
-  name        String   @db.VarChar(120)
-  /// 표시용 이모지/아이콘 (선택).
-  icon        String?  @db.VarChar(16)
-  /// 자유 태그 배열. 예: ['hp_recovery', 'rare']. 소비자 게임이 추가 필터에 사용.
-  tags        String[] @default([])
-  /// 능력치·메타데이터 자유 JSON. 예: { attack: 5, hpHeal: 30 }.
-  stats       Json     @default("{}")
-  /// 스택형 수량. 무기처럼 개별이면 1.
-  qty         Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([userId, category])
-  @@index([userId, sourceGame])
-  @@index([userId, kind])
-  @@map("inventory_items")
-}
-
-/// 게임별 내부 상태 저장소 — official 게임마다 자유로운 JSON 진행도/설정 보관.
-/// 예: 낚시 스킬 레벨, 던전 클리어 보스 목록, 게임 내 설정.
-/// community 게임은 community_game_data 를 사용 (token 미발급 정책).
-model GameState {
-  userId    String
-  gameSlug  String   @db.VarChar(60)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  data      Json     @default("{}")
-  updatedAt DateTime @updatedAt
-
-  @@id([userId, gameSlug])
-  @@index([gameSlug])
-  @@map("game_state")
-}
-
-/// 자유게시판 게시물
-model CommunityPost {
-  id        String             @id @default(cuid())
-  userId    String
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String             @db.VarChar(200)
-  content   String             @db.Text
-  /// free | qna | tips | showcase
-  category  String             @default("free") @db.VarChar(20)
-  views     Int                @default(0)
-  isPinned  Boolean            @default(false)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  comments  CommunityComment[]
-
-  @@index([userId])
-  @@index([category, createdAt(sort: Desc)])
-  @@index([createdAt(sort: Desc)])
-  @@map("community_posts")
-}
-
-/// 자유게시판 댓글
-model CommunityComment {
-  id        BigInt        @id @default(autoincrement())
-  postId    String
-  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String        @db.VarChar(500)
-  createdAt DateTime      @default(now())
-
-  @@index([postId, createdAt])
-  @@map("community_comments")
-}
-
-/// 보상형 광고 시청 로그 (쿨다운·일일한도 체크용)
-model AdReward {
-  id           BigInt   @id @default(autoincrement())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rewardType   String   @db.VarChar(40)
-  coinsGranted Int      @default(0)
+/// 3D 에셋 (Meshy AI 생성 또는 시스템 기본 에셋)
+model Asset {
+  id           String   @id @default(cuid())
+  creatorId    String?                         // null = 시스템 에셋
+  creator      Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  name         String   @db.VarChar(100)
+  prompt       String?  @db.VarChar(500)       // Meshy AI 프롬프트
+  modelUrl     String   @db.VarChar(400)       // R2 GLB URL
+  thumbnailUrl String?  @db.VarChar(400)
+  meshyTaskId  String?  @db.VarChar(100)
+  polyCount    Int?
+  isPublic     Boolean  @default(false)
   createdAt    DateTime @default(now())
 
-  @@index([userId, rewardType, createdAt])
-  @@map("ad_rewards")
+  @@index([creatorId])
+  @@index([isPublic])
+  @@map("assets")
 }
