@@ -8,6 +8,7 @@ const path = require('path');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const r2 = require('../lib/r2');
+const { optimizeGLB } = require('../lib/glbOptimizer');
 
 const router = Router();
 
