@@ -50,6 +50,7 @@ router.use('/modules', require('./modules'));
 router.use('/donate', require('./donate'));
 router.use('/announcements', require('./announcements'));
 router.use('/community', require('./community'));
+router.use('/social', require('./social'));
 router.use('/shop', require('./shop'));
 router.use('/leaderboard', require('./leaderboard'));
 router.use('/missions', require('./missions'));
