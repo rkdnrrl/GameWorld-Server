@@ -53,26 +53,7 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
     const assetId   = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const r2Key     = `assets/${req.user.id}/${assetId}${ext}`;
 
-    // GLB/GLTF는 자동 폴리곤 감소 (FBX/OBJ는 미지원)
-    let finalBuffer = file.buffer;
-    let optimization = null;
-    if (ext === '.glb' || ext === '.gltf') {
-      try {
-        const result = await optimizeGLB(file.buffer);
-        finalBuffer = result.buffer;
-        optimization = {
-          originalTris: result.originalTris,
-          finalTris:    result.finalTris,
-          reduced:      result.reduced,
-          sizeBefore:   file.buffer.length,
-          sizeAfter:    result.buffer.length,
-        };
-      } catch (err) {
-        console.warn('[assets] GLB 최적화 실패, 원본 업로드:', err.message);
-      }
-    }
-
-    await r2.putObject(r2Key, finalBuffer, {
+    await r2.putObject(r2Key, file.buffer, {
       contentType: file.mimetype || r2.contentType(r2Key),
     });
 
@@ -86,11 +67,10 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
         name:      assetName,
         modelUrl,
         isPublic:  false,
-        polyCount: optimization?.finalTris ?? null,
       },
     });
 
-    res.json({ asset, optimization });
+    res.json({ asset });
   } catch (err) { next(err); }
 });
 
