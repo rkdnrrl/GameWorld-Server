@@ -70,6 +70,7 @@ router.post('/:username/follow', requireAuth, async (req, res, next) => {
     if (!target) return res.status(404).json({ error: { message: '유저 없음' } });
     if (target.id === req.user.id) return res.status(400).json({ error: { message: '본인은 팔로우 불가' } });
 
+    let isNew = false;
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.userFollow.findUnique({
         where: { followerId_followeeId: { followerId: req.user.id, followeeId: target.id } },
@@ -78,6 +79,7 @@ router.post('/:username/follow', requireAuth, async (req, res, next) => {
         const p = await tx.profile.findUnique({ where: { id: target.id }, select: { followerCount: true } });
         return { isFollowing: true, followerCount: p.followerCount };
       }
+      isNew = true;
       await tx.userFollow.create({ data: { followerId: req.user.id, followeeId: target.id } });
       const [, p] = await Promise.all([
         tx.profile.update({ where: { id: req.user.id }, data: { followingCount: { increment: 1 } } }),
@@ -85,6 +87,12 @@ router.post('/:username/follow', requireAuth, async (req, res, next) => {
       ]);
       return { isFollowing: true, followerCount: p.followerCount };
     });
+
+    if (isNew) {
+      require('./notifications').createNotification(target.id, 'user_followed', {
+        actorName: req.user.nickname,
+      });
+    }
     res.json(result);
   } catch (err) { next(err); }
 });
