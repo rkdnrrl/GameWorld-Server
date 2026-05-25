@@ -13,7 +13,7 @@ const router = Router();
 
 const CDN_BASE = 'https://play.airliveplay.com';
 
-const ALLOWED_EXT  = new Set(['.fbx']);
+const ALLOWED_EXT  = new Set(['.fbx', '.png', '.jpg', '.jpeg', '.webp']);
 const MAX_MODEL_BYTES = 100 * 1024 * 1024; // 100MB
 const MAX_THUMB_BYTES = 5   * 1024 * 1024; // 5MB
 
