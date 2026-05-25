@@ -165,7 +165,7 @@ router.get('/my', requireAuth, async (req, res, next) => {
 const PAGE_SIZE_DEFAULT = 40;
 const PAGE_SIZE_MAX     = 100;
 
-router.get('/public', async (req, res, next) => {
+router.get('/public', optionalAuth, async (req, res, next) => {
   try {
     const q        = String(req.query.q || '').trim();
     const kind     = String(req.query.kind || '').trim();
@@ -187,8 +187,9 @@ router.get('/public', async (req, res, next) => {
     }
 
     const orderBy =
-      sort === 'name' ? [{ name: 'asc' }] :
-                        [{ createdAt: 'desc' }];
+      sort === 'name'    ? [{ name: 'asc' }] :
+      sort === 'popular' ? [{ likeCount: 'desc' }, { importCount: 'desc' }, { createdAt: 'desc' }] :
+                           [{ createdAt: 'desc' }];
 
     const [total, assets] = await Promise.all([
       prisma.asset.count({ where }),
@@ -200,11 +201,88 @@ router.get('/public', async (req, res, next) => {
       }),
     ]);
 
+    // 로그인 상태면 liked 여부 함께 반환
+    let likedSet = new Set();
+    if (req.user) {
+      const likes = await prisma.assetLike.findMany({
+        where: { userId: req.user.id, assetId: { in: assets.map(a => a.id) } },
+        select: { assetId: true },
+      });
+      likedSet = new Set(likes.map(l => l.assetId));
+    }
+
     res.json({
-      assets: assets.map(serializeAsset),
+      assets: assets.map(a => ({ ...serializeAsset(a), liked: likedSet.has(a.id) })),
       page, pageSize, total,
       hasMore: page * pageSize < total,
     });
+  } catch (err) { next(err); }
+});
+
+/* ─────────────────────────────────────────
+   POST   /api/assets/:id/like   — 좋아요 (멱등)
+   DELETE /api/assets/:id/like   — 좋아요 취소 (멱등)
+───────────────────────────────────────── */
+router.post('/:id/like', requireAuth, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const asset = await prisma.asset.findUnique({ where: { id }, select: { id: true, isPublic: true, creatorId: true } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
+    if (!asset.isPublic) return res.status(403).json({ error: { message: '공개 에셋만 좋아요 가능' } });
+    if (asset.creatorId === req.user.id) return res.status(400).json({ error: { message: '본인 에셋엔 좋아요 불가' } });
+
+    // 트랜잭션: like 생성 + 카운터 증가 (이미 있으면 건너뜀)
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.assetLike.findUnique({
+        where: { userId_assetId: { userId: req.user.id, assetId: id } },
+      });
+      if (existing) {
+        const a = await tx.asset.findUnique({ where: { id }, select: { likeCount: true } });
+        return { liked: true, likeCount: a.likeCount };
+      }
+      await tx.assetLike.create({ data: { userId: req.user.id, assetId: id } });
+      const a = await tx.asset.update({
+        where: { id },
+        data:  { likeCount: { increment: 1 } },
+        select: { likeCount: true },
+      });
+      return { liked: true, likeCount: a.likeCount };
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/like', requireAuth, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.assetLike.findUnique({
+        where: { userId_assetId: { userId: req.user.id, assetId: id } },
+      });
+      if (!existing) {
+        const a = await tx.asset.findUnique({ where: { id }, select: { likeCount: true } });
+        return { liked: false, likeCount: a?.likeCount ?? 0 };
+      }
+      await tx.assetLike.delete({ where: { userId_assetId: { userId: req.user.id, assetId: id } } });
+      const a = await tx.asset.update({
+        where: { id },
+        data:  { likeCount: { decrement: 1 } },
+        select: { likeCount: true },
+      });
+      return { liked: false, likeCount: Math.max(0, a.likeCount) };
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+/* GET /api/assets/my-likes — 내가 좋아요한 에셋 id 목록 */
+router.get('/my-likes', requireAuth, async (req, res, next) => {
+  try {
+    const likes = await prisma.assetLike.findMany({
+      where:  { userId: req.user.id },
+      select: { assetId: true },
+    });
+    res.json({ ids: likes.map(l => l.assetId) });
   } catch (err) { next(err); }
 });
 
