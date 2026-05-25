@@ -53,7 +53,7 @@ router.get('/:id', async (req, res, next) => {
 /** POST /api/worlds — 월드 생성 */
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, mapData } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: { message: '이름을 입력하세요.' } });
 
     await prisma.profile.upsert({
@@ -67,7 +67,7 @@ router.post('/', requireAuth, async (req, res, next) => {
         creatorId:   req.user.id,
         name:        String(name).trim().slice(0, 100),
         description: description ? String(description).trim().slice(0, 500) : null,
-        mapData:     { objects: [] },
+        mapData:     (mapData && typeof mapData === 'object') ? mapData : { objects: [] },
       },
     });
     res.json({ world });
