@@ -275,6 +275,9 @@ router.delete('/:id/like', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/* POST /api/assets/:id/report — 신고 (asset-reports.js 의 submitReport 위임) */
+router.post('/:id/report', requireAuth, require('./asset-reports').submitReport);
+
 /* GET /api/assets/my-likes — 내가 좋아요한 에셋 id 목록 */
 router.get('/my-likes', requireAuth, async (req, res, next) => {
   try {
