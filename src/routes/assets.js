@@ -364,6 +364,13 @@ router.post('/:id/clone', requireAuth, async (req, res, next) => {
       data:  { importCount: { increment: 1 } },
     }).catch(() => {});
 
+    // 작가에게 알림
+    if (src.creatorId) {
+      require('./notifications').createNotification(src.creatorId, 'asset_imported', {
+        assetId: src.id, assetName: src.name, actorName: req.user.nickname,
+      });
+    }
+
     res.json({ asset: serializeAsset(cloned) });
   } catch (err) { next(err); }
 });
