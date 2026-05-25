@@ -78,10 +78,13 @@ model Character {
   /// { bodyColor, skinColor, hairColor, eyeColor, hairStyle }
   appearance Json     @default("{}")
   isActive   Boolean  @default(false) @map("is_active")
+  isPublic   Boolean  @default(false) @map("is_public")
+  shareSlug  String?  @unique @map("share_slug")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([userId, isActive])
+  @@index([isPublic, updatedAt])
   @@map("characters")
 }
 

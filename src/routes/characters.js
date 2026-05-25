@@ -8,7 +8,11 @@ function trimmedName(raw) {
   return String(raw || '').trim().slice(0, 30);
 }
 
-/** GET /api/characters — 내 캐릭터 목록 + 활성 캐릭터 */
+function makeShareSlug() {
+  return `char_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
+}
+
+// GET /api/characters : my characters + active character
 router.get('/', requireAuth, async (req, res, next) => {
   try {
     const characters = await prisma.character.findMany({
@@ -20,7 +24,7 @@ router.get('/', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** GET /api/characters/me — 활성 캐릭터 조회 (world 진입 시 사용) */
+// GET /api/characters/me : active character only
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const char = await prisma.character.findFirst({
@@ -31,7 +35,45 @@ router.get('/me', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** POST /api/characters — 캐릭터 생성 + 활성화 */
+// GET /api/characters/public : public shared characters
+router.get('/public', requireAuth, async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const where = {
+      isPublic: true,
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { profile: { username: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+
+    const characters = await prisma.character.findMany({
+      where,
+      include: {
+        user: { select: { username: true } },
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 60,
+    });
+
+    res.json({
+      characters: characters.map((c) => ({
+        id: c.id,
+        name: c.name,
+        appearance: c.appearance || {},
+        updatedAt: c.updatedAt,
+        shareSlug: c.shareSlug || null,
+        creatorName: c.user?.username || null,
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/characters : create and set active
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const { name, appearance } = req.body || {};
@@ -63,7 +105,71 @@ router.post('/', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** POST /api/characters/:id/select — 해당 캐릭터를 활성화 */
+// POST /api/characters/import/:id : clone a public character into my account
+router.post('/import/:id', requireAuth, async (req, res, next) => {
+  try {
+    const sourceId = String(req.params.id || '');
+    const source = await prisma.character.findFirst({
+      where: { id: sourceId, isPublic: true },
+    });
+    if (!source) return res.status(404).json({ error: { message: '공유 캐릭터를 찾을 수 없습니다.' } });
+
+    const baseName = trimmedName(source.name) || 'Character';
+    const myChars = await prisma.character.findMany({
+      where: { userId: req.user.id },
+      select: { name: true },
+    });
+    const usedNames = new Set(myChars.map((c) => c.name));
+    let nextName = baseName;
+    let i = 2;
+    while (usedNames.has(nextName)) {
+      nextName = `${baseName} (${i})`.slice(0, 30);
+      i += 1;
+    }
+
+    const character = await prisma.character.create({
+      data: {
+        userId: req.user.id,
+        name: nextName,
+        appearance: source.appearance || {},
+        isActive: false,
+      },
+    });
+
+    res.json({ character });
+  } catch (err) { next(err); }
+});
+
+// POST /api/characters/:id/share : toggle or set public/private
+router.post('/:id/share', requireAuth, async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '');
+    const existing = await prisma.character.findFirst({
+      where: { id, userId: req.user.id },
+    });
+    if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
+
+    const requested = req.body?.isPublic;
+    const nextPublic = typeof requested === 'boolean' ? requested : !existing.isPublic;
+
+    let shareSlug = existing.shareSlug;
+    if (nextPublic && !shareSlug) {
+      shareSlug = makeShareSlug();
+    }
+
+    const character = await prisma.character.update({
+      where: { id },
+      data: {
+        isPublic: nextPublic,
+        shareSlug,
+      },
+    });
+
+    res.json({ character });
+  } catch (err) { next(err); }
+});
+
+// POST /api/characters/:id/select : set selected character active
 router.post('/:id/select', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
@@ -87,7 +193,7 @@ router.post('/:id/select', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** PATCH /api/characters/:id — 내 캐릭터 수정 */
+// PATCH /api/characters/:id : update character
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
@@ -110,7 +216,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** DELETE /api/characters/:id — 내 캐릭터 삭제 */
+// DELETE /api/characters/:id : delete character
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
