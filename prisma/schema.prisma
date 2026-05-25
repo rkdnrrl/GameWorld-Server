@@ -39,6 +39,22 @@ model Notification {
   @@map("notifications")
 }
 
+/// 폴더 팩 — 폴더를 발행 단위로 묶음
+model FolderPack {
+  id            String   @id @default(cuid())
+  creatorId     String
+  path          String                                     // "/캐릭터/주인공"
+  isPublic      Boolean  @default(false)
+  description   String?  @db.VarChar(500)
+  coverAssetId  String?
+  importCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([creatorId, path])
+  @@map("folder_packs")
+}
+
 /// 유저 팔로우 (followerId → followeeId)
 model UserFollow {
   followerId String
