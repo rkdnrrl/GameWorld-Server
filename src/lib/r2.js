@@ -89,6 +89,12 @@ async function deletePrefix(prefix) {
  * CopyObjectCommand(서버사이드 복사)는 R2에서 묵시적 실패 가능성이 있어
  * getObject → putObject 방식으로 확실하게 처리한다.
  */
+/** 단일 객체 복사 (get → put 방식 — CopyObject 묵시적 실패 회피) */
+async function copyObject(srcKey, dstKey, opts = {}) {
+  const data = await getObject(srcKey);
+  await putObject(dstKey, data, { contentType: opts.contentType || contentType(dstKey) });
+}
+
 async function copyPrefix(srcPrefix, dstPrefix) {
   const keys = await listObjects(srcPrefix);
   if (keys.length === 0) {
