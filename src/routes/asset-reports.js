@@ -57,7 +57,7 @@ async function submitReport(req, res, next) {
       const updated = await tx.asset.update({
         where: { id },
         data:  { reportCount: { increment: 1 } },
-        select: { reportCount: true, isPublic: true },
+        select: { reportCount: true, isPublic: true, name: true },
       });
 
       // 자동 hide
@@ -66,10 +66,17 @@ async function submitReport(req, res, next) {
         await tx.asset.update({ where: { id }, data: { isPublic: false } });
         autoHidden = true;
       }
-      return { reportCount: updated.reportCount, autoHidden };
+      return { reportCount: updated.reportCount, autoHidden, assetName: updated.name };
     });
 
-    res.json({ ok: true, ...result });
+    // 자동 hide 됐으면 작가에게 알림
+    if (result.autoHidden && asset.creatorId) {
+      require('./notifications').createNotification(asset.creatorId, 'asset_auto_hidden', {
+        assetId: id, assetName: result.assetName, reportCount: result.reportCount,
+      });
+    }
+
+    res.json({ ok: true, reportCount: result.reportCount, autoHidden: result.autoHidden });
   } catch (err) { next(err); }
 }
 
