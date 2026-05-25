@@ -13,6 +13,7 @@ router.use('/worlds',     require('./worlds'));
 router.use('/assets',                require('./assets'));
 router.use('/asset-kinds',           require('./asset-kinds'));
 router.use('/users',                 require('./users'));
+router.use('/notifications',         require('./notifications'));
 router.use('/operator/asset-reports', require('./asset-reports'));
 
 /** GET /api/me — 현재 유저 정보 */
