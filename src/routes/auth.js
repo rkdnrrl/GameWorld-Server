@@ -65,12 +65,13 @@ router.post('/login', async (req, res, next) => {
  * Supabase 토큰 → 플랫폼 JWT 교환 (7일 만료)
  * 소셜 로그인 후 호출하면 자체 JWT 발급 → 만료 관리 단순화
  */
-router.post('/exchange', requireAuth, (req, res) => {
-  // sub 는 platform DB users.id (= Supabase Auth user_id) 로 고정.
-  // requireAuth 가 sub → prisma.profile.findUnique({ id }) 로 조회하므로
-  // 여기서 commonUserId 를 박으면 platform user 와 ID 가 어긋나 401 이 남.
-  const token = authService.signToken(req.user.id, !!req.user.isOperator);
-  res.json({ token });
+router.post('/exchange', requireAuth, (req, res, next) => {
+  try {
+    const token = authService.signToken(req.user.id, !!req.user.isOperator);
+    res.json({ token });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
