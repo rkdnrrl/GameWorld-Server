@@ -67,7 +67,7 @@ router.post('/login', async (req, res, next) => {
  */
 router.post('/exchange', requireAuth, (req, res) => {
   // sub 는 platform DB users.id (= Supabase Auth user_id) 로 고정.
-  // requireAuth 가 sub → prisma.user.findUnique({ id }) 로 조회하므로
+  // requireAuth 가 sub → prisma.profile.findUnique({ id }) 로 조회하므로
   // 여기서 commonUserId 를 박으면 platform user 와 ID 가 어긋나 401 이 남.
   const token = authService.signToken(req.user.id, !!req.user.isOperator);
   res.json({ token });
@@ -75,26 +75,41 @@ router.post('/exchange', requireAuth, (req, res) => {
 
 // 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
 router.get('/me', requireAuth, async (req, res) => {
-  const COMMON_API = 'https://api.airnuri.com';
-  const cuid = req.user.commonUserId || req.user.id;
   try {
-    const [coinRes, subRes] = await Promise.all([
-      fetch(`${COMMON_API}/api/coins/${cuid}`).catch(() => null),
-      fetch(`${COMMON_API}/api/subscriptions/${cuid}`).catch(() => null),
-    ]);
-    const coins = coinRes?.ok ? ((await coinRes.json()).coins ?? 0) : 0;
-    let isSubscribed = false;
-    let subscriptionUntil = null;
-    if (subRes?.ok) {
-      const s = await subRes.json();
-      subscriptionUntil = s.until || s.expiresAt || null;
-      isSubscribed = !!s.active || (subscriptionUntil && new Date(subscriptionUntil) > new Date());
+    const profile = await prisma.profile.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, username: true, createdAt: true, isOperator: true },
+    });
+    if (!profile) {
+      return res.status(404).json({ error: { message: '사용자 정보를 찾을 수 없습니다.' } });
     }
-    const alpUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { alpCoins: true } });
-    const alpCoins = Number(alpUser?.alpCoins ?? 0);
-    res.json({ user: { ...req.user, coins, alpCoins, isSubscribed, subscriptionUntil, operatorAccess: userIsOperator(req.user) } });
+    res.json({
+      user: {
+        id: profile.id,
+        email: req.user.email || '',
+        nickname: profile.username,
+        coins: 0,
+        createdAt: profile.createdAt,
+        isOperator: !!profile.isOperator,
+        operatorAccess: userIsOperator(profile),
+        isSubscribed: false,
+        subscriptionUntil: null,
+      },
+    });
   } catch {
-    res.json({ user: { ...req.user, coins: 0, alpCoins: 0, isSubscribed: false, operatorAccess: userIsOperator(req.user) } });
+    res.json({
+      user: {
+        id: req.user.id,
+        email: req.user.email || '',
+        nickname: req.user.nickname,
+        coins: 0,
+        createdAt: new Date().toISOString(),
+        isOperator: !!req.user.isOperator,
+        operatorAccess: userIsOperator(req.user),
+        isSubscribed: false,
+        subscriptionUntil: null,
+      },
+    });
   }
 });
 
@@ -110,21 +125,30 @@ router.patch('/me', requireAuth, async (req, res, next) => {
   try {
     const { nickname } = patchMeSchema.parse(req.body);
 
-    const duplicate = await prisma.user.findFirst({
-      where: { nickname, NOT: { id: req.user.id } },
+    const duplicate = await prisma.profile.findFirst({
+      where: { username: nickname, NOT: { id: req.user.id } },
       select: { id: true },
     });
     if (duplicate) {
       return res.status(409).json({ error: { message: '이미 사용 중인 닉네임입니다.' } });
     }
 
-    const updated = await prisma.user.update({
+    const updated = await prisma.profile.update({
       where: { id: req.user.id },
-      data: { nickname },
-      select: { id: true, nickname: true, createdAt: true, isOperator: true },
+      data: { username: nickname },
+      select: { id: true, username: true, createdAt: true, isOperator: true },
     });
-
-    res.json({ user: { ...updated, operatorAccess: userIsOperator(updated) } });
+    res.json({
+      user: {
+        id: updated.id,
+        email: req.user.email || '',
+        nickname: updated.username,
+        coins: 0,
+        createdAt: updated.createdAt,
+        isOperator: !!updated.isOperator,
+        operatorAccess: userIsOperator(updated),
+      },
+    });
   } catch (err) {
     if (err.name === 'ZodError') {
       const message = err.issues?.[0]?.message || '입력값이 올바르지 않습니다.';
@@ -137,7 +161,7 @@ router.patch('/me', requireAuth, async (req, res, next) => {
 // 회원 탈퇴
 router.delete('/me', requireAuth, async (req, res, next) => {
   try {
-    await prisma.user.delete({ where: { id: req.user.id } });
+    await prisma.profile.delete({ where: { id: req.user.id } });
     res.json({ message: '회원 탈퇴가 완료되었습니다.' });
   } catch (err) {
     next(err);
@@ -150,11 +174,20 @@ router.delete('/me', requireAuth, async (req, res, next) => {
  */
 router.get('/profile', requireAuth, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.profile.findUnique({
       where: { id: req.user.id },
-      select: { nickname: true, bio: true, profileImageUrl: true, websiteUrl: true },
+      select: { username: true, bio: true, profileImageUrl: true, websiteUrl: true },
     });
-    res.json({ profile: user });
+    res.json({
+      profile: user
+        ? {
+            nickname: user.username,
+            bio: user.bio,
+            profileImageUrl: user.profileImageUrl,
+            websiteUrl: user.websiteUrl,
+          }
+        : null,
+    });
   } catch (err) { next(err); }
 });
 
@@ -164,12 +197,19 @@ router.patch('/profile', requireAuth, async (req, res, next) => {
     const data = {};
     if (typeof bio        === 'string') data.bio        = bio.trim().slice(0, 300);
     if (typeof websiteUrl === 'string') data.websiteUrl = websiteUrl.trim().slice(0, 200);
-    const updated = await prisma.user.update({
+    const updated = await prisma.profile.update({
       where: { id: req.user.id },
       data,
-      select: { nickname: true, bio: true, profileImageUrl: true, websiteUrl: true },
+      select: { username: true, bio: true, profileImageUrl: true, websiteUrl: true },
     });
-    res.json({ profile: updated });
+    res.json({
+      profile: {
+        nickname: updated.username,
+        bio: updated.bio,
+        profileImageUrl: updated.profileImageUrl,
+        websiteUrl: updated.websiteUrl,
+      },
+    });
   } catch (err) { next(err); }
 });
 
@@ -189,7 +229,7 @@ router.post('/profile/image', requireAuth, uploadProfileImg.single('profileImage
     const key = `media/profiles/${req.user.id}.${ext}`;
     await r2.putObject(key, img.buffer, { contentType: img.mimetype });
     const profileImageUrl = `${CDN_BASE}/${key}`;
-    await prisma.user.update({
+    await prisma.profile.update({
       where: { id: req.user.id },
       data: { profileImageUrl },
     });

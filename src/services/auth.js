@@ -1,9 +1,6 @@
-﻿const jwt = require('jsonwebtoken');
-const { prisma } = require('../db');
+const jwt = require('jsonwebtoken');
+const { createClient } = require('@supabase/supabase-js');
 const config = require('../config');
-const { userIsOperator } = require('../middleware/operatorAuth');
-
-const COMMON_API = 'https://api.airnuri.com';
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -12,22 +9,27 @@ class HttpError extends Error {
   }
 }
 
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabase = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
 async function signup({ email, nickname, password, redirectTo }) {
-  // Common API에 회원가입 — 이메일 인증 메일 발송 (redirectTo 필수)
-  const res = await fetch(`${COMMON_API}/api/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, nickname, password, redirectTo }),
+  if (!supabase) throw new HttpError(500, 'Supabase 설정이 누락되었습니다.');
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { nickname },
+      ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
+    },
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new HttpError(res.status, data.error || '회원가입 실패');
-  }
+  if (error) throw new HttpError(400, error.message || '회원가입 실패');
 
-  // Common API 응답에 token이 없으면 = 이메일 인증 대기 상태
-  // (Common API는 인증 메일을 보내고 userId만 반환, 사용자가 메일 클릭해야 활성화됨)
-  if (!data.token && !data.session) {
+  if (!data?.session) {
     return {
       requiresEmailConfirmation: true,
       email,
@@ -35,59 +37,25 @@ async function signup({ email, nickname, password, redirectTo }) {
     };
   }
 
-  // 즉시 활성화된 경우만 게임 프로필 + JWT 발급
-  const commonUserId = data.userId;
-  const isOperator = !!data.isOperator;
-
-  const user = await prisma.user.create({
-    data: { id: commonUserId, nickname },
-    select: { id: true, nickname: true, createdAt: true },
-  });
-
-  const token = signToken(user.id, isOperator);
   return {
-    user: { ...user, email, coins: 0, isOperator, operatorAccess: isOperator },
-    token,
+    requiresEmailConfirmation: false,
+    email,
+    message: '회원가입이 완료되었습니다.',
   };
 }
 
 async function login({ email, password }) {
-  // Common API에 로그인
-  const res = await fetch(`${COMMON_API}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
+  if (!supabase) throw new HttpError(500, 'Supabase 설정이 누락되었습니다.');
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new HttpError(401, data.error || '이메일 또는 비밀번호가 올바르지 않습니다.');
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data?.session) {
+    throw new HttpError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
   }
 
-  const { user: commonUser } = data;
-  const commonUserId = commonUser.id;
-
-  // 플랫폼 DB 프로필 조회 또는 생성
-  let user = await prisma.user.findUnique({ where: { id: commonUserId } });
-  if (!user) {
-    user = await prisma.user.create({
-      data: { id: commonUserId, nickname: commonUser.nickname },
-    });
-  }
-
-  const isOperator = !!commonUser.isOperator;
-  const token = signToken(user.id, isOperator);
   return {
-    user: {
-      id: user.id,
-      email: commonUser.email,
-      nickname: user.nickname,
-      coins: commonUser.coins,
-      createdAt: user.createdAt,
-      isOperator,
-      operatorAccess: isOperator,
-    },
-    token,
+    token: data.session.access_token,
+    refreshToken: data.session.refresh_token,
+    expiresAt: data.session.expires_at || null,
   };
 }
 

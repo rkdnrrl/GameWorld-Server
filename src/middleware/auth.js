@@ -20,7 +20,7 @@ if (supabaseUrl && supabaseKey) {
  * 성공 시 req.user 와 동일한 구조 반환.
  */
 async function resolveUserFromToken(token) {
-  let userId, nickname, isOperator = false;
+  let userId, nickname, isOperator = false, email = '';
 
   // 1) 플랫폼 자체 JWT
   try {
@@ -35,6 +35,7 @@ async function resolveUserFromToken(token) {
       const { data, error } = await supabase.auth.getUser(token);
       if (error || !data?.user) return null;
       const u = data.user;
+      email    = u.email || '';
       userId   = u.id;
       nickname = u.user_metadata?.full_name
         || u.user_metadata?.name
@@ -61,6 +62,7 @@ async function resolveUserFromToken(token) {
   return {
     id:         profile.id,
     nickname:   profile.username,
+    email,
     isOperator: profile.isOperator || isOperator,
   };
 }
