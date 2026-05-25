@@ -17,7 +17,7 @@ model Profile {
   followingCount Int   @default(0)
   createdAt  DateTime  @default(now())
 
-  character  Character?
+  characters Character[]
   worlds     World[]
   assets     Asset[]
   followers  UserFollow[] @relation("Followee")  // 나를 팔로우하는 사람들
@@ -72,14 +72,16 @@ model UserFollow {
 /// 캐릭터 외형 (유저당 1개)
 model Character {
   id         String   @id @default(cuid())
-  userId     String   @unique
+  userId     String
   user       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String   @db.VarChar(30)
   /// { bodyColor, skinColor, hairColor, eyeColor, hairStyle }
   appearance Json     @default("{}")
+  isActive   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([userId, isActive])
   @@map("characters")
 }
 
