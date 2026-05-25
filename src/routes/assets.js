@@ -344,6 +344,12 @@ router.post('/:id/clone', requireAuth, async (req, res, next) => {
       },
     });
 
+    // 원본의 importCount 증가 (best-effort, 실패해도 응답 보냄)
+    prisma.asset.update({
+      where: { id: src.id },
+      data:  { importCount: { increment: 1 } },
+    }).catch(() => {});
+
     res.json({ asset: serializeAsset(cloned) });
   } catch (err) { next(err); }
 });
