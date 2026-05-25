@@ -70,6 +70,14 @@ router.post('/exchange', requireAuth, (req, res, next) => {
     const token = authService.signToken(req.user.id, !!req.user.isOperator);
     res.json({ token });
   } catch (err) {
+    // Fallback: if platform JWT signing fails in runtime env,
+    // return the original Supabase access token so login flow can continue.
+    const auth = req.headers.authorization || '';
+    const [type, rawToken] = auth.split(' ');
+    if (type === 'Bearer' && rawToken) {
+      console.error('[auth/exchange] signToken failed, fallback to supabase token:', err?.message || err);
+      return res.json({ token: rawToken, fallback: true });
+    }
     next(err);
   }
 });
