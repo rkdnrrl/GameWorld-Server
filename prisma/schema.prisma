@@ -67,6 +67,8 @@ model Asset {
   meshyTaskId  String?  @db.VarChar(100)
   polyCount    Int?
   isPublic     Boolean  @default(false)
+  /// 머티리얼/텍스처 설정 — { material, materialColor, textureAlbedo, textureNormal, textureRoughness, textureTilingX, textureTilingY }
+  materialConfig Json?
   createdAt    DateTime @default(now())
 
   @@index([creatorId])
