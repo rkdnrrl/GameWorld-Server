@@ -5,7 +5,7 @@
 const { Router } = require('express');
 const multer = require('multer');
 const path = require('path');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
 const r2 = require('../lib/r2');
 
@@ -158,16 +158,115 @@ router.get('/my', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/* GET /api/assets/public — 공개 에셋 목록 */
+/* ─────────────────────────────────────────
+   GET /api/assets/public — 공개 에셋 검색 + 페이지네이션
+   쿼리: q (이름·태그), kind, tag, sort (recent|name), page, pageSize
+───────────────────────────────────────── */
+const PAGE_SIZE_DEFAULT = 40;
+const PAGE_SIZE_MAX     = 100;
+
 router.get('/public', async (req, res, next) => {
   try {
-    const assets = await prisma.asset.findMany({
-      where:   { isPublic: true },
-      orderBy: { createdAt: 'desc' },
-      take:    200,
+    const q        = String(req.query.q || '').trim();
+    const kind     = String(req.query.kind || '').trim();
+    const tag      = String(req.query.tag || '').trim();
+    const sort     = String(req.query.sort || 'recent');
+    const page     = Math.max(1, parseInt(String(req.query.page || '1')) || 1);
+    const pageSize = Math.min(PAGE_SIZE_MAX,
+      Math.max(1, parseInt(String(req.query.pageSize || PAGE_SIZE_DEFAULT)) || PAGE_SIZE_DEFAULT),
+    );
+
+    const where = { isPublic: true };
+    if (kind) where.kind = kind;
+    if (tag)  where.tags = { has: tag };
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { tags: { has: q } },
+      ];
+    }
+
+    const orderBy =
+      sort === 'name' ? [{ name: 'asc' }] :
+                        [{ createdAt: 'desc' }];
+
+    const [total, assets] = await Promise.all([
+      prisma.asset.count({ where }),
+      prisma.asset.findMany({
+        where, orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { creator: { select: { username: true } } },
+      }),
+    ]);
+
+    res.json({
+      assets: assets.map(serializeAsset),
+      page, pageSize, total,
+      hasMore: page * pageSize < total,
+    });
+  } catch (err) { next(err); }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/assets/:id/clone — 공개 에셋을 내 라이브러리로 복사
+   원본 R2 파일을 내 prefix 로 복사, DB row 생성, 메타데이터에 출처 기록
+───────────────────────────────────────── */
+router.post('/:id/clone', requireAuth, async (req, res, next) => {
+  try {
+    const src = await prisma.asset.findUnique({
+      where: { id: req.params.id },
       include: { creator: { select: { username: true } } },
     });
-    res.json({ assets: assets.map(serializeAsset) });
+    if (!src) return res.status(404).json({ error: { message: '에셋 없음' } });
+    if (!src.isPublic) return res.status(403).json({ error: { message: '공개 에셋만 복사 가능' } });
+    if (src.creatorId === req.user.id) {
+      return res.status(400).json({ error: { message: '본인 에셋은 복사할 수 없습니다.' } });
+    }
+
+    await ensureProfile(req.user);
+
+    // R2 key 추출 + 새 key 생성
+    const srcKey = src.modelUrl.replace(`${CDN_BASE}/`, '');
+    const ext = path.extname(srcKey);
+    const newId  = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const dstKey = `assets/${req.user.id}/${newId}${ext}`;
+
+    try {
+      await r2.copyObject(srcKey, dstKey);
+    } catch (e) {
+      return res.status(500).json({ error: { message: '원본 파일 복사 실패' } });
+    }
+
+    let thumbDstUrl = null;
+    if (src.thumbnailUrl) {
+      try {
+        const tSrcKey = src.thumbnailUrl.replace(`${CDN_BASE}/`, '');
+        const tExt    = path.extname(tSrcKey) || '.png';
+        const tDstKey = `assets/${req.user.id}/thumb_${newId}${tExt}`;
+        await r2.copyObject(tSrcKey, tDstKey);
+        thumbDstUrl = `${CDN_BASE}/${tDstKey}`;
+      } catch {}
+    }
+
+    const modelUrl = `${CDN_BASE}/${dstKey}`;
+    const meta = { ...(src.metadata || {}), importedFrom: { assetId: src.id, creatorName: src.creator?.username || null } };
+
+    const cloned = await prisma.asset.create({
+      data: {
+        creatorId:    req.user.id,
+        name:         src.name,
+        modelUrl,
+        thumbnailUrl: thumbDstUrl,
+        kind:         src.kind,
+        metadata:     meta,
+        tags:         src.tags || [],
+        fileSize:     src.fileSize,
+        isPublic:     false,
+      },
+    });
+
+    res.json({ asset: serializeAsset(cloned) });
   } catch (err) { next(err); }
 });
 
