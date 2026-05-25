@@ -11,9 +11,17 @@ class HttpError extends Error {
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabase = (supabaseUrl && supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+let supabase = null;
+if (supabaseUrl && supabaseAnonKey) {
+  try {
+    const ws = require('ws');
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      realtime: { transport: ws },
+    });
+  } catch {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+  }
+}
 
 async function signup({ email, nickname, password, redirectTo }) {
   if (!supabase) throw new HttpError(500, 'Supabase 설정이 누락되었습니다.');
