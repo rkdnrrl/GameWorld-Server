@@ -133,8 +133,9 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
     const data = {};
-    if (req.body.name     !== undefined) data.name     = String(req.body.name).slice(0, 100);
-    if (req.body.isPublic !== undefined) data.isPublic = Boolean(req.body.isPublic);
+    if (req.body.name     !== undefined)        data.name     = String(req.body.name).slice(0, 100);
+    if (req.body.isPublic !== undefined)        data.isPublic = Boolean(req.body.isPublic);
+    if (req.body.materialConfig !== undefined)  data.materialConfig = req.body.materialConfig;
 
     const updated = await prisma.asset.update({ where: { id: req.params.id }, data });
     res.json({ asset: updated });
