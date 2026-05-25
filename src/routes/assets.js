@@ -104,6 +104,11 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
 
     await ensureProfile(req.user);
 
+    // 폴더 — 현재 보고 있는 폴더로 자동 분류 (선택 사항)
+    const folder = req.body.folder
+      ? String(req.body.folder).slice(0, 200)
+      : null;
+
     const asset = await prisma.asset.create({
       data: {
         creatorId: req.user.id,
@@ -111,6 +116,7 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
         modelUrl,
         kind:      kind.id,
         fileSize:  BigInt(file.size),
+        folder,
         isPublic:  false,
       },
     });
