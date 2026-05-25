@@ -19,6 +19,8 @@ FROM ranked r
 WHERE c.id = r.id;
 
 -- Remove old one-character-per-user unique constraint/index if present
+ALTER TABLE "characters"
+DROP CONSTRAINT IF EXISTS "characters_userId_key";
 DROP INDEX IF EXISTS "characters_userId_key";
 
 -- Query helper index
