@@ -12,6 +12,9 @@ model Profile {
   id         String    @id          // = Supabase auth.users.id
   username   String    @unique @db.VarChar(30)
   isOperator Boolean   @default(false)
+  bio        String?   @db.VarChar(300)
+  profileImageUrl String? @db.VarChar(400)
+  websiteUrl String?   @db.VarChar(200)
   /// 팔로워/팔로잉 카운터 (denormalized)
   followerCount  Int   @default(0)
   followingCount Int   @default(0)
