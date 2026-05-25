@@ -196,6 +196,87 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/* ─────────────────────────────────────────
+   POST /api/assets/batch — 일괄 작업
+   body: { ids: string[], action: 'delete'|'move'|'addTags'|'removeTags'|'setPublic', value?: any }
+───────────────────────────────────────── */
+const BATCH_MAX = 200;
+router.post('/batch', requireAuth, async (req, res, next) => {
+  try {
+    const { ids, action } = req.body || {};
+    const value = req.body?.value;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: { message: 'ids 필요' } });
+    }
+    if (ids.length > BATCH_MAX) {
+      return res.status(400).json({ error: { message: `한 번에 ${BATCH_MAX}개 까지` } });
+    }
+    const allowedActions = new Set(['delete', 'move', 'addTags', 'removeTags', 'setPublic']);
+    if (!allowedActions.has(action)) {
+      return res.status(400).json({ error: { message: 'action 잘못됨' } });
+    }
+
+    // 소유 검증 — 본인 것만 필터
+    const owned = await prisma.asset.findMany({
+      where: { id: { in: ids }, creatorId: req.user.id },
+      select: { id: true, modelUrl: true, thumbnailUrl: true, tags: true },
+    });
+    const ownedIds = owned.map(a => a.id);
+    if (ownedIds.length === 0) {
+      return res.status(403).json({ error: { message: '권한 있는 에셋 없음' } });
+    }
+
+    let result;
+    if (action === 'delete') {
+      // R2 키 모아서 best-effort 삭제
+      const keys = [];
+      for (const a of owned) {
+        if (a.modelUrl)     keys.push(a.modelUrl.replace(`${CDN_BASE}/`, ''));
+        if (a.thumbnailUrl) keys.push(a.thumbnailUrl.replace(`${CDN_BASE}/`, ''));
+      }
+      try { if (keys.length) await r2.deleteKeys(keys); } catch {}
+      const r = await prisma.asset.deleteMany({ where: { id: { in: ownedIds } } });
+      result = { deleted: r.count };
+    } else if (action === 'move') {
+      // value = folder (string|null)
+      const folder = value ? String(value).slice(0, 200) : null;
+      const r = await prisma.asset.updateMany({
+        where: { id: { in: ownedIds } },
+        data:  { folder },
+      });
+      result = { updated: r.count, folder };
+    } else if (action === 'setPublic') {
+      const isPublic = Boolean(value);
+      const r = await prisma.asset.updateMany({
+        where: { id: { in: ownedIds } },
+        data:  { isPublic },
+      });
+      result = { updated: r.count, isPublic };
+    } else if (action === 'addTags' || action === 'removeTags') {
+      // PG 배열 연산은 updateMany 로 안되니 row 단위 처리 (트랜잭션)
+      if (!Array.isArray(value) || value.length === 0) {
+        return res.status(400).json({ error: { message: 'value: 태그 배열 필요' } });
+      }
+      const incoming = value.map(t => String(t).trim().slice(0, 50)).filter(Boolean);
+      const ops = owned.map(a => {
+        const current = a.tags || [];
+        let next;
+        if (action === 'addTags') {
+          next = Array.from(new Set([...current, ...incoming])).slice(0, 30);
+        } else {
+          const remove = new Set(incoming);
+          next = current.filter(t => !remove.has(t));
+        }
+        return prisma.asset.update({ where: { id: a.id }, data: { tags: next } });
+      });
+      await prisma.$transaction(ops);
+      result = { updated: owned.length };
+    }
+
+    res.json({ ok: true, ...result, skipped: ids.length - ownedIds.length });
+  } catch (err) { next(err); }
+});
+
 /* DELETE /api/assets/:id */
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
