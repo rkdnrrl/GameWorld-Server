@@ -10,9 +10,10 @@ router.get('/health', (req, res) => {
 router.use('/auth',       require('./auth'));
 router.use('/characters', require('./characters'));
 router.use('/worlds',     require('./worlds'));
-router.use('/assets',      require('./assets'));
-router.use('/asset-kinds', require('./asset-kinds'));
-router.use('/users',       require('./users'));
+router.use('/assets',                require('./assets'));
+router.use('/asset-kinds',           require('./asset-kinds'));
+router.use('/users',                 require('./users'));
+router.use('/operator/asset-reports', require('./asset-reports'));
 
 /** GET /api/me — 현재 유저 정보 */
 router.get('/me', requireAuth, (req, res) => {
