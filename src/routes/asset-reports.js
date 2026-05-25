@@ -134,14 +134,18 @@ router.patch('/:id', requireAuth, requireOperator, async (req, res, next) => {
       return res.status(409).json({ error: { message: '이미 처리됨' } });
     }
 
+    // 작가 정보 (알림용)
+    const asset = await prisma.asset.findUnique({
+      where: { id: report.assetId },
+      select: { id: true, name: true, creatorId: true, modelUrl: true, thumbnailUrl: true },
+    });
+
     if (resolution === 'dismiss') {
-      // 신고 기각 — 에셋은 그대로
       await prisma.assetReport.update({
         where: { id },
         data:  { status: 'dismissed', resolution: 'dismiss', resolvedBy: req.user.id, resolvedAt: new Date() },
       });
     } else if (resolution === 'hide') {
-      // 비공개 처리 — 에셋은 보존, 다른 신고도 같이 resolved 처리
       await prisma.$transaction([
         prisma.asset.update({ where: { id: report.assetId }, data: { isPublic: false } }),
         prisma.assetReport.updateMany({
@@ -149,9 +153,12 @@ router.patch('/:id', requireAuth, requireOperator, async (req, res, next) => {
           data:  { status: 'resolved', resolution: 'hide', resolvedBy: req.user.id, resolvedAt: new Date() },
         }),
       ]);
+      if (asset?.creatorId) {
+        require('./notifications').createNotification(asset.creatorId, 'report_resolved', {
+          assetId: asset.id, assetName: asset.name, resolution: 'hide',
+        });
+      }
     } else if (resolution === 'delete') {
-      // 영구 삭제 (R2 + DB cascade)
-      const asset = await prisma.asset.findUnique({ where: { id: report.assetId } });
       if (asset) {
         try {
           const keys = [];
@@ -159,8 +166,12 @@ router.patch('/:id', requireAuth, requireOperator, async (req, res, next) => {
           if (asset.thumbnailUrl) keys.push(asset.thumbnailUrl.replace(`${CDN_BASE}/`, ''));
           if (keys.length) await r2.deleteKeys(keys);
         } catch {}
-        // assetReport.assetId 가 cascade 라서 같이 삭제됨 — resolved 마킹 의미 없음
         await prisma.asset.delete({ where: { id: asset.id } });
+        if (asset.creatorId) {
+          require('./notifications').createNotification(asset.creatorId, 'report_resolved', {
+            assetId: asset.id, assetName: asset.name, resolution: 'delete',
+          });
+        }
       } else {
         await prisma.assetReport.update({
           where: { id },

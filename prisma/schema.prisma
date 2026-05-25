@@ -12,13 +12,45 @@ model Profile {
   id         String    @id          // = Supabase auth.users.id
   username   String    @unique @db.VarChar(30)
   isOperator Boolean   @default(false)
+  /// 팔로워/팔로잉 카운터 (denormalized)
+  followerCount  Int   @default(0)
+  followingCount Int   @default(0)
   createdAt  DateTime  @default(now())
 
   character  Character?
   worlds     World[]
   assets     Asset[]
+  followers  UserFollow[] @relation("Followee")  // 나를 팔로우하는 사람들
+  following  UserFollow[] @relation("Follower")  // 내가 팔로우하는 사람들
 
   @@map("profiles")
+}
+
+/// 알림
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String                                                // 받는 사람
+  type      String                                                // 'asset_liked','user_followed','asset_imported','report_resolved','asset_auto_hidden'
+  payload   Json      @default("{}")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+/// 유저 팔로우 (followerId → followeeId)
+model UserFollow {
+  followerId String
+  followeeId String
+  follower   Profile  @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee   Profile  @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([followerId, followeeId])
+  @@index([followeeId])
+  @@index([followerId])
+  @@map("user_follows")
 }
 
 /// 캐릭터 외형 (유저당 1개)
@@ -79,6 +111,17 @@ model Asset {
   /// 가상 폴더 경로 (예: "/캐릭터/주인공")
   folder       String?
   fileSize     BigInt?
+  /// 마켓플레이스 — 좋아요 수
+  likeCount    Int      @default(0)
+  /// 마켓플레이스 — 다른 유저가 내 라이브러리로 가져간 횟수
+  importCount  Int      @default(0)
+  /// 누적 신고수 (자동 hide 임계 판단)
+  reportCount  Int      @default(0)
+  /// 현재 버전 번호 (asset_versions 의 최신)
+  currentVersion Int    @default(1)
+  likes        AssetLike[]
+  reports      AssetReport[]
+  versions     AssetVersion[]
   createdAt    DateTime @default(now())
 
   @@index([creatorId])
@@ -87,6 +130,55 @@ model Asset {
   @@index([folder])
   @@index([creatorId, createdAt])
   @@map("assets")
+}
+
+/// 좋아요 (유저↔에셋 N:M)
+model AssetLike {
+  userId    String
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, assetId])
+  @@index([userId])
+  @@index([assetId])
+  @@map("asset_likes")
+}
+
+/// 에셋 버전 히스토리
+model AssetVersion {
+  id           String   @id @default(cuid())
+  assetId      String
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  version      Int                                 // 1부터, 순차
+  modelUrl     String
+  thumbnailUrl String?
+  fileSize     BigInt?
+  note         String?  @db.VarChar(300)
+  createdAt    DateTime @default(now())
+
+  @@unique([assetId, version])
+  @@index([assetId, createdAt])
+  @@map("asset_versions")
+}
+
+/// 에셋 신고 (모더레이션)
+model AssetReport {
+  id          String   @id @default(cuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  reporterId  String                                              // 신고한 유저
+  reason      String                                              // 'inappropriate','copyright','spam','malware','other'
+  comment     String?  @db.VarChar(500)
+  status      String   @default("pending")                        // 'pending','dismissed','resolved'
+  resolvedBy  String?                                             // 운영자 userId
+  resolvedAt  DateTime?
+  resolution  String?                                             // 'dismiss','hide','delete'
+  createdAt   DateTime @default(now())
+
+  @@unique([reporterId, assetId])
+  @@index([status, createdAt])
+  @@map("asset_reports")
 }
 
 /// 에셋 타입 정의 — 운영자가 동적으로 추가/관리

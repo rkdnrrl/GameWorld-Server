@@ -289,6 +289,146 @@ router.delete('/:id/like', requireAuth, async (req, res, next) => {
 /* POST /api/assets/:id/report — 신고 (asset-reports.js 의 submitReport 위임) */
 router.post('/:id/report', requireAuth, require('./asset-reports').submitReport);
 
+/* ─────────────────────────────────────────
+   에셋 버전 관리
+     GET    /:id/versions               — 버전 목록 (소유자만)
+     POST   /:id/versions  (multipart)  — 새 버전 업로드 + 현재로 설정
+     POST   /:id/versions/:v/revert     — 특정 버전을 현재로 복원
+     DELETE /:id/versions/:v            — 버전 삭제 (현재 버전은 불가)
+───────────────────────────────────────── */
+router.get('/:id/versions', requireAuth, async (req, res, next) => {
+  try {
+    const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
+    if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
+
+    const versions = await prisma.assetVersion.findMany({
+      where: { assetId: asset.id },
+      orderBy: { version: 'desc' },
+    });
+    res.json({
+      currentVersion: asset.currentVersion,
+      versions: versions.map(v => ({ ...v, fileSize: v.fileSize != null ? v.fileSize.toString() : null })),
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/versions', requireAuth, uploadModel.single('model'), async (req, res, next) => {
+  try {
+    const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
+    if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
+
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: { message: '파일 필요' } });
+
+    const ext = path.extname(file.originalname).toLowerCase();
+    const extNoDot = ext.replace(/^\./, '');
+
+    if (DANGEROUS_EXTS.has(ext)) {
+      return res.status(400).json({ error: { message: '허용되지 않는 파일 형식' } });
+    }
+    const kinds = await getKindsCached();
+    const kind  = kinds.find(k => k.extensions.includes(extNoDot));
+    if (!kind) return res.status(400).json({ error: { message: '지원하지 않는 형식' } });
+    // 동일 kind 유지 — 다른 kind 로 바꾸려면 새 에셋 만드는 게 안전
+    if (asset.kind && asset.kind !== kind.id) {
+      return res.status(400).json({
+        error: { message: `현재 타입(${asset.kind})과 다른 형식 업로드 불가. 새 에셋으로 올려주세요.` },
+      });
+    }
+    if (file.size > kind.maxSizeMb * 1024 * 1024) {
+      return res.status(413).json({ error: { message: `${kind.label} 최대 ${kind.maxSizeMb}MB 초과` } });
+    }
+
+    const nextVersion = asset.currentVersion + 1;
+    const r2Key = `assets/${req.user.id}/${asset.id}_v${nextVersion}${ext}`;
+
+    await r2.putObject(r2Key, file.buffer, { contentType: file.mimetype || r2.contentType(r2Key) });
+    const modelUrl = `${CDN_BASE}/${r2Key}`;
+
+    const note = req.body?.note ? String(req.body.note).slice(0, 300) : null;
+
+    await prisma.$transaction([
+      prisma.assetVersion.create({
+        data: {
+          assetId:      asset.id,
+          version:      nextVersion,
+          modelUrl,
+          thumbnailUrl: null,
+          fileSize:     BigInt(file.size),
+          note,
+        },
+      }),
+      prisma.asset.update({
+        where: { id: asset.id },
+        data:  { modelUrl, fileSize: BigInt(file.size), currentVersion: nextVersion },
+      }),
+    ]);
+
+    const updated = await prisma.asset.findUnique({ where: { id: asset.id } });
+    res.json({ asset: serializeAsset(updated), version: nextVersion });
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/versions/:v/revert', requireAuth, async (req, res, next) => {
+  try {
+    const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
+    if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
+
+    const v = parseInt(String(req.params.v), 10);
+    if (!Number.isFinite(v)) return res.status(400).json({ error: { message: 'version 잘못됨' } });
+    if (v === asset.currentVersion) return res.status(400).json({ error: { message: '이미 현재 버전' } });
+
+    const target = await prisma.assetVersion.findUnique({
+      where: { assetId_version: { assetId: asset.id, version: v } },
+    });
+    if (!target) return res.status(404).json({ error: { message: '버전 없음' } });
+
+    const updated = await prisma.asset.update({
+      where: { id: asset.id },
+      data:  {
+        modelUrl:       target.modelUrl,
+        fileSize:       target.fileSize,
+        currentVersion: v,
+        // 썸네일은 의도적으로 유지 (썸네일은 별도 업로드 자산)
+      },
+    });
+    res.json({ asset: serializeAsset(updated) });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/versions/:v', requireAuth, async (req, res, next) => {
+  try {
+    const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
+    if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
+
+    const v = parseInt(String(req.params.v), 10);
+    if (!Number.isFinite(v)) return res.status(400).json({ error: { message: 'version 잘못됨' } });
+    if (v === asset.currentVersion) {
+      return res.status(400).json({ error: { message: '현재 버전은 삭제 불가 (다른 버전으로 복원 후 시도)' } });
+    }
+
+    const target = await prisma.assetVersion.findUnique({
+      where: { assetId_version: { assetId: asset.id, version: v } },
+    });
+    if (!target) return res.status(404).json({ error: { message: '버전 없음' } });
+
+    // R2 best-effort
+    try {
+      const key = target.modelUrl.replace(`${CDN_BASE}/`, '');
+      if (key) await r2.deleteKeys([key]);
+    } catch {}
+
+    await prisma.assetVersion.delete({
+      where: { assetId_version: { assetId: asset.id, version: v } },
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 /* GET /api/assets/my-likes — 내가 좋아요한 에셋 id 목록 */
 router.get('/my-likes', requireAuth, async (req, res, next) => {
   try {
