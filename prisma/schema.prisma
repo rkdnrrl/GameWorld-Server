@@ -62,16 +62,45 @@ model Asset {
   creator      Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
   name         String   @db.VarChar(100)
   prompt       String?  @db.VarChar(500)       // Meshy AI 프롬프트
-  modelUrl     String   @db.VarChar(400)       // R2 GLB URL
+  modelUrl     String   @db.VarChar(400)       // R2 URL
   thumbnailUrl String?  @db.VarChar(400)
   meshyTaskId  String?  @db.VarChar(100)
   polyCount    Int?
   isPublic     Boolean  @default(false)
-  /// 머티리얼/텍스처 설정 — { material, materialColor, textureAlbedo, textureNormal, textureRoughness, textureTilingX, textureTilingY }
+  /// 머티리얼/텍스처 설정 — DEPRECATED: metadata.materialConfig 로 이전됨
   materialConfig Json?
+  /// 타입(asset_kinds.id) — 'model','image','audio','video',...
+  kind         String?
+  kindRef      AssetKind? @relation(fields: [kind], references: [id], onDelete: SetNull)
+  /// 타입별 메타데이터 (3D=materialConfig, image=width/height, audio=duration ...)
+  metadata     Json?    @default("{}")
+  /// 사용자 태그
+  tags         String[] @default([])
+  /// 가상 폴더 경로 (예: "/캐릭터/주인공")
+  folder       String?
+  fileSize     BigInt?
   createdAt    DateTime @default(now())
 
   @@index([creatorId])
   @@index([isPublic])
+  @@index([kind])
+  @@index([folder])
+  @@index([creatorId, createdAt])
   @@map("assets")
+}
+
+/// 에셋 타입 정의 — 운영자가 동적으로 추가/관리
+model AssetKind {
+  id          String   @id                       // 'model','image','audio'
+  label       String
+  icon        String?
+  extensions  String[]                            // ['fbx','glb']
+  mimeTypes   String[] @default([])               // 검증용 prefix
+  maxSizeMb   Int      @default(50)
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  assets      Asset[]
+
+  @@map("asset_kinds")
 }

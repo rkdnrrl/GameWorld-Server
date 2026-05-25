@@ -1,6 +1,6 @@
 /**
- * 3D 에셋 업로드 (FBX / GLB / OBJ)
- * R2에 저장 후 DB에 메타 기록
+ * 에셋 업로드 — 타입은 asset_kinds 테이블에서 동적으로 결정
+ * 운영자가 새 타입(sound/video) 추가하면 코드 변경 없이 즉시 허용
  */
 const { Router } = require('express');
 const multer = require('multer');
@@ -13,19 +13,36 @@ const router = Router();
 
 const CDN_BASE = 'https://play.airliveplay.com';
 
-const ALLOWED_EXT  = new Set(['.fbx', '.png', '.jpg', '.jpeg', '.webp']);
-const MAX_MODEL_BYTES = 100 * 1024 * 1024; // 100MB
-const MAX_THUMB_BYTES = 5   * 1024 * 1024; // 5MB
+/** 운영자도 화이트리스트 못 하는 위험 확장자 (서버 강제) */
+const DANGEROUS_EXTS = new Set([
+  '.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.dll', '.so', '.dylib',
+  '.jar', '.app', '.deb', '.rpm', '.scr', '.vbs', '.com', '.pif',
+  '.html', '.htm', '.svg',  // XSS 위험
+]);
+
+const HARD_MAX_BYTES = 500 * 1024 * 1024;   // 운영자가 maxSizeMb 잘못 설정해도 절대 500MB 못넘김
+const MAX_THUMB_BYTES = 5 * 1024 * 1024;
 
 const uploadModel = multer({
   storage: multer.memoryStorage(),
-  limits:  { fileSize: MAX_MODEL_BYTES, files: 1 },
+  limits:  { fileSize: HARD_MAX_BYTES, files: 1 },
 });
 
 const uploadThumb = multer({
   storage: multer.memoryStorage(),
   limits:  { fileSize: MAX_THUMB_BYTES, files: 1 },
 });
+
+/* ── asset_kinds 캐시 (60초) ── */
+let kindsCache = { data: null, at: 0 };
+async function getKindsCached() {
+  const now = Date.now();
+  if (kindsCache.data && now - kindsCache.at < 60_000) return kindsCache.data;
+  const rows = await prisma.assetKind.findMany({ where: { enabled: true } });
+  kindsCache = { data: rows, at: now };
+  return rows;
+}
+function invalidateKindsCache() { kindsCache = { data: null, at: 0 }; }
 
 /** 프로필 upsert 헬퍼 */
 async function ensureProfile(user) {
@@ -37,16 +54,42 @@ async function ensureProfile(user) {
 }
 
 /* ─────────────────────────────────────────
-   POST /api/assets/upload — FBX/GLB 업로드
+   POST /api/assets/upload — 파일 업로드
+   타입/확장자/크기/MIME 모두 asset_kinds DB 검증
 ───────────────────────────────────────── */
 router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res, next) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: { message: '파일을 첨부해주세요.' } });
 
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!ALLOWED_EXT.has(ext)) {
-      return res.status(400).json({ error: { message: '지원 형식: FBX, PNG, JPG, WEBP' } });
+    const ext = path.extname(file.originalname).toLowerCase();   // '.fbx'
+    const extNoDot = ext.replace(/^\./, '');
+
+    // 1) 위험 확장자 (서버 강제 블랙리스트)
+    if (DANGEROUS_EXTS.has(ext)) {
+      return res.status(400).json({ error: { message: '허용되지 않는 파일 형식입니다.' } });
+    }
+
+    // 2) DB 에서 매칭되는 활성 kind 찾기
+    const kinds = await getKindsCached();
+    const kind  = kinds.find(k => k.extensions.includes(extNoDot));
+    if (!kind) {
+      const allowed = kinds.flatMap(k => k.extensions).join(', ');
+      return res.status(400).json({ error: { message: `지원하지 않는 형식입니다. 허용: ${allowed}` } });
+    }
+
+    // 3) 크기 검증
+    if (file.size > kind.maxSizeMb * 1024 * 1024) {
+      return res.status(413).json({ error: { message: `${kind.label} 최대 크기 ${kind.maxSizeMb}MB 초과` } });
+    }
+
+    // 4) MIME 검증 (선택 — kind 에 mimeTypes 설정돼 있을 때만)
+    if (kind.mimeTypes && kind.mimeTypes.length > 0) {
+      const mime = (file.mimetype || '').toLowerCase();
+      const ok = kind.mimeTypes.some(prefix => mime.startsWith(prefix.toLowerCase()));
+      if (!ok) {
+        return res.status(400).json({ error: { message: '파일 형식과 내용이 일치하지 않습니다.' } });
+      }
     }
 
     const assetName = (req.body.name || path.basename(file.originalname, ext)).slice(0, 100);
@@ -66,11 +109,14 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
         creatorId: req.user.id,
         name:      assetName,
         modelUrl,
+        kind:      kind.id,
+        fileSize:  BigInt(file.size),
         isPublic:  false,
       },
     });
 
-    res.json({ asset });
+    // BigInt → string 직렬화
+    res.json({ asset: serializeAsset(asset) });
   } catch (err) { next(err); }
 });
 
@@ -96,7 +142,7 @@ router.post('/:id/thumbnail', requireAuth, uploadThumb.single('thumbnail'), asyn
       data:  { thumbnailUrl },
     });
 
-    res.json({ asset: updated });
+    res.json({ asset: serializeAsset(updated) });
   } catch (err) { next(err); }
 });
 
@@ -106,9 +152,9 @@ router.get('/my', requireAuth, async (req, res, next) => {
     const assets = await prisma.asset.findMany({
       where:   { creatorId: req.user.id },
       orderBy: { createdAt: 'desc' },
-      take:    100,
+      take:    500,
     });
-    res.json({ assets });
+    res.json({ assets: assets.map(serializeAsset) });
   } catch (err) { next(err); }
 });
 
@@ -121,11 +167,11 @@ router.get('/public', async (req, res, next) => {
       take:    200,
       include: { creator: { select: { username: true } } },
     });
-    res.json({ assets });
+    res.json({ assets: assets.map(serializeAsset) });
   } catch (err) { next(err); }
 });
 
-/* PATCH /api/assets/:id — 이름/공개 여부 수정 */
+/* PATCH /api/assets/:id — 이름/공개여부/태그/폴더/메타데이터 수정 */
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
     const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
@@ -133,12 +179,20 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
     const data = {};
-    if (req.body.name     !== undefined)        data.name     = String(req.body.name).slice(0, 100);
-    if (req.body.isPublic !== undefined)        data.isPublic = Boolean(req.body.isPublic);
-    if (req.body.materialConfig !== undefined)  data.materialConfig = req.body.materialConfig;
+    if (req.body.name           !== undefined) data.name     = String(req.body.name).slice(0, 100);
+    if (req.body.isPublic       !== undefined) data.isPublic = Boolean(req.body.isPublic);
+    if (req.body.tags           !== undefined && Array.isArray(req.body.tags)) {
+      data.tags = req.body.tags.map(t => String(t).slice(0, 50)).slice(0, 30);
+    }
+    if (req.body.folder         !== undefined) data.folder   = req.body.folder ? String(req.body.folder).slice(0, 200) : null;
+    if (req.body.metadata       !== undefined) data.metadata = req.body.metadata;
+    // 하위 호환: materialConfig 가 오면 metadata.materialConfig 로 저장
+    if (req.body.materialConfig !== undefined) {
+      data.metadata = { ...(asset.metadata || {}), materialConfig: req.body.materialConfig };
+    }
 
     const updated = await prisma.asset.update({ where: { id: req.params.id }, data });
-    res.json({ asset: updated });
+    res.json({ asset: serializeAsset(updated) });
   } catch (err) { next(err); }
 });
 
@@ -149,7 +203,6 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
-    // R2에서 파일 삭제 (실패해도 DB는 삭제)
     try {
       const key = asset.modelUrl.replace(`${CDN_BASE}/`, '');
       await r2.deleteKeys([key]);
@@ -164,4 +217,11 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/* BigInt 직렬화 헬퍼 */
+function serializeAsset(a) {
+  if (!a) return a;
+  return { ...a, fileSize: a.fileSize != null ? a.fileSize.toString() : null };
+}
+
 module.exports = router;
+module.exports.invalidateKindsCache = invalidateKindsCache;
