@@ -46,7 +46,7 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
 
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXT.has(ext)) {
-      return res.status(400).json({ error: { message: 'FBX 파일만 지원합니다.' } });
+      return res.status(400).json({ error: { message: '지원 형식: FBX, PNG, JPG, WEBP' } });
     }
 
     const assetName = (req.body.name || path.basename(file.originalname, ext)).slice(0, 100);
