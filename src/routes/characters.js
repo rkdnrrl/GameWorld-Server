@@ -110,4 +110,34 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/** DELETE /api/characters/:id — 내 캐릭터 삭제 */
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '');
+    const existing = await prisma.character.findFirst({
+      where: { id, userId: req.user.id },
+    });
+    if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.character.delete({ where: { id } });
+
+      if (existing.isActive) {
+        const fallback = await tx.character.findFirst({
+          where: { userId: req.user.id },
+          orderBy: { updatedAt: 'desc' },
+        });
+        if (fallback) {
+          await tx.character.update({
+            where: { id: fallback.id },
+            data: { isActive: true },
+          });
+        }
+      }
+    });
+
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
