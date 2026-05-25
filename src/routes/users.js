@@ -5,7 +5,7 @@
  */
 const { Router } = require('express');
 const { prisma } = require('../db');
-const { optionalAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 const router = Router();
 const PAGE_SIZE_DEFAULT = 40;
