@@ -226,12 +226,15 @@ router.get('/public', optionalAuth, async (req, res, next) => {
 router.post('/:id/like', requireAuth, async (req, res, next) => {
   try {
     const id = req.params.id;
-    const asset = await prisma.asset.findUnique({ where: { id }, select: { id: true, isPublic: true, creatorId: true } });
+    const asset = await prisma.asset.findUnique({
+      where: { id },
+      select: { id: true, isPublic: true, creatorId: true, name: true },
+    });
     if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
     if (!asset.isPublic) return res.status(403).json({ error: { message: '공개 에셋만 좋아요 가능' } });
     if (asset.creatorId === req.user.id) return res.status(400).json({ error: { message: '본인 에셋엔 좋아요 불가' } });
 
-    // 트랜잭션: like 생성 + 카운터 증가 (이미 있으면 건너뜀)
+    let isNew = false;
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.assetLike.findUnique({
         where: { userId_assetId: { userId: req.user.id, assetId: id } },
@@ -240,6 +243,7 @@ router.post('/:id/like', requireAuth, async (req, res, next) => {
         const a = await tx.asset.findUnique({ where: { id }, select: { likeCount: true } });
         return { liked: true, likeCount: a.likeCount };
       }
+      isNew = true;
       await tx.assetLike.create({ data: { userId: req.user.id, assetId: id } });
       const a = await tx.asset.update({
         where: { id },
@@ -248,6 +252,13 @@ router.post('/:id/like', requireAuth, async (req, res, next) => {
       });
       return { liked: true, likeCount: a.likeCount };
     });
+
+    // 새 좋아요 시 작가에게 알림 (best-effort)
+    if (isNew && asset.creatorId) {
+      require('./notifications').createNotification(asset.creatorId, 'asset_liked', {
+        assetId: asset.id, assetName: asset.name, actorName: req.user.nickname,
+      });
+    }
     res.json(result);
   } catch (err) { next(err); }
 });
