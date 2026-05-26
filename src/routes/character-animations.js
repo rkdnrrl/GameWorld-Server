@@ -47,7 +47,8 @@ function serialize(row) {
 
 function normalizeSlot(input) {
   const slot = String(input || '').trim().toLowerCase();
-  return SLOTS.includes(slot) ? slot : null;
+  // 소문자+숫자+언더스코어+하이픈, 1~50자 — 어떤 이름이든 허용 (swim, skydive, zero_gravity 등)
+  return /^[a-z][a-z0-9_-]{0,49}$/.test(slot) ? slot : null;
 }
 
 function isValidFbxUrl(input) {
