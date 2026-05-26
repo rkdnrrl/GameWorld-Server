@@ -77,7 +77,8 @@ async function listSlots(includeDisabled = false) {
 
   const bySlot = {};
   for (const row of rows) bySlot[row.slot] = serialize(row);
-  return { slots: bySlot, order: SLOTS };
+  // coreSlots: 물리 자동 트리거 슬롯 목록 (클라이언트 UI에서 코어/커스텀 구분용)
+  return { slots: bySlot, coreSlots: CORE_SLOTS, order: Object.keys(bySlot) };
 }
 
 router.get('/', async (_req, res, next) => {
