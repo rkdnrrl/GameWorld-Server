@@ -16,7 +16,7 @@ const upload = multer({
 });
 
 // 코어 슬롯 (물리엔진이 자동 트리거) — 목록 참고용, 유효성 검사에 쓰지 않음
-const CORE_SLOTS = ['idle', 'walk', 'run', 'jump', 'crouch', 'prone'];
+const CORE_SLOTS = ['idle', 'walk', 'run', 'jump', 'fall', 'crouch', 'crouch_walk', 'prone', 'prone_move'];
 // 하위 호환용 (이전 코드에서 SLOTS 참조 시)
 const SLOTS = CORE_SLOTS;
 
@@ -65,12 +65,15 @@ async function listSlots(includeDisabled = false) {
     WHERE ${includeDisabled} = true OR enabled = true
     ORDER BY
       CASE slot
-        WHEN 'idle' THEN 1
-        WHEN 'walk' THEN 2
-        WHEN 'run' THEN 3
-        WHEN 'jump' THEN 4
-        WHEN 'crouch' THEN 5
-        WHEN 'prone' THEN 6
+        WHEN 'idle'        THEN 1
+        WHEN 'walk'        THEN 2
+        WHEN 'run'         THEN 3
+        WHEN 'jump'        THEN 4
+        WHEN 'fall'        THEN 5
+        WHEN 'crouch'      THEN 6
+        WHEN 'crouch_walk' THEN 7
+        WHEN 'prone'       THEN 8
+        WHEN 'prone_move'  THEN 9
         ELSE 99
       END
   `;
