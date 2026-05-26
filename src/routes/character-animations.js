@@ -113,10 +113,17 @@ operatorRouter.put('/', requireAuth, requireOperator, async (req, res, next) => 
       }
       if (!enabled && !modelUrl) {
         await prisma.$executeRaw`
-          UPDATE "character_animation_slots"
-          SET enabled = false, "updatedBy" = ${req.user.id}, "updatedAt" = NOW()
-          WHERE slot = ${slot}
+          INSERT INTO "character_animation_slots" (slot, name, "assetId", "modelUrl", enabled, "updatedBy", "updatedAt")
+          VALUES (${slot}, ${name}, ${assetId}, ${''}, false, ${req.user.id}, NOW())
+          ON CONFLICT (slot) DO UPDATE SET
+            name = EXCLUDED.name,
+            "assetId" = EXCLUDED."assetId",
+            "modelUrl" = EXCLUDED."modelUrl",
+            enabled = false,
+            "updatedBy" = EXCLUDED."updatedBy",
+            "updatedAt" = NOW()
         `;
+        saved.push(slot);
         continue;
       }
 
