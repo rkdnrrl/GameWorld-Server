@@ -15,7 +15,10 @@ const upload = multer({
   limits: { fileSize: 250 * 1024 * 1024, files: 1 },
 });
 
-const SLOTS = ['idle', 'walk', 'run', 'jump', 'crouch', 'prone'];
+// 코어 슬롯 (물리엔진이 자동 트리거) — 목록 참고용, 유효성 검사에 쓰지 않음
+const CORE_SLOTS = ['idle', 'walk', 'run', 'jump', 'crouch', 'prone'];
+// 하위 호환용 (이전 코드에서 SLOTS 참조 시)
+const SLOTS = CORE_SLOTS;
 
 async function ensureTable() {
   await prisma.$executeRawUnsafe(`
