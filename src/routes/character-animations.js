@@ -1,12 +1,19 @@
 'use strict';
 
 const { Router } = require('express');
+const multer = require('multer');
+const path = require('path');
 const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
+const r2 = require('../lib/r2');
 
 const router = Router();
 const operatorRouter = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 250 * 1024 * 1024, files: 1 },
+});
 
 const SLOTS = ['idle', 'walk', 'run', 'jump', 'crouch', 'prone'];
 
@@ -129,6 +136,49 @@ operatorRouter.put('/', requireAuth, requireOperator, async (req, res, next) => 
 
     const result = await listSlots(true);
     res.json({ ok: true, saved, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+operatorRouter.post('/:slot/upload', requireAuth, requireOperator, upload.single('animation'), async (req, res, next) => {
+  try {
+    await ensureTable();
+    const slot = normalizeSlot(req.params.slot);
+    if (!slot) return res.status(400).json({ error: { message: 'Invalid slot.' } });
+
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: { message: 'FBX file is required.' } });
+
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ext !== '.fbx') {
+      return res.status(400).json({ error: { message: 'Only FBX files are allowed.' } });
+    }
+
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const r2Key = `character-animations/${slot}/${id}.fbx`;
+    await r2.putObject(r2Key, file.buffer, {
+      contentType: file.mimetype || 'application/octet-stream',
+    });
+
+    const modelUrl = `https://play.airliveplay.com/${r2Key}`;
+    const name = path.basename(file.originalname, ext).slice(0, 80);
+
+    await prisma.$executeRaw`
+      INSERT INTO "character_animation_slots" (slot, name, "assetId", "modelUrl", enabled, "updatedBy", "updatedAt")
+      VALUES (${slot}, ${name}, ${null}, ${modelUrl}, true, ${req.user.id}, NOW())
+      ON CONFLICT (slot) DO UPDATE SET
+        name = EXCLUDED.name,
+        "assetId" = NULL,
+        "modelUrl" = EXCLUDED."modelUrl",
+        enabled = true,
+        "updatedBy" = EXCLUDED."updatedBy",
+        "updatedAt" = NOW()
+    `;
+
+    res.json({
+      slot: { slot, name, assetId: null, modelUrl, enabled: true },
+    });
   } catch (err) {
     next(err);
   }
