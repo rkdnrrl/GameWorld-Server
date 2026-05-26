@@ -86,6 +86,18 @@ async function ensureCoreSchema() {
   `);
 
   await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "character_animation_slots" (
+      slot TEXT PRIMARY KEY,
+      name TEXT,
+      "assetId" TEXT,
+      "modelUrl" TEXT NOT NULL,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      "updatedBy" TEXT,
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "game_categories" (
       slug TEXT PRIMARY KEY,
       "labelKo" TEXT NOT NULL,

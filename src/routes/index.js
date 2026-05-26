@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const gamesUploadRoutes = require('./gamesUpload');
 const genreRoutes = require('./genres');
 const categoryRoutes = require('./categories');
+const characterAnimationRoutes = require('./character-animations');
 
 const router = Router();
 
@@ -28,6 +29,8 @@ router.use('/genres',                genreRoutes.router);
 router.use('/operator/genres',       genreRoutes.operatorRouter);
 router.use('/categories',            categoryRoutes.router);
 router.use('/operator/categories',   categoryRoutes.operatorRouter);
+router.use('/character-animations',  characterAnimationRoutes.router);
+router.use('/operator/character-animations', characterAnimationRoutes.operatorRouter);
 
 /** GET /api/me — 현재 유저 정보 */
 router.get('/me', requireAuth, (req, res) => {
