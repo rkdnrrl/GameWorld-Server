@@ -31,6 +31,7 @@ router.use('/categories',            categoryRoutes.router);
 router.use('/operator/categories',   categoryRoutes.operatorRouter);
 router.use('/character-animations',  characterAnimationRoutes.router);
 router.use('/operator/character-animations', characterAnimationRoutes.operatorRouter);
+router.use('/characters/auto-rig',   require('./auto-rig'));
 
 /** GET /api/me — 현재 유저 정보 */
 router.get('/me', requireAuth, (req, res) => {
