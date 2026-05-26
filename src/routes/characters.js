@@ -12,6 +12,31 @@ function makeShareSlug() {
   return `char_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
+let sharingSchemaReady = null;
+function ensureSharingSchema() {
+  if (!sharingSchemaReady) {
+    sharingSchemaReady = (async () => {
+      await prisma.$executeRawUnsafe('ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "is_public" BOOLEAN NOT NULL DEFAULT false');
+      await prisma.$executeRawUnsafe('ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "share_slug" TEXT');
+      await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "characters_share_slug_key" ON "characters" ("share_slug") WHERE "share_slug" IS NOT NULL');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "characters_is_public_updatedAt_idx" ON "characters" ("is_public", "updatedAt")');
+    })().catch((err) => {
+      sharingSchemaReady = null;
+      throw err;
+    });
+  }
+  return sharingSchemaReady;
+}
+
+router.use(async (_req, _res, next) => {
+  try {
+    await ensureSharingSchema();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/characters : my characters + active character
 router.get('/', requireAuth, async (req, res, next) => {
   try {
@@ -45,7 +70,7 @@ router.get('/public', requireAuth, async (req, res, next) => {
         ? {
             OR: [
               { name: { contains: q, mode: 'insensitive' } },
-              { profile: { username: { contains: q, mode: 'insensitive' } } },
+              { user: { username: { contains: q, mode: 'insensitive' } } },
             ],
           }
         : {}),
