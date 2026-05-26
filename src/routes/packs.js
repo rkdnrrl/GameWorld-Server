@@ -245,17 +245,26 @@ router.post('/:id/import', requireAuth, async (req, res, next) => {
         const ext    = path.extname(srcKey);
         const newId  = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const dstKey = `assets/${req.user.id}/${newId}${ext}`;
-        await r2.copyObject(srcKey, dstKey);
+        // Pack imports keep references to source files instead of copying R2 objects.
 
-        let thumbDstUrl = null;
+        let thumbDstUrl = src.thumbnailUrl;
         if (src.thumbnailUrl) {
           try {
             const tSrcKey = src.thumbnailUrl.replace(`${CDN_BASE}/`, '');
             const tExt    = path.extname(tSrcKey) || '.png';
             const tDstKey = `assets/${req.user.id}/thumb_${newId}${tExt}`;
-            await r2.copyObject(tSrcKey, tDstKey);
-            thumbDstUrl = `${CDN_BASE}/${tDstKey}`;
+            thumbDstUrl = src.thumbnailUrl;
           } catch {}
+        }
+
+        const existingRefs = await prisma.asset.findMany({
+          where: { creatorId: req.user.id, modelUrl: src.modelUrl },
+          take: 20,
+        });
+        const existingRef = existingRefs.find((a) => a.metadata?.importedFrom?.assetId === src.id);
+        if (existingRef) {
+          cloned.push(existingRef.id);
+          continue;
         }
 
         const meta = {
@@ -264,13 +273,14 @@ router.post('/:id/import', requireAuth, async (req, res, next) => {
             assetId: src.id, packId: pack.id, packPath: pack.path,
             creatorName: creatorProfile?.username || null,
           },
+          referenceOnly: true,
         };
 
         const c = await prisma.asset.create({
           data: {
             creatorId:    req.user.id,
             name:         src.name,
-            modelUrl:     `${CDN_BASE}/${dstKey}`,
+            modelUrl:     src.modelUrl,
             thumbnailUrl: thumbDstUrl,
             kind:         src.kind,
             metadata:     meta,

@@ -12,6 +12,29 @@ function makeShareSlug() {
   return `char_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
+async function hydrateCharacter(character) {
+  if (!character) return character;
+  const appearance = character.appearance || {};
+  const refCharacterId = appearance.refCharacterId || appearance.importedFrom?.characterId;
+  if (!refCharacterId) return character;
+
+  const source = await prisma.character.findFirst({
+    where: { id: String(refCharacterId), isPublic: true },
+    select: { appearance: true, name: true, user: { select: { username: true } } },
+  });
+  if (!source) return character;
+
+  return {
+    ...character,
+    appearance: source.appearance || {},
+    sourceCharacter: {
+      id: String(refCharacterId),
+      name: source.name,
+      creatorName: source.user?.username || null,
+    },
+  };
+}
+
 let sharingSchemaReady = null;
 function ensureSharingSchema() {
   if (!sharingSchemaReady) {
@@ -44,8 +67,9 @@ router.get('/', requireAuth, async (req, res, next) => {
       where: { userId: req.user.id },
       orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
     });
-    const activeCharacter = characters.find((c) => c.isActive) || null;
-    res.json({ characters, activeCharacter });
+    const hydrated = await Promise.all(characters.map(hydrateCharacter));
+    const activeCharacter = hydrated.find((c) => c.isActive) || null;
+    res.json({ characters: hydrated, activeCharacter });
   } catch (err) { next(err); }
 });
 
@@ -56,7 +80,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       where: { userId: req.user.id, isActive: true },
       orderBy: { updatedAt: 'desc' },
     });
-    res.json({ character: char || null });
+    res.json({ character: await hydrateCharacter(char || null) });
   } catch (err) { next(err); }
 });
 
@@ -142,8 +166,16 @@ router.post('/import/:id', requireAuth, async (req, res, next) => {
     const baseName = trimmedName(source.name) || 'Character';
     const myChars = await prisma.character.findMany({
       where: { userId: req.user.id },
-      select: { name: true },
+      select: { id: true, name: true, appearance: true, isActive: true, isPublic: true, shareSlug: true, createdAt: true, updatedAt: true, userId: true },
     });
+    const existingRef = myChars.find((c) => {
+      const appearance = c.appearance || {};
+      return appearance.refCharacterId === source.id || appearance.importedFrom?.characterId === source.id;
+    });
+    if (existingRef) {
+      return res.json({ character: await hydrateCharacter(existingRef) });
+    }
+
     const usedNames = new Set(myChars.map((c) => c.name));
     let nextName = baseName;
     let i = 2;
@@ -156,12 +188,16 @@ router.post('/import/:id', requireAuth, async (req, res, next) => {
       data: {
         userId: req.user.id,
         name: nextName,
-        appearance: source.appearance || {},
+        appearance: {
+          refOnly: true,
+          refCharacterId: source.id,
+          importedFrom: { characterId: source.id },
+        },
         isActive: false,
       },
     });
 
-    res.json({ character });
+    res.json({ character: await hydrateCharacter(character) });
   } catch (err) { next(err); }
 });
 
@@ -214,7 +250,7 @@ router.post('/:id/select', requireAuth, async (req, res, next) => {
       });
     });
 
-    res.json({ character: selected });
+    res.json({ character: await hydrateCharacter(selected) });
   } catch (err) { next(err); }
 });
 
@@ -237,7 +273,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       where: { id },
       data,
     });
-    res.json({ character: char });
+    res.json({ character: await hydrateCharacter(char) });
   } catch (err) { next(err); }
 });
 

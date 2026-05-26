@@ -13,6 +13,12 @@ const router = Router();
 
 const CDN_BASE = 'https://play.airliveplay.com';
 
+function ownedR2Key(url, userId) {
+  if (!url || !url.startsWith(`${CDN_BASE}/`)) return null;
+  const key = url.replace(`${CDN_BASE}/`, '');
+  return key.startsWith(`assets/${userId}/`) ? key : null;
+}
+
 /** 운영자도 화이트리스트 못 하는 위험 확장자 (서버 강제) */
 const DANGEROUS_EXTS = new Set([
   '.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.dll', '.so', '.dylib',
@@ -465,30 +471,42 @@ router.post('/:id/clone', requireAuth, async (req, res, next) => {
     await ensureProfile(req.user);
 
     // R2 key 추출 + 새 key 생성
+    const existingRefs = await prisma.asset.findMany({
+      where: { creatorId: req.user.id, modelUrl: src.modelUrl },
+      take: 20,
+    });
+    const existingRef = existingRefs.find((a) => a.metadata?.importedFrom?.assetId === src.id);
+    if (existingRef) {
+      return res.json({ asset: serializeAsset(existingRef) });
+    }
+
     const srcKey = src.modelUrl.replace(`${CDN_BASE}/`, '');
     const ext = path.extname(srcKey);
     const newId  = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const dstKey = `assets/${req.user.id}/${newId}${ext}`;
 
     try {
-      await r2.copyObject(srcKey, dstKey);
+      // Imported assets reference the source file instead of copying it.
     } catch (e) {
       return res.status(500).json({ error: { message: '원본 파일 복사 실패' } });
     }
 
-    let thumbDstUrl = null;
+    let thumbDstUrl = src.thumbnailUrl;
     if (src.thumbnailUrl) {
       try {
         const tSrcKey = src.thumbnailUrl.replace(`${CDN_BASE}/`, '');
         const tExt    = path.extname(tSrcKey) || '.png';
         const tDstKey = `assets/${req.user.id}/thumb_${newId}${tExt}`;
-        await r2.copyObject(tSrcKey, tDstKey);
-        thumbDstUrl = `${CDN_BASE}/${tDstKey}`;
+        thumbDstUrl = src.thumbnailUrl;
       } catch {}
     }
 
-    const modelUrl = `${CDN_BASE}/${dstKey}`;
-    const meta = { ...(src.metadata || {}), importedFrom: { assetId: src.id, creatorName: src.creator?.username || null } };
+    const modelUrl = src.modelUrl;
+    const meta = {
+      ...(src.metadata || {}),
+      importedFrom: { assetId: src.id, creatorName: src.creator?.username || null },
+      referenceOnly: true,
+    };
 
     const cloned = await prisma.asset.create({
       data: {
@@ -581,8 +599,10 @@ router.post('/batch', requireAuth, async (req, res, next) => {
       // R2 키 모아서 best-effort 삭제
       const keys = [];
       for (const a of owned) {
-        if (a.modelUrl)     keys.push(a.modelUrl.replace(`${CDN_BASE}/`, ''));
-        if (a.thumbnailUrl) keys.push(a.thumbnailUrl.replace(`${CDN_BASE}/`, ''));
+        const modelKey = ownedR2Key(a.modelUrl, req.user.id);
+        const thumbKey = ownedR2Key(a.thumbnailUrl, req.user.id);
+        if (modelKey) keys.push(modelKey);
+        if (thumbKey) keys.push(thumbKey);
       }
       try { if (keys.length) await r2.deleteKeys(keys); } catch {}
       const r = await prisma.asset.deleteMany({ where: { id: { in: ownedIds } } });
@@ -635,12 +655,11 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
     try {
-      const key = asset.modelUrl.replace(`${CDN_BASE}/`, '');
-      await r2.deleteKeys([key]);
-      if (asset.thumbnailUrl) {
-        const tKey = asset.thumbnailUrl.replace(`${CDN_BASE}/`, '');
-        await r2.deleteKeys([tKey]);
-      }
+      const keys = [
+        ownedR2Key(asset.modelUrl, req.user.id),
+        ownedR2Key(asset.thumbnailUrl, req.user.id),
+      ].filter(Boolean);
+      if (keys.length) await r2.deleteKeys(keys);
     } catch {}
 
     await prisma.asset.delete({ where: { id: req.params.id } });
