@@ -201,11 +201,7 @@ operatorRouter.delete('/:slot', requireAuth, requireOperator, async (req, res, n
     await ensureTable();
     const slot = normalizeSlot(req.params.slot);
     if (!slot) return res.status(400).json({ error: { message: 'Invalid slot.' } });
-    await prisma.$executeRaw`
-      UPDATE "character_animation_slots"
-      SET enabled = false, "updatedBy" = ${req.user.id}, "updatedAt" = NOW()
-      WHERE slot = ${slot}
-    `;
+    await prisma.$executeRaw`DELETE FROM "character_animation_slots" WHERE slot = ${slot}`;
     res.json({ ok: true });
   } catch (err) {
     next(err);
