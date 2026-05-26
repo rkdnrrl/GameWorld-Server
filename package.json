@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "db:ensure-core": "node scripts/ensure-core-schema.mjs",
     "smoke:core": "node scripts/smoke-core.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
