@@ -30,6 +30,9 @@ app.use('/api', routes);
 app.get('/', (req, res) => {
   res.json({ name: 'gameworld-platform', status: 'running' });
 });
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
 
 app.use(notFound);
 app.use(errorHandler);
