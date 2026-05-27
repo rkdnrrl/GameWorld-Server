@@ -1,6 +1,10 @@
 const { Router } = require('express');
+const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
+const r2 = require('../lib/r2');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -91,6 +95,19 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
 
     const updated = await prisma.world.update({ where: { id: req.params.id }, data });
     res.json({ world: updated });
+  } catch (err) { next(err); }
+});
+
+/** POST /api/worlds/thumbnail — 썸네일 이미지 업로드 (R2) */
+router.post('/thumbnail', requireAuth, upload.single('file'), async (req, res, next) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: { message: '파일 없음' } });
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const key = `world-thumbnails/${req.user.id}/${id}.webp`;
+    await r2.putObject(key, file.buffer, { contentType: 'image/webp' });
+    const url = `https://play.airliveplay.com/${key}`;
+    res.json({ url });
   } catch (err) { next(err); }
 });
 
