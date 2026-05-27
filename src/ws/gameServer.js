@@ -6,12 +6,16 @@
  *  C→S: { type:'join', worldId, playerId, username, character }
  *  C→S: { type:'move', x, y, z, rotY }
  *  C→S: { type:'chat', message }
+ *  C→S: { type:'script_event', objectId, event, data }
+ *  C→S: { type:'object_states', states:[{id,pos,rot,scl,vis,anim?}] }
  *
  *  S→C: { type:'players', players:[{id,username,character,x,y,z,rotY}] }
  *  S→C: { type:'joined', id, username, character, x, y, z, rotY }
  *  S→C: { type:'moved',  id, x, y, z, rotY }
  *  S→C: { type:'left',   id }
  *  S→C: { type:'chat',   id, username, message }
+ *  S→C: { type:'script_event', objectId, event, data, fromId }
+ *  S→C: { type:'object_states', states:[...], fromId }
  */
 
 // worlds: worldId → Map(playerId → { ws, id, username, character, x, y, z, rotY })
@@ -92,6 +96,38 @@ function createGameServer(wss) {
           username: player.username,
           message,
         });
+      }
+
+      else if (msg.type === 'object_states') {
+        // Authority 클라이언트가 broadcast하는 dynamic/scripted 오브젝트 상태
+        if (!worldId || !playerId) return;
+        if (!Array.isArray(msg.states)) return;
+        broadcast(worldId, playerId, {
+          type: 'object_states',
+          states: msg.states,
+          fromId: playerId,
+        });
+      }
+
+      else if (msg.type === 'script_event') {
+        // Lua net:sendAll() / net:sendTo() 릴레이
+        if (!worldId || !playerId) return;
+        const objectId = String(msg.objectId || '').slice(0, 80);
+        const event    = String(msg.event    || '').slice(0, 80);
+        const toId     = msg.toId ? String(msg.toId).slice(0, 40) : null;
+        if (!objectId || !event) return;
+
+        const payload = { type: 'script_event', objectId, event, data: msg.data ?? {}, fromId: playerId };
+
+        if (toId) {
+          // sendTo: 특정 플레이어에게만
+          const room = worlds.get(worldId);
+          const target = room?.get(toId);
+          if (target) send(target.ws, payload);
+        } else {
+          // sendAll: 자신 포함 전체 브로드캐스트
+          broadcastAll(worldId, payload);
+        }
       }
     });
 
