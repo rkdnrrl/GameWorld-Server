@@ -23,6 +23,7 @@ model Profile {
   characters Character[]
   worlds     World[]
   assets     Asset[]
+  prefabs    Prefab[]
   followers  UserFollow[] @relation("Followee")  // 나를 팔로우하는 사람들
   following  UserFollow[] @relation("Follower")  // 내가 팔로우하는 사람들
 
@@ -109,6 +110,28 @@ model World {
   @@index([isPublic, playCount(sort: Desc)])
   @@index([creatorId])
   @@map("worlds")
+}
+
+/// 스튜디오 프리팹 — 오브젝트(+components+script+...) 스냅샷.
+/// V1: 인스턴스는 독립 복사본 (링크 X). V2+ 에서 instanceOf/version 추가해 update-propagation 가능.
+model Prefab {
+  id           String   @id @default(cuid())
+  creatorId    String
+  creator      Profile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  name         String   @db.VarChar(100)
+  thumbnailUrl String?  @db.VarChar(400)
+  /// { version: 1, root: { kind, position, ..., components, script, ... } }
+  /// V2 에서 multi-object 지원 시 root → children 트리로 확장
+  payload      Json
+  /// 향후 마켓플레이스/공유용 (V1 은 항상 false)
+  isPublic     Boolean  @default(false)
+  importCount  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([creatorId, updatedAt(sort: Desc)])
+  @@index([isPublic, importCount(sort: Desc)])
+  @@map("prefabs")
 }
 
 /// 3D 에셋 (Meshy AI 생성 또는 시스템 기본 에셋)
