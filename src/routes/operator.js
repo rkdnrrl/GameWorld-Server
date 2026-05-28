@@ -357,4 +357,47 @@ router.get('/equip-art/status', requireAuth, requireOperator, async (req, res, n
   }
 });
 
+/* ── 홈허브 설정 ───────────────────────────────────────────
+ * 유저가 /world (id 없이) 진입 시 보일 월드를 운영자가 지정.
+ * null 이면 기본 데모 섬으로 fallback.
+ * ───────────────────────────────────────────────────────── */
+
+/** GET /api/operator/home-hub — 현재 홈허브 worldId + 월드 정보 */
+router.get('/home-hub', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const cfg = await prisma.appConfig.findUnique({ where: { key: 'homeHubWorldId' } });
+    const worldId = cfg?.value || null;
+    let world = null;
+    if (worldId) {
+      world = await prisma.world.findUnique({
+        where: { id: worldId },
+        select: { id: true, name: true, description: true, thumbnailUrl: true, isPublic: true },
+      });
+    }
+    res.json({ worldId, world });
+  } catch (err) { next(err); }
+});
+
+/** PUT /api/operator/home-hub — 홈허브 worldId 설정. body: { worldId: string | null } */
+router.put('/home-hub', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const worldId = req.body?.worldId ? String(req.body.worldId).trim() : null;
+    if (!worldId) {
+      // 해제 — 기본 데모 섬으로 복귀
+      await prisma.appConfig.deleteMany({ where: { key: 'homeHubWorldId' } });
+      return res.json({ worldId: null });
+    }
+    // 월드 존재 + 공개 여부 검증 (홈허브는 누구나 들어오니 공개여야 함)
+    const world = await prisma.world.findUnique({ where: { id: worldId } });
+    if (!world) return res.status(404).json({ error: { message: '월드를 찾을 수 없습니다.' } });
+    if (!world.isPublic) return res.status(400).json({ error: { message: '공개 월드만 홈허브로 지정 가능합니다.' } });
+    await prisma.appConfig.upsert({
+      where:  { key: 'homeHubWorldId' },
+      update: { value: worldId },
+      create: { key: 'homeHubWorldId', value: worldId },
+    });
+    res.json({ worldId });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

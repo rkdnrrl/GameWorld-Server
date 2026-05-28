@@ -37,6 +37,14 @@ router.get('/my', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/** GET /api/worlds/home-hub — 현재 홈허브 월드 ID (운영자가 설정한 것) */
+router.get('/home-hub', async (req, res, next) => {
+  try {
+    const cfg = await prisma.appConfig.findUnique({ where: { key: 'homeHubWorldId' } });
+    res.json({ worldId: cfg?.value || null });
+  } catch (err) { next(err); }
+});
+
 /** GET /api/worlds/:id — 월드 상세 */
 router.get('/:id', async (req, res, next) => {
   try {

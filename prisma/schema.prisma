@@ -205,6 +205,15 @@ model AssetReport {
   @@map("asset_reports")
 }
 
+/// 전역 설정 (운영자 관리) — key/value 싱글톤. 예: homeHubWorldId
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_config")
+}
+
 /// 에셋 타입 정의 — 운영자가 동적으로 추가/관리
 model AssetKind {
   id          String   @id                       // 'model','image','audio'
