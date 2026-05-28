@@ -62,7 +62,7 @@ router.get('/by-ids', optionalAuth, async (req, res, next) => {
 /** POST /api/script-components — 일반 유저: 본인 컴포넌트 생성 (isOfficial 무시) */
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { name, icon, description, code } = req.body ?? {};
+    const { name, icon, description, code, propsSchema } = req.body ?? {};
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: { message: '이름이 필요합니다.' } });
     }
@@ -76,6 +76,7 @@ router.post('/', requireAuth, async (req, res, next) => {
         icon: icon ? String(icon).slice(0, 8) : null,
         description: description ? String(description).slice(0, 300) : null,
         code: String(code),
+        propsSchema: Array.isArray(propsSchema) ? propsSchema : [],
         isOfficial: false,  // 일반 유저는 항상 false
       },
     });
@@ -91,12 +92,13 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (existing.creatorId !== req.user.id) {
       return res.status(403).json({ error: { message: '권한 없음' } });
     }
-    const { name, icon, description, code } = req.body ?? {};
+    const { name, icon, description, code, propsSchema } = req.body ?? {};
     const data = {};
     if (typeof name === 'string' && name.trim()) data.name = name.trim().slice(0, 60);
     if (icon !== undefined) data.icon = icon ? String(icon).slice(0, 8) : null;
     if (description !== undefined) data.description = description ? String(description).slice(0, 300) : null;
     if (typeof code === 'string') data.code = code;
+    if (Array.isArray(propsSchema)) data.propsSchema = propsSchema;
     // isOfficial 은 여기서 못 바꿈 — 운영자 라우트 사용
     const component = await prisma.scriptComponent.update({
       where: { id: req.params.id },
@@ -141,7 +143,7 @@ operatorRouter.get('/', requireAuth, requireOperator, async (req, res, next) => 
 /** POST /api/operator/script-components — 운영자가 만든 공식 컴포넌트 (자동 isOfficial=true) */
 operatorRouter.post('/', requireAuth, requireOperator, async (req, res, next) => {
   try {
-    const { name, icon, description, code, isOfficial } = req.body ?? {};
+    const { name, icon, description, code, isOfficial, propsSchema } = req.body ?? {};
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: { message: '이름이 필요합니다.' } });
     }
@@ -155,6 +157,7 @@ operatorRouter.post('/', requireAuth, requireOperator, async (req, res, next) =>
         icon: icon ? String(icon).slice(0, 8) : null,
         description: description ? String(description).slice(0, 300) : null,
         code: String(code),
+        propsSchema: Array.isArray(propsSchema) ? propsSchema : [],
         isOfficial: isOfficial !== false,  // 기본 true (운영자가 만들면 보통 공식)
       },
     });
@@ -167,13 +170,14 @@ operatorRouter.patch('/:id', requireAuth, requireOperator, async (req, res, next
   try {
     const existing = await prisma.scriptComponent.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: { message: '컴포넌트 없음' } });
-    const { name, icon, description, code, isOfficial } = req.body ?? {};
+    const { name, icon, description, code, isOfficial, propsSchema } = req.body ?? {};
     const data = {};
     if (typeof name === 'string' && name.trim()) data.name = name.trim().slice(0, 60);
     if (icon !== undefined) data.icon = icon ? String(icon).slice(0, 8) : null;
     if (description !== undefined) data.description = description ? String(description).slice(0, 300) : null;
     if (typeof code === 'string') data.code = code;
     if (typeof isOfficial === 'boolean') data.isOfficial = isOfficial;
+    if (Array.isArray(propsSchema)) data.propsSchema = propsSchema;
     const component = await prisma.scriptComponent.update({
       where: { id: req.params.id },
       data,
