@@ -124,10 +124,14 @@ model ScriptComponent {
   description String?  @db.VarChar(300)
   /// onStart/onUpdate/onGrab/onRelease/onNetEvent 등 정의. props.<key> 접근 가능.
   code        String   @db.Text
+  /// 운영자가 만든 "공식" 컴포넌트 — 모든 유저가 picker 에서 사용 가능.
+  /// 일반 유저는 false 만 만들 수 있음 (자기 컴포넌트). 운영자가 true 로 승격 가능.
+  isOfficial  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([creatorId, updatedAt(sort: Desc)])
+  @@index([isOfficial, updatedAt(sort: Desc)])
   @@map("script_components")
 }
 
