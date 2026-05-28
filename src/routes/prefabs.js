@@ -3,10 +3,34 @@
  * V1: 인스턴스는 독립 복사본 (링크 없음). isPublic/importCount 는 V2 마켓플레이스용 자리.
  */
 const { Router } = require('express');
+const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
+const r2 = require('../lib/r2');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
 const router = Router();
+
+/** POST /api/prefabs/thumbnail — 썸네일 이미지 업로드 (R2). { url } 반환.
+ *  업로드만 함 — 실제 prefab.thumbnailUrl 연결은 클라가 PATCH 로 처리. */
+router.post('/thumbnail', requireAuth, upload.single('file'), async (req, res, next) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: { message: '파일 없음' } });
+    // 이미지 MIME 만 허용
+    if (!file.mimetype?.startsWith('image/')) {
+      return res.status(400).json({ error: { message: '이미지 파일만 업로드 가능합니다.' } });
+    }
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // 확장자 보존 (R2 가 content-type 으로 판단하지만 URL 에도 hint)
+    const ext = (file.originalname?.split('.').pop() || 'png').toLowerCase().slice(0, 4);
+    const key = `prefab-thumbnails/${req.user.id}/${id}.${ext}`;
+    await r2.putObject(key, file.buffer, { contentType: file.mimetype });
+    const url = `https://play.airliveplay.com/${key}`;
+    res.json({ url });
+  } catch (err) { next(err); }
+});
 
 /** GET /api/prefabs/my — 본인 프리팹 목록 */
 router.get('/my', requireAuth, async (req, res, next) => {
