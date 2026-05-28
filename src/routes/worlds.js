@@ -8,20 +8,63 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 *
 
 const router = Router();
 
-/** GET /api/worlds/public — 공개 월드 목록 */
+/**
+ * GET /api/worlds/public — 공개 월드 목록 + 검색/정렬/태그
+ * Query:
+ *   q     — 이름/설명 부분 검색 (case-insensitive)
+ *   tag   — 태그(해시태그) 필터. 이름/설명에 `#{tag}` 포함된 월드만.
+ *   sort  — 'popular' (기본, playCount desc) | 'latest' (createdAt desc) | 'updated' (updatedAt desc) | 'name' (name asc)
+ *   limit — 최대 50 (default 50)
+ *   offset — pagination
+ */
 router.get('/public', async (req, res, next) => {
   try {
-    const worlds = await prisma.world.findMany({
-      where: { isPublic: true },
-      orderBy: { playCount: 'desc' },
-      take: 50,
-      select: {
-        id: true, name: true, description: true, thumbnailUrl: true,
-        playCount: true, createdAt: true,
-        creator: { select: { username: true } },
-      },
-    });
-    res.json({ worlds });
+    const q      = String(req.query.q   || '').trim().slice(0, 60);
+    const tag    = String(req.query.tag || '').trim().slice(0, 40).replace(/^#/, '');
+    const sort   = String(req.query.sort || 'popular');
+    const limit  = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 50));
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+
+    const where = { isPublic: true };
+    const AND = [];
+    if (q) {
+      AND.push({
+        OR: [
+          { name:        { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+        ],
+      });
+    }
+    if (tag) {
+      const needle = `#${tag}`;
+      AND.push({
+        OR: [
+          { name:        { contains: needle, mode: 'insensitive' } },
+          { description: { contains: needle, mode: 'insensitive' } },
+        ],
+      });
+    }
+    if (AND.length) where.AND = AND;
+
+    const orderBy =
+      sort === 'latest'  ? { createdAt: 'desc' } :
+      sort === 'updated' ? { updatedAt: 'desc' } :
+      sort === 'name'    ? { name:      'asc'  } :
+                           { playCount: 'desc' }; // popular (default)
+
+    const [worlds, total] = await Promise.all([
+      prisma.world.findMany({
+        where, orderBy, take: limit, skip: offset,
+        select: {
+          id: true, name: true, description: true, thumbnailUrl: true,
+          playCount: true, createdAt: true, updatedAt: true,
+          creator: { select: { username: true } },
+        },
+      }),
+      prisma.world.count({ where }),
+    ]);
+
+    res.json({ worlds, total });
   } catch (err) { next(err); }
 });
 
