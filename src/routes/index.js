@@ -20,6 +20,7 @@ router.use('/users',                 require('./users'));
 router.use('/notifications',         require('./notifications'));
 router.use('/packs',                 require('./packs'));
 router.use('/prefabs',               require('./prefabs'));
+router.use('/script-components',     require('./script-components'));
 router.use('/operator/asset-reports', require('./asset-reports'));
 router.use('/operator/home-hub',     require('./home-hub'));
 router.use('/games',                 gamesUploadRoutes.router);

@@ -24,6 +24,7 @@ model Profile {
   worlds     World[]
   assets     Asset[]
   prefabs    Prefab[]
+  scriptComponents ScriptComponent[]
   followers  UserFollow[] @relation("Followee")  // 나를 팔로우하는 사람들
   following  UserFollow[] @relation("Follower")  // 내가 팔로우하는 사람들
 
@@ -110,6 +111,24 @@ model World {
   @@index([isPublic, playCount(sort: Desc)])
   @@index([creatorId])
   @@map("worlds")
+}
+
+/// 유저 정의 스크립트 컴포넌트 (Unity MonoBehaviour 비슷).
+/// 부착하면 오브젝트에 그 동작 발현. 한 컴포넌트를 여러 오브젝트에 부착 가능.
+model ScriptComponent {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     Profile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(60)
+  icon        String?  @db.VarChar(8)  // 이모지 (선택)
+  description String?  @db.VarChar(300)
+  /// onStart/onUpdate/onGrab/onRelease/onNetEvent 등 정의. props.<key> 접근 가능.
+  code        String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([creatorId, updatedAt(sort: Desc)])
+  @@map("script_components")
 }
 
 /// 스튜디오 프리팹 — 오브젝트(+components+script+...) 스냅샷.
