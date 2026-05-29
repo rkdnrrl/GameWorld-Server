@@ -282,3 +282,121 @@ model AssetKind {
 
   @@map("asset_kinds")
 }
+
+// ─────────────────────────────────────────────────────────────
+// 게임 / 커뮤니티 / 공지 — 라우트가 typed client 로 사용하는 모델.
+// 테이블은 Supabase 에 이미 존재(컬럼은 prisma db pull 인트로스펙션 기준).
+// profiles(Profile) 와 별개로, games/community 작성자는 users(User) 테이블 사용.
+// ─────────────────────────────────────────────────────────────
+
+/// 커스텀 계정 테이블 (games·community 작성자). nickname 보유. profiles 와 별개.
+model User {
+  id                String             @id
+  nickname          String             @unique
+  games             Game[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+
+  @@map("users")
+}
+
+/// UGC 게임 메타 (official + community)
+model Game {
+  slug         String    @id
+  ownerUserId  String?
+  title        String
+  description  String    @default("")
+  emoji        String    @default("🎮")
+  kind         String    @default("community")
+  status       String    @default("pending")
+  category     String    @default("other")
+  genre        String?
+  storagePath  String    @default("")
+  externalUrl  String?
+  thumbnailUrl String?
+  screenshots  Json      @default("[]")
+  tags         Json      @default("[]")
+  statusUrl    String?
+  maxPlayers   Int       @default(1)
+  playCount    Int       @default(0)
+  likeCount    Int       @default(0)
+  version      Int       @default(1)
+  rejectReason String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @db.Timestamptz(6)
+  publishedAt  DateTime? @db.Timestamptz(6)
+  owner        User?     @relation(fields: [ownerUserId], references: [id])
+
+  @@index([status, kind, createdAt])
+  @@map("games")
+}
+
+/// 게임 장르 (운영자 관리)
+model GameGenre {
+  slug      String   @id
+  labelKo   String
+  labelEn   String
+  emoji     String   @default("🎮")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("game_genres")
+}
+
+/// 게임 카테고리 (운영자 관리)
+model GameCategory {
+  slug      String   @id
+  labelKo   String
+  labelEn   String
+  emoji     String   @default("🎮")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("game_categories")
+}
+
+/// 자유게시판 게시물
+model CommunityPost {
+  id        String             @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId    String?
+  title     String
+  content   String
+  category  String             @default("free")
+  views     Int                @default(0)
+  isPinned  Boolean            @default(false)
+  createdAt DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime           @default(now()) @db.Timestamptz(6)
+  user      User?              @relation(fields: [userId], references: [id])
+  comments  CommunityComment[]
+
+  @@index([category, createdAt])
+  @@map("community_posts")
+}
+
+/// 자유게시판 댓글
+model CommunityComment {
+  id        BigInt        @id @default(autoincrement())
+  postId    String
+  userId    String?
+  content   String
+  createdAt DateTime      @default(now()) @db.Timestamptz(6)
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User?         @relation(fields: [userId], references: [id])
+
+  @@map("community_comments")
+}
+
+/// 공지사항 · 패치노트
+model Announcement {
+  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  title     String   @db.VarChar(120)
+  body      String
+  kind      String   @default("notice") @db.VarChar(20)
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([pinned, createdAt])
+  @@map("announcements")
+}
