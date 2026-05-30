@@ -39,21 +39,15 @@ router.get('/my', requireAuth, async (req, res, next) => {
 });
 
 /** GET /api/script-components/by-ids?ids=a,b,c — 월드 런타임용 일괄 fetch.
- *  본인 것 또는 공식인 컴포넌트만 반환. */
+ *  맵(월드)에 실제로 쓰인 컴포넌트는 누가 만들었든 코드가 있어야 다른 플레이어 화면에서도 실행됨.
+ *  → ID 로 조회 허용 (ID 는 추측 불가한 cuid 라 접근 가능한 월드 데이터에서만 얻음). */
 router.get('/by-ids', optionalAuth, async (req, res, next) => {
   try {
     const idsRaw = String(req.query.ids || '');
     const ids = idsRaw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 200);
     if (ids.length === 0) return res.json({ components: [] });
-    const userId = req.user?.id;
     const components = await prisma.scriptComponent.findMany({
-      where: {
-        id: { in: ids },
-        OR: [
-          { isOfficial: true },
-          ...(userId ? [{ creatorId: userId }] : []),
-        ],
-      },
+      where: { id: { in: ids } },
     });
     res.json({ components });
   } catch (err) { next(err); }
