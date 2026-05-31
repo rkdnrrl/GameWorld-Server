@@ -133,6 +133,68 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
 });
 
 /* ─────────────────────────────────────────
+   POST /api/assets/script — 스크립트 asset 생성 (파일 X, 코드 텍스트 입력)
+   body: { name, code, propsSchema?, icon?, folder? }
+───────────────────────────────────────── */
+router.post('/script', requireAuth, async (req, res, next) => {
+  try {
+    const { name, code, propsSchema, icon, folder } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: { message: '이름이 필요합니다.' } });
+    }
+    if (typeof code !== 'string') {
+      return res.status(400).json({ error: { message: '코드가 필요합니다.' } });
+    }
+    if (code.length > 100 * 1024) {
+      return res.status(413).json({ error: { message: '코드 크기 100KB 초과.' } });
+    }
+    const asset = await prisma.asset.create({
+      data: {
+        creatorId: req.user.id,
+        name:      name.trim().slice(0, 80),
+        modelUrl:  '',                              // 스크립트는 파일 없음
+        kind:      'script',
+        fileSize:  BigInt(Buffer.byteLength(code, 'utf8')),
+        folder:    typeof folder === 'string' ? folder.slice(0, 200) : null,
+        isPublic:  false,
+        metadata:  {
+          code,
+          propsSchema: Array.isArray(propsSchema) ? propsSchema.slice(0, 40) : [],
+          icon:        typeof icon === 'string' ? icon.slice(0, 8) : '📜',
+        },
+      },
+    });
+    res.json({ asset: serializeAsset(asset) });
+  } catch (err) { next(err); }
+});
+
+/* PATCH /api/assets/:id/script — 코드/메타 업데이트 (본인만) */
+router.patch('/:id/script', requireAuth, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const asset = await prisma.asset.findUnique({ where: { id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋을 찾을 수 없습니다.' } });
+    if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
+    if (asset.kind !== 'script') return res.status(400).json({ error: { message: 'script 에셋이 아닙니다.' } });
+
+    const { name, code, propsSchema, icon } = req.body || {};
+    const update = {};
+    const meta = { ...(asset.metadata || {}) };
+    if (typeof name === 'string' && name.trim()) update.name = name.trim().slice(0, 80);
+    if (typeof code === 'string') {
+      if (code.length > 100 * 1024) return res.status(413).json({ error: { message: '코드 크기 100KB 초과.' } });
+      meta.code = code;
+      update.fileSize = BigInt(Buffer.byteLength(code, 'utf8'));
+    }
+    if (Array.isArray(propsSchema)) meta.propsSchema = propsSchema.slice(0, 40);
+    if (typeof icon === 'string') meta.icon = icon.slice(0, 8);
+    update.metadata = meta;
+    const updated = await prisma.asset.update({ where: { id }, data: update });
+    res.json({ asset: serializeAsset(updated) });
+  } catch (err) { next(err); }
+});
+
+/* ─────────────────────────────────────────
    POST /api/assets/:id/thumbnail — 썸네일 업로드
 ───────────────────────────────────────── */
 router.post('/:id/thumbnail', requireAuth, uploadThumb.single('thumbnail'), async (req, res, next) => {
