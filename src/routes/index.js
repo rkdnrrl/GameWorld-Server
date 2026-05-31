@@ -30,6 +30,7 @@ router.use('/games',                 require('./games'));
 router.use('/operator/games',        gamesUploadRoutes.operatorRouter);
 router.use('/announcements',         require('./announcements'));
 router.use('/community',             require('./community'));
+router.use('/world-data',            require('./worldData'));
 router.use('/genres',                genreRoutes.router);
 router.use('/operator/genres',       genreRoutes.operatorRouter);
 router.use('/categories',            categoryRoutes.router);

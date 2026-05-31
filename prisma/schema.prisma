@@ -117,6 +117,21 @@ model World {
   @@map("worlds")
 }
 
+/// 맵별 영구 데이터 저장 (KV). userId NULL = 맵 전역(모두 공유), userId 있음 = 플레이어 개인.
+/// 스크립트의 data.save/load/list 가 이걸 read/write. (mapId, userId, key) unique 로 upsert.
+model WorldData {
+  id        String   @id @default(cuid())
+  mapId     String   @db.VarChar(40)
+  userId    String?  @db.VarChar(40)   // NULL = 맵 전역. 있으면 플레이어 개인
+  key       String   @db.VarChar(120)
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([mapId, userId, key])
+  @@index([mapId, userId])
+  @@map("world_data")
+}
+
 /// 유저 정의 스크립트 컴포넌트 (Unity MonoBehaviour 비슷).
 /// 부착하면 오브젝트에 그 동작 발현. 한 컴포넌트를 여러 오브젝트에 부착 가능.
 model ScriptComponent {
