@@ -157,11 +157,13 @@ router.get('/official', async (_req, res, next) => {
   try {
     const characters = await prisma.character.findMany({
       where: { isOfficial: true },
-      include: { user: { select: { username: true } } },
       orderBy: [{ updatedAt: 'desc' }],
       take: 200,
     });
-    res.json({ characters });
+    // 공식 캐릭터는 모두 "ALP" 명의로 — 운영자 username 숨김
+    res.json({
+      characters: characters.map(c => ({ ...c, user: { username: 'ALP' } })),
+    });
   } catch (err) { next(err); }
 });
 
@@ -215,7 +217,9 @@ router.get('/public', requireAuth, async (req, res, next) => {
         appearance: c.appearance || {},
         updatedAt: c.updatedAt,
         shareSlug: c.shareSlug || null,
-        creatorName: c.user?.username || null,
+        // 공식 캐릭터는 ALP 명의로
+        creatorName: c.isOfficial ? 'ALP' : (c.user?.username || null),
+        isOfficial: !!c.isOfficial,
       })),
     });
   } catch (err) { next(err); }
