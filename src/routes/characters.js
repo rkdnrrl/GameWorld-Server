@@ -1,8 +1,18 @@
 const { Router } = require('express');
+const path = require('node:path');
+const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const { prisma } = require('../db');
+const r2 = require('../lib/r2');
 
 const router = Router();
+const CDN_BASE = 'https://play.airliveplay.com';
+
+// 공식 캐릭터 FBX 업로드 — 최대 30MB
+const uploadFbx = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 30 * 1024 * 1024 },
+});
 
 function trimmedName(raw) {
   return String(raw || '').trim().slice(0, 30);
@@ -85,6 +95,58 @@ router.get('/me', requireAuth, async (req, res, next) => {
 });
 
 // GET /api/characters/public : public shared characters
+/**
+ * POST /api/characters/admin — 운영자가 공식 캐릭터 직접 생성 (multipart, FBX 업로드 포함).
+ * fields: name, appearance (JSON 문자열)
+ * file:   fbx (선택)
+ * 생성 즉시 isOfficial=true, isPublic=true.
+ */
+router.post('/admin', requireAuth, async (req, res, next) => {
+  // requireOperator 는 안에서 import
+  const { requireOperator } = require('../middleware/operatorAuth');
+  return requireOperator(req, res, () => {
+    uploadFbx.single('fbx')(req, res, async (uerr) => {
+      if (uerr) return res.status(400).json({ error: { message: uerr.message } });
+      try {
+        const name = trimmedName(req.body.name);
+        if (!name) return res.status(400).json({ error: { message: '이름이 필요합니다.' } });
+        let appearance = {};
+        try {
+          appearance = req.body.appearance ? JSON.parse(req.body.appearance) : {};
+          if (!appearance || typeof appearance !== 'object') appearance = {};
+        } catch { return res.status(400).json({ error: { message: 'appearance JSON 파싱 실패' } }); }
+
+        // FBX 업로드 시 R2 에 저장
+        const file = req.file;
+        if (file) {
+          const ext = path.extname(file.originalname).toLowerCase();
+          if (ext !== '.fbx' && ext !== '.glb' && ext !== '.gltf') {
+            return res.status(400).json({ error: { message: 'FBX / GLB / GLTF 만 허용됩니다.' } });
+          }
+          const charId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          const r2Key = `official-characters/${charId}${ext}`;
+          await r2.putObject(r2Key, file.buffer, {
+            contentType: file.mimetype || r2.contentType(r2Key),
+          });
+          appearance.modelUrl = `${CDN_BASE}/${r2Key}`;
+        }
+
+        const character = await prisma.character.create({
+          data: {
+            userId:     req.user.id,
+            name,
+            appearance,
+            isActive:   false,
+            isPublic:   true,
+            isOfficial: true,
+          },
+        });
+        res.status(201).json({ character });
+      } catch (err) { next(err); }
+    });
+  });
+});
+
 /**
  * GET /api/characters/official — 공식 캐릭터 목록 (공개, 인증 불필요).
  * 모든 유저가 캐릭터 선택 화면에서 후보로 사용.
