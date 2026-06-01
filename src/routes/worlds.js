@@ -179,10 +179,11 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const world = await prisma.world.findUnique({ where: { id: req.params.id } });
     if (!world) return res.status(404).json({ error: { message: '월드 없음' } });
-    // 공식 월드는 운영자만 삭제 가능. 일반 월드는 본인만.
+    // 한 번이라도 공개됐던 월드는 운영자만 삭제 가능 (서버 귀속).
+    // 한 번도 공개 안 한 월드는 본인만 삭제 가능.
     const isOp = !!req.user.isOperator;
-    if (world.isOfficial) {
-      if (!isOp) return res.status(403).json({ error: { message: '공식 월드는 운영자만 삭제할 수 있습니다.' } });
+    if (world.wasPublic) {
+      if (!isOp) return res.status(403).json({ error: { message: '공개된 적 있는 월드는 운영자만 삭제할 수 있습니다.' } });
     } else if (world.creatorId !== req.user.id) {
       return res.status(403).json({ error: { message: '권한 없음' } });
     }
@@ -192,31 +193,13 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 });
 
 /**
- * PATCH /api/worlds/:id/official — 월드 공식 토글 (운영자 전용).
- * body: { isOfficial: true | false }
- * 공식으로 마킹된 월드는 creator 탈퇴 시에도 보존됨.
+ * GET /api/worlds/server-owned — 서버 귀속(wasPublic=true) 월드 목록.
+ * creator 탈퇴해도 살아남는 월드들. 홈허브 후보·운영자 관리 화면용.
  */
-router.patch('/:id/official', requireAuth, requireOperator, async (req, res, next) => {
-  try {
-    const world = await prisma.world.findUnique({ where: { id: req.params.id } });
-    if (!world) return res.status(404).json({ error: { message: '월드 없음' } });
-    const isOfficial = !!req.body?.isOfficial;
-    const updated = await prisma.world.update({
-      where: { id: req.params.id },
-      data: { isOfficial },
-    });
-    res.json({ world: updated });
-  } catch (err) { next(err); }
-});
-
-/**
- * GET /api/worlds/official — 공식 월드 목록 (공개).
- * 홈허브 후보 / 마켓 노출 등에 사용.
- */
-router.get('/official', async (_req, res, next) => {
+router.get('/server-owned', async (_req, res, next) => {
   try {
     const worlds = await prisma.world.findMany({
-      where: { isOfficial: true },
+      where: { wasPublic: true },
       orderBy: [{ playCount: 'desc' }, { updatedAt: 'desc' }],
       take: 100,
     });

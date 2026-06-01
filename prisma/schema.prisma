@@ -109,8 +109,8 @@ model Character {
 /// 유저가 만든 3D 맵/월드
 model World {
   id           String   @id @default(cuid())
-  /// 공식 월드(isOfficial=true)는 creator 탈퇴 시 NULL 로만 처리되어 보존.
-  /// 일반 월드(isOfficial=false)는 DELETE /me 에서 명시 삭제.
+  /// 한 번이라도 공개(wasPublic=true)된 월드는 creator 탈퇴 시 보존 (creatorId → NULL).
+  /// 비공개로만 유지된 월드는 DELETE /me 에서 같이 삭제.
   creatorId    String?
   creator      Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
   name         String   @db.VarChar(100)
@@ -118,9 +118,11 @@ model World {
   thumbnailUrl String?  @db.VarChar(400)
   /// { objects: [{ assetId, x, y, z, rx, ry, rz, sx, sy, sz }], terrain: {} }
   mapData      Json     @default("{\"objects\":[]}")
+  /// 현재 공개 상태. 토글 가능.
   isPublic     Boolean  @default(false)
-  /// true = 공식 월드 (운영자가 마킹, 영구 보존). false = 일반.
-  isOfficial   Boolean  @default(false)
+  /// 한 번이라도 isPublic=true 였는지. 한 번 true 되면 다시 false 안 됨 (서버 트리거).
+  /// 이 플래그가 true 면 creator 탈퇴 시에도 월드 보존.
+  wasPublic    Boolean  @default(false)
   playCount    Int      @default(0)
   /// 'personal' = 각자 자기 DO 인스턴스 (홈허브용). 'multi' = 공개 세션 매칭.
   kind         String   @default("multi") @db.VarChar(20)
@@ -131,7 +133,7 @@ model World {
 
   @@index([isPublic, playCount(sort: Desc)])
   @@index([creatorId])
-  @@index([isOfficial])
+  @@index([wasPublic])
   @@map("worlds")
 }
 

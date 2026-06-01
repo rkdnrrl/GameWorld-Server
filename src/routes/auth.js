@@ -246,11 +246,12 @@ router.delete('/me', requireAuth, async (req, res, next) => {
       // 영구 삭제하면 다른 유저들의 game_ratings/comments 도 사라져서 마켓 영향. nullify 가 안전.
       await tx.game.updateMany({ where: { ownerUserId: userId }, data: { ownerUserId: null } }).catch(() => {});
 
-      // 비공식 월드만 명시 삭제 — 공식(isOfficial=true)은 FK SetNull 로 자동 보존됨.
+      // 한 번도 공개된 적 없는 월드만 명시 삭제 — 한 번이라도 공개됐던(wasPublic=true) 월드는
+      // FK SetNull 로 자동 보존됨 (creatorId → NULL, 본체는 서버 귀속).
       const worldDel = await tx.world.deleteMany({
-        where: { creatorId: userId, isOfficial: false },
+        where: { creatorId: userId, wasPublic: false },
       }).catch(() => ({ count: 0 }));
-      if (worldDel?.count) summary.tables['worlds(non-official)'] = worldDel.count;
+      if (worldDel?.count) summary.tables['worlds(private-only)'] = worldDel.count;
 
       // User row 삭제 (있으면)
       await tx.user.delete({ where: { id: userId } }).catch(() => {});
