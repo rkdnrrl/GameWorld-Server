@@ -31,6 +31,19 @@ model Profile {
   @@map("profiles")
 }
 
+/// 탈퇴한 계정의 묘비 (tombstone).
+/// DELETE /api/auth/me 시 여기 기록 → 미들웨어가 그 id 의 토큰을 거부 → 자동 재생성 차단.
+/// 운영자가 수동 row 삭제하면 재가입 가능.
+model DeletedProfile {
+  id               String   @id
+  deletedAt        DateTime @default(now()) @db.Timestamptz(6)
+  originalUsername String?
+  email            String?
+
+  @@index([email])
+  @@map("deleted_profiles")
+}
+
 /// 알림
 model Notification {
   id        String    @id @default(cuid())

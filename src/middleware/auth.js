@@ -47,6 +47,13 @@ async function resolveUserFromToken(token) {
 
   if (!userId) return null;
 
+  // 묘비 체크 — DELETE /me 로 탈퇴한 계정이면 즉시 거부 (auto-upsert 부활 차단).
+  // 운영자가 deleted_profiles 에서 row 지우면 재가입 가능.
+  try {
+    const tombstone = await prisma.deletedProfile.findUnique({ where: { id: userId } });
+    if (tombstone) return { _deleted: true, id: userId };
+  } catch { /* 마이그레이션 전엔 테이블 없음 — skip */ }
+
   // Keep auth flow alive even when profile sync fails.
   try {
     let profile = await prisma.profile.findUnique({ where: { id: userId } });
@@ -89,6 +96,9 @@ async function requireAuth(req, res, next) {
     if (!user) {
       return res.status(401).json({ error: { message: 'Invalid token.' } });
     }
+    if (user._deleted) {
+      return res.status(401).json({ error: { message: '탈퇴한 계정입니다.', code: 'ACCOUNT_DELETED' } });
+    }
 
     req.user = user;
     next();
@@ -106,7 +116,8 @@ async function optionalAuth(req, _res, next) {
       return next();
     }
 
-    req.user = await resolveUserFromToken(token);
+    const u = await resolveUserFromToken(token);
+    req.user = (u && u._deleted) ? null : u;
     next();
   } catch {
     req.user = null;

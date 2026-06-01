@@ -208,6 +208,11 @@ router.delete('/me', requireAuth, async (req, res, next) => {
   const userId = req.user.id;
   const summary = { tables: {}, errors: [] };
 
+  // 묘비 기록용 — Profile 삭제 전에 username 캡쳐
+  const beforeProfile = await prisma.profile.findUnique({
+    where: { id: userId }, select: { username: true },
+  }).catch(() => null);
+
   try {
     // 1) 비-Prisma 테이블들 — 트랜잭션 밖에서 개별 처리 (테이블 없거나 컬럼 다르면 skip)
     for (const [table, col] of USER_KEYED_TABLES) {
@@ -240,6 +245,17 @@ router.delete('/me', requireAuth, async (req, res, next) => {
       // 3) Profile 삭제 — cascade 로 Character/World/ScriptComponent/Prefab/UserFollow/Notification/AssetLike/FolderPack 같이 사라짐.
       //    Asset 는 creatorId SetNull (다른 유저의 import/like 보존)
       await tx.profile.delete({ where: { id: userId } });
+
+      // 묘비 기록 — 다른 라우트의 upsert 가 다시 만드는 것 차단. 미들웨어에서 401.
+      await tx.deletedProfile.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          originalUsername: beforeProfile?.username || null,
+          email: req.user.email || null,
+        },
+        update: { deletedAt: new Date() },
+      });
     });
 
     // 4) Supabase auth.users — service role 있을 때만
