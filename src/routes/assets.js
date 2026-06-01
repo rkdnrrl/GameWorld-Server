@@ -100,6 +100,65 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
     }
 
     const assetName = (req.body.name || path.basename(file.originalname, ext)).slice(0, 100);
+
+    await ensureProfile(req.user);
+
+    // 폴더 — 현재 보고 있는 폴더로 자동 분류 (선택 사항)
+    const folder = req.body.folder
+      ? String(req.body.folder).slice(0, 200)
+      : null;
+
+    // 🗺 .alp / .alpmap.json — alp-map JSON 이면 파일 R2 저장 대신 metadata.data 에 보관
+    // (클라이언트가 잘못된 경로로 보내도 서버에서 방어적으로 처리)
+    if (kind.id === 'map' || /\.(alp|alpmap\.json)$/i.test(file.originalname)) {
+      try {
+        const text = file.buffer.toString('utf8');
+        const parsed = JSON.parse(text);
+        if (parsed && parsed.format === 'alp-map' && Array.isArray(parsed.objects)) {
+          const finalName = (parsed.name || assetName).slice(0, 80);
+          // env — 명시적 env or 최상위 환경 필드들 fallback
+          const env = parsed.env || {
+            bgColor: parsed.bgColor,
+            ambientIntensity: parsed.ambientIntensity,
+            preset: parsed.preset,
+            fogDensity: parsed.fogDensity,
+            hdriPreset: parsed.hdriPreset,
+            camera: parsed.camera,
+          };
+          // terrain — 명시적 최상위 or kind:terrain 오브젝트에서 추출
+          const terrainObj = parsed.objects.find(o => o && o.kind === 'terrain');
+          const terrain = parsed.terrain || (terrainObj && terrainObj.terrain) || undefined;
+          const data = { objects: parsed.objects, env, terrain };
+          const serialized = JSON.stringify(data);
+          if (Buffer.byteLength(serialized, 'utf8') > 2 * 1024 * 1024) {
+            return res.status(413).json({ error: { message: '맵 데이터 2MB 초과' } });
+          }
+          const asset = await prisma.asset.create({
+            data: {
+              creatorId: req.user.id,
+              name:      finalName,
+              modelUrl:  '',
+              kind:      'map',
+              fileSize:  BigInt(file.size),
+              folder,
+              isPublic:  false,
+              metadata: {
+                data,
+                icon: typeof parsed.icon === 'string' ? parsed.icon.slice(0, 8) : '🗺',
+                description: typeof parsed.description === 'string' ? parsed.description.slice(0, 300) : '',
+                objectCount: parsed.objects.length,
+                version: 1,
+              },
+            },
+          });
+          return res.json({ asset: serializeAsset(asset) });
+        }
+      } catch (e) {
+        // JSON 파싱 실패 → 일반 파일 업로드로 fall through (예: 잘못된 .alp 파일은 R2 에 그대로 저장)
+        console.warn('[upload] .alp parse failed, falling back to file storage:', e.message);
+      }
+    }
+
     const assetId   = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const r2Key     = `assets/${req.user.id}/${assetId}${ext}`;
 
@@ -108,13 +167,6 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
     });
 
     const modelUrl = `${CDN_BASE}/${r2Key}`;
-
-    await ensureProfile(req.user);
-
-    // 폴더 — 현재 보고 있는 폴더로 자동 분류 (선택 사항)
-    const folder = req.body.folder
-      ? String(req.body.folder).slice(0, 200)
-      : null;
 
     const asset = await prisma.asset.create({
       data: {
