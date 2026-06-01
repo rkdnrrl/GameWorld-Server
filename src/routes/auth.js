@@ -246,11 +246,17 @@ router.delete('/me', requireAuth, async (req, res, next) => {
       // 영구 삭제하면 다른 유저들의 game_ratings/comments 도 사라져서 마켓 영향. nullify 가 안전.
       await tx.game.updateMany({ where: { ownerUserId: userId }, data: { ownerUserId: null } }).catch(() => {});
 
+      // 비공식 월드만 명시 삭제 — 공식(isOfficial=true)은 FK SetNull 로 자동 보존됨.
+      const worldDel = await tx.world.deleteMany({
+        where: { creatorId: userId, isOfficial: false },
+      }).catch(() => ({ count: 0 }));
+      if (worldDel?.count) summary.tables['worlds(non-official)'] = worldDel.count;
+
       // User row 삭제 (있으면)
       await tx.user.delete({ where: { id: userId } }).catch(() => {});
 
-      // 3) Profile 삭제 — cascade 로 Character/World/ScriptComponent/Prefab/UserFollow/Notification/AssetLike/FolderPack 같이 사라짐.
-      //    Asset 는 creatorId SetNull (다른 유저의 import/like 보존)
+      // 3) Profile 삭제 — cascade 로 Character/ScriptComponent/Prefab/UserFollow/Notification/AssetLike/FolderPack 같이 사라짐.
+      //    Asset 는 creatorId SetNull. World 는 SetNull (공식 보존) + 위에서 비공식은 이미 삭제됨.
       await tx.profile.delete({ where: { id: userId } });
 
       // 묘비 기록 — 다른 라우트의 upsert 가 다시 만드는 것 차단. 미들웨어에서 401.

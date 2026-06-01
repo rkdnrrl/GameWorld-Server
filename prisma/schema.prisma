@@ -109,14 +109,18 @@ model Character {
 /// 유저가 만든 3D 맵/월드
 model World {
   id           String   @id @default(cuid())
-  creatorId    String
-  creator      Profile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  /// 공식 월드(isOfficial=true)는 creator 탈퇴 시 NULL 로만 처리되어 보존.
+  /// 일반 월드(isOfficial=false)는 DELETE /me 에서 명시 삭제.
+  creatorId    String?
+  creator      Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
   name         String   @db.VarChar(100)
   description  String?  @db.VarChar(500)
   thumbnailUrl String?  @db.VarChar(400)
   /// { objects: [{ assetId, x, y, z, rx, ry, rz, sx, sy, sz }], terrain: {} }
   mapData      Json     @default("{\"objects\":[]}")
   isPublic     Boolean  @default(false)
+  /// true = 공식 월드 (운영자가 마킹, 영구 보존). false = 일반.
+  isOfficial   Boolean  @default(false)
   playCount    Int      @default(0)
   /// 'personal' = 각자 자기 DO 인스턴스 (홈허브용). 'multi' = 공개 세션 매칭.
   kind         String   @default("multi") @db.VarChar(20)
@@ -127,6 +131,7 @@ model World {
 
   @@index([isPublic, playCount(sort: Desc)])
   @@index([creatorId])
+  @@index([isOfficial])
   @@map("worlds")
 }
 
