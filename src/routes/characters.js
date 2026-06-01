@@ -410,15 +410,17 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     });
     if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
 
-    // 공식 캐릭터는 웹에서 삭제 금지 — 데스크톱 운영자 앱에서만 삭제 가능
-    if (existing.isOfficial) {
-      return res.status(403).json({
-        error: { message: '공식 캐릭터는 삭제할 수 없습니다. 데스크톱 운영자 앱에서 관리하세요.' },
-      });
-    }
-
     await prisma.$transaction(async (tx) => {
-      await tx.character.delete({ where: { id } });
+      if (existing.isOfficial) {
+        // 공식 캐릭터는 실제 row 삭제하지 않고 내 소유에서만 분리 (orphan)
+        // 공식 캐릭터 카드로는 계속 노출, 데스크톱 운영자 앱에서만 진짜 삭제 가능
+        await tx.character.update({
+          where: { id },
+          data: { userId: null, isActive: false },
+        });
+      } else {
+        await tx.character.delete({ where: { id } });
+      }
 
       if (existing.isActive) {
         const fallback = await tx.character.findFirst({
