@@ -6,6 +6,7 @@ const { Router } = require('express');
 const multer = require('multer');
 const path = require('path');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
 const r2 = require('../lib/r2');
 
@@ -781,17 +782,36 @@ router.post('/batch', requireAuth, async (req, res, next) => {
 });
 
 /* DELETE /api/assets/:id */
+// 새 구조: 에셋 등록 시 즉시 서버 자산. 유저는 자기 라이브러리에서만 분리(orphan).
+// 진짜 row + R2 파일 삭제는 운영자 admin 엔드포인트에서만.
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
     if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
+    // creatorId 만 NULL 처리 → 내 라이브러리에서 사라지지만 row + R2 파일은 보존, 마켓에서 계속 사용 가능
+    await prisma.asset.update({
+      where: { id: req.params.id },
+      data: { creatorId: null },
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// 운영자 전용: 진짜 row + R2 파일 삭제. creatorId 매칭 무시.
+router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
+
+    // R2 파일 키는 URL 에서 직접 추출 (creatorId 가 null 이어도 동작)
+    const r2KeyFromUrl = (url) => {
+      if (!url || !url.startsWith(`${CDN_BASE}/`)) return null;
+      return url.replace(`${CDN_BASE}/`, '');
+    };
     try {
-      const keys = [
-        ownedR2Key(asset.modelUrl, req.user.id),
-        ownedR2Key(asset.thumbnailUrl, req.user.id),
-      ].filter(Boolean);
+      const keys = [r2KeyFromUrl(asset.modelUrl), r2KeyFromUrl(asset.thumbnailUrl)].filter(Boolean);
       if (keys.length) await r2.deleteKeys(keys);
     } catch {}
 

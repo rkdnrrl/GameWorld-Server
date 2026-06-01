@@ -2,6 +2,7 @@ const { Router } = require('express');
 const path = require('node:path');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
+const { requireOperator } = require('../middleware/operatorAuth');
 const { prisma } = require('../db');
 const r2 = require('../lib/r2');
 
@@ -401,7 +402,9 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/characters/:id : delete character
+// DELETE /api/characters/:id : 내 라이브러리에서 분리 (orphan).
+// 새 구조: 등록된 캐릭터 row 는 서버 자산. 유저는 row 를 진짜로 지우지 않고 자기 소유 링크만 끊는다.
+// 누구나 가져오기(import) 로 다시 자기 라이브러리에 추가 가능. 진짜 row 삭제는 운영자 admin 엔드포인트.
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
@@ -411,16 +414,11 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
 
     await prisma.$transaction(async (tx) => {
-      if (existing.isOfficial) {
-        // 공식 캐릭터는 실제 row 삭제하지 않고 내 소유에서만 분리 (orphan)
-        // 공식 캐릭터 카드로는 계속 노출, 데스크톱 운영자 앱에서만 진짜 삭제 가능
-        await tx.character.update({
-          where: { id },
-          data: { userId: null, isActive: false },
-        });
-      } else {
-        await tx.character.delete({ where: { id } });
-      }
+      // 공식이든 일반이든 동일: 내 소유 분리
+      await tx.character.update({
+        where: { id },
+        data: { userId: null, isActive: false },
+      });
 
       if (existing.isActive) {
         const fallback = await tx.character.findFirst({
@@ -436,6 +434,19 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
       }
     });
 
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/characters/admin/:id : 진짜 row 삭제 (운영자 전용)
+// userId 매칭 없이 어떤 캐릭터든 삭제 가능. 공식 캐릭터 관리/정리용.
+router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '');
+    const existing = await prisma.character.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
+
+    await prisma.character.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
