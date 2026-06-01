@@ -25,6 +25,7 @@ router.use('/script-components',          scriptComponentsRoutes.router);
 router.use('/operator/script-components', scriptComponentsRoutes.operatorRouter);
 router.use('/operator/asset-reports', require('./asset-reports'));
 router.use('/operator/home-hub',     require('./home-hub'));
+router.use('/operators',             require('./operators'));
 router.use('/games',                 gamesUploadRoutes.router);
 router.use('/games',                 require('./games'));
 router.use('/operator/games',        gamesUploadRoutes.operatorRouter);
