@@ -47,6 +47,83 @@ router.post('/signup', async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/auth/admin-signup — 이메일 인증 없는 즉시 가입.
+ * 데스크톱 운영자 앱에서만 사용. Supabase service_role 로 email_confirm=true 설정 후 user 생성.
+ *
+ * 생성된 계정은 일반 사용자 — 데스크톱 콘솔 로그인 불가 (operator 권한 없음).
+ * 기존 운영자가 /api/operators/promote 로 권한 부여 후 로그인 가능.
+ *
+ * body: { email, password, nickname? }
+ */
+router.post('/admin-signup', async (req, res, next) => {
+  try {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.SUPABASE_URL) {
+      return res.status(500).json({ error: { message: 'SUPABASE_SERVICE_ROLE_KEY 환경변수 미설정.' } });
+    }
+    const { email, password, nickname } = req.body || {};
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ error: { message: '유효한 이메일이 필요합니다.' } });
+    }
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: { message: '비밀번호는 최소 6자 이상이어야 합니다.' } });
+    }
+    const nick = (typeof nickname === 'string' && nickname.trim()) ? nickname.trim().slice(0, 30) : email.split('@')[0].slice(0, 30);
+
+    const { createClient } = require('@supabase/supabase-js');
+    let admin;
+    const adminOpts = { auth: { autoRefreshToken: false, persistSession: false } };
+    try {
+      const ws = require('ws');
+      admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        ...adminOpts, realtime: { transport: ws },
+      });
+    } catch {
+      admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, adminOpts);
+    }
+
+    const { data, error } = await admin.auth.admin.createUser({
+      email: email.trim(),
+      password,
+      email_confirm: true,                            // ★ 이메일 인증 skip
+      user_metadata: { nickname: nick },
+    });
+
+    if (error) {
+      const msg = /already.*registered|already.*exist/i.test(error.message || '')
+        ? '이미 가입된 이메일입니다.'
+        : (error.message || '가입 실패');
+      return res.status(400).json({ error: { message: msg } });
+    }
+
+    // Profile 도 미리 생성 (다른 운영자가 promote 할 때 username 으로 찾을 수 있게)
+    try {
+      const userId = data?.user?.id;
+      if (userId) {
+        // 묘비가 있으면 청소 (재가입 흐름)
+        await prisma.deletedProfile.delete({ where: { id: userId } }).catch(() => {});
+        // 같은 username 이 있으면 suffix
+        const exists = await prisma.profile.findFirst({ where: { username: nick } });
+        const finalUsername = exists ? `${nick.slice(0, 24)}_${userId.slice(0, 4)}` : nick;
+        await prisma.profile.upsert({
+          where: { id: userId },
+          update: {},
+          create: { id: userId, username: finalUsername, isOperator: false },
+        });
+      }
+    } catch (e) {
+      console.warn('[admin-signup] profile create failed:', e.message);
+    }
+
+    res.status(201).json({
+      message: '가입 완료. 운영자가 권한을 부여하면 로그인할 수 있습니다.',
+      userId: data?.user?.id,
+      email: data?.user?.email,
+      nickname: nick,
+    });
+  } catch (err) { next(err); }
+});
+
 router.post('/login', async (req, res, next) => {
   try {
     const data = loginSchema.parse(req.body);
