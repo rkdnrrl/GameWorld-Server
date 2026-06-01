@@ -800,6 +800,8 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 });
 
 // 운영자 전용: 진짜 row + R2 파일 삭제. creatorId 매칭 무시.
+// clone 은 referenceOnly (같은 R2 파일을 가리킴) 이므로 R2 파일 삭제 시 자동으로 못쓰게 되지만,
+// DB 정리를 위해 metadata.importedFrom.assetId 가 이 id 인 모든 clone row 도 함께 삭제.
 router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next) => {
   try {
     const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
@@ -815,8 +817,21 @@ router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next)
       if (keys.length) await r2.deleteKeys(keys);
     } catch {}
 
+    // metadata->importedFrom->assetId = req.params.id 인 clone row 모두 삭제
+    // Prisma JSON path 필터 사용
+    const clones = await prisma.asset.findMany({
+      where: {
+        metadata: { path: ['importedFrom', 'assetId'], equals: req.params.id },
+      },
+      select: { id: true },
+    });
+    const clonedCount = clones.length;
+    if (clonedCount) {
+      await prisma.asset.deleteMany({ where: { id: { in: clones.map(c => c.id) } } });
+    }
+
     await prisma.asset.delete({ where: { id: req.params.id } });
-    res.json({ ok: true });
+    res.json({ ok: true, clonedDeleted: clonedCount });
   } catch (err) { next(err); }
 });
 
