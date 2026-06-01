@@ -193,7 +193,6 @@ router.get('/official', async (_req, res, next) => {
  * body: { isOfficial: bool }
  * 공식 등록 시 자동으로 isPublic 도 true 로 만듬 (공유 가능 상태로).
  */
-const { requireOperator } = require('../middleware/operatorAuth');
 router.patch('/:id/official', requireAuth, requireOperator, async (req, res, next) => {
   try {
     const character = await prisma.character.findUnique({ where: { id: req.params.id } });
