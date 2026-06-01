@@ -168,11 +168,109 @@ router.patch('/me', requireAuth, async (req, res, next) => {
 });
 
 // 회원 탈퇴
+/**
+ * DELETE /api/auth/me — 회원 탈퇴 (모든 데이터 완전 삭제).
+ *
+ * 삭제 순서:
+ *   1. 비-Prisma 테이블 (catches, smelt_stock 등 게임 데이터) — userId 기반 raw SQL
+ *   2. User 테이블 자식 (CommunityPost/Comment) + User 자체
+ *   3. Profile (cascade 로 Character/World/ScriptComponent/Prefab/UserFollow/Notification 등 같이 삭제)
+ *   4. Supabase auth.users — SUPABASE_SERVICE_ROLE_KEY 있을 때만 (없으면 이메일 재가입 차단됨 — 수동 정리 필요)
+ *
+ * 테이블 누락에 안전 — 존재하지 않는 테이블은 silent skip (개발/스테이징 환경 대비).
+ */
+const USER_KEYED_TABLES = [
+  // CLAUDE.md 의 현재 테이블 목록 중 userId 컬럼 가진 것들
+  ['catches',                 'userId'],
+  ['crafted_equipment',       'userId'],
+  ['dungeon_saves',           'userId'],
+  ['enhancement_stock',       'userId'],
+  ['smelt_stock',             'userId'],
+  ['activity_logs',           'userId'],
+  ['modules',                 'userId'],
+  ['furniture_items',         'userId'],
+  ['voxel_objects',           'userId'],
+  ['voxel_placements',        'userId'],
+  ['alchemy_element_stock',   'userId'],
+  ['user_records',            'userId'],
+  ['daily_mission_progress',  'userId'],
+  ['ad_rewards',              'userId'],
+  ['community_game_data',     'userId'],
+  ['inventory_items',         'userId'],
+  ['game_state',              'userId'],
+  ['world_data',              'userId'],
+  ['game_comments',           'userId'],
+  ['game_ratings',            'userId'],
+  ['game_reports',            'reporterId'],
+];
+
 router.delete('/me', requireAuth, async (req, res, next) => {
+  const userId = req.user.id;
+  const summary = { tables: {}, errors: [] };
+
   try {
-    await prisma.profile.delete({ where: { id: req.user.id } });
-    res.json({ message: '회원 탈퇴가 완료되었습니다.' });
+    // 1) 비-Prisma 테이블들 — 트랜잭션 밖에서 개별 처리 (테이블 없거나 컬럼 다르면 skip)
+    for (const [table, col] of USER_KEYED_TABLES) {
+      try {
+        const result = await prisma.$executeRawUnsafe(
+          `DELETE FROM "${table}" WHERE "${col}" = $1`, userId,
+        );
+        if (result > 0) summary.tables[table] = result;
+      } catch (e) {
+        // 테이블 없음 (42P01) / 컬럼 없음 (42703) → 무시. 그 외엔 로그.
+        if (e?.code !== '42P01' && e?.code !== '42703') {
+          summary.errors.push(`${table}: ${e.message}`);
+          console.warn(`[delete /me] ${table}: ${e.message}`);
+        }
+      }
+    }
+
+    // 2) User 테이블 측 데이터 (community, games owner)
+    await prisma.$transaction(async (tx) => {
+      // CommunityComment / CommunityPost — User 의 자식. cascade 없어서 명시 삭제.
+      await tx.communityComment.deleteMany({ where: { userId } }).catch(() => {});
+      await tx.communityPost.deleteMany({ where: { userId } }).catch(() => {});
+      // Game.ownerUserId — 사용자가 만든 UGC 게임은 ownerless 처리 (운영자가 검토 후 처리)
+      // 영구 삭제하면 다른 유저들의 game_ratings/comments 도 사라져서 마켓 영향. nullify 가 안전.
+      await tx.game.updateMany({ where: { ownerUserId: userId }, data: { ownerUserId: null } }).catch(() => {});
+
+      // User row 삭제 (있으면)
+      await tx.user.delete({ where: { id: userId } }).catch(() => {});
+
+      // 3) Profile 삭제 — cascade 로 Character/World/ScriptComponent/Prefab/UserFollow/Notification/AssetLike/FolderPack 같이 사라짐.
+      //    Asset 는 creatorId SetNull (다른 유저의 import/like 보존)
+      await tx.profile.delete({ where: { id: userId } });
+    });
+
+    // 4) Supabase auth.users — service role 있을 때만
+    let supabaseDeleted = false;
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_URL) {
+      try {
+        const { createClient } = require('@supabase/supabase-js');
+        const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+        const { error } = await admin.auth.admin.deleteUser(userId);
+        if (error) {
+          summary.errors.push(`supabase auth.users: ${error.message}`);
+          console.warn('[delete /me] supabase auth delete failed:', error.message);
+        } else {
+          supabaseDeleted = true;
+        }
+      } catch (e) {
+        summary.errors.push(`supabase admin: ${e.message}`);
+      }
+    }
+
+    res.json({
+      message: '회원 탈퇴가 완료되었습니다.',
+      deletedTables: summary.tables,
+      supabaseAuthDeleted: supabaseDeleted,
+      warnings: summary.errors.length ? summary.errors : undefined,
+      ...(!supabaseDeleted ? { note: 'Supabase auth.users 는 자동 삭제 안 됨 — SUPABASE_SERVICE_ROLE_KEY 환경변수 추가 후 가능.' } : {}),
+    });
   } catch (err) {
+    console.error('[auth/me DELETE] failed:', err);
     next(err);
   }
 });
