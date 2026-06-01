@@ -142,6 +142,26 @@ router.post('/admin', requireAuth, async (req, res, next) => {
             isOfficial: true,
           },
         });
+
+        // FBX 가 있으면 같은 모델을 Asset 으로도 등록 → 에셋 마켓플레이스에 노출
+        if (file && appearance.modelUrl) {
+          try {
+            await prisma.asset.create({
+              data: {
+                creatorId: req.user.id,
+                name,
+                modelUrl:  appearance.modelUrl,
+                kind:      'model',
+                fileSize:  BigInt(file.size),
+                isPublic:  true,
+                tags:      ['official-character'],
+              },
+            });
+          } catch (e) {
+            console.warn('[admin character] asset 생성 실패:', e.message);
+          }
+        }
+
         res.status(201).json({ character });
       } catch (err) { next(err); }
     });
