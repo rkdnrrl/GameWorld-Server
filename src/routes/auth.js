@@ -180,7 +180,8 @@ router.patch('/me', requireAuth, async (req, res, next) => {
  * 테이블 누락에 안전 — 존재하지 않는 테이블은 silent skip (개발/스테이징 환경 대비).
  */
 const USER_KEYED_TABLES = [
-  // CLAUDE.md 의 현재 테이블 목록 중 userId 컬럼 가진 것들
+  // CLAUDE.md 의 테이블 목록 중 userId 컬럼 가진 것들.
+  // 존재하지 않는 테이블은 42P01 로 silent skip 됨 — 추가/제거 자유.
   ['catches',                 'userId'],
   ['crafted_equipment',       'userId'],
   ['dungeon_saves',           'userId'],
@@ -199,9 +200,10 @@ const USER_KEYED_TABLES = [
   ['inventory_items',         'userId'],
   ['game_state',              'userId'],
   ['world_data',              'userId'],
-  ['game_comments',           'userId'],
-  ['game_ratings',            'userId'],
-  ['game_reports',            'reporterId'],
+  // 아래 3개는 실제 DB 에 없을 수 있음 (CLAUDE.md 에만 명시) — silent skip 됨
+  // ['game_comments',           'userId'],
+  // ['game_ratings',            'userId'],
+  // ['game_reports',            'reporterId'],
 ];
 
 router.delete('/me', requireAuth, async (req, res, next) => {
