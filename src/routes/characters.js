@@ -475,9 +475,12 @@ router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next)
       if (assets.length) {
         const assetIds = assets.map(a => a.id);
         // 2a) 그 Asset 들의 import 클론(다른 Asset row) 도 삭제
+        // Prisma JSON path 필터는 `in` 미지원 → assetId 별로 OR 조립
         const assetClones = await prisma.asset.findMany({
           where: {
-            metadata: { path: ['importedFrom', 'assetId'], in: assetIds },
+            OR: assetIds.map(aid => ({
+              metadata: { path: ['importedFrom', 'assetId'], equals: aid },
+            })),
           },
           select: { id: true },
         });
