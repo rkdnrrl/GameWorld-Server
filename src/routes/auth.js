@@ -217,17 +217,22 @@ router.delete('/me', requireAuth, async (req, res, next) => {
 
   try {
     // 1) 비-Prisma 테이블들 — 트랜잭션 밖에서 개별 처리 (테이블 없거나 컬럼 다르면 skip)
+    // userId 컬럼이 UUID 타입이든 TEXT 타입이든 호환되게 양쪽 모두 text 로 캐스트.
     for (const [table, col] of USER_KEYED_TABLES) {
       try {
         const result = await prisma.$executeRawUnsafe(
-          `DELETE FROM "${table}" WHERE "${col}" = $1`, userId,
+          `DELETE FROM "${table}" WHERE "${col}"::text = $1::text`, userId,
         );
         if (result > 0) summary.tables[table] = result;
       } catch (e) {
         // 테이블 없음 (42P01) / 컬럼 없음 (42703) → 무시. 그 외엔 로그.
         if (e?.code !== '42P01' && e?.code !== '42703') {
-          summary.errors.push(`${table}: ${e.message}`);
-          console.warn(`[delete /me] ${table}: ${e.message}`);
+          // Prisma 가 e.code 안 채우는 경우 있으니 메시지로도 한 번 더 체크
+          const msg = e?.message || '';
+          if (!/does not exist/i.test(msg)) {
+            summary.errors.push(`${table}: ${msg.slice(0, 200)}`);
+            console.warn(`[delete /me] ${table}: ${msg}`);
+          }
         }
       }
     }
@@ -265,9 +270,17 @@ router.delete('/me', requireAuth, async (req, res, next) => {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_URL) {
       try {
         const { createClient } = require('@supabase/supabase-js');
-        const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        });
+        // Node 20 은 native WebSocket 없음 → ws 패키지 transport 명시 (services/auth.js 와 동일 패턴)
+        let admin;
+        const adminOpts = { auth: { autoRefreshToken: false, persistSession: false } };
+        try {
+          const ws = require('ws');
+          admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+            ...adminOpts, realtime: { transport: ws },
+          });
+        } catch {
+          admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, adminOpts);
+        }
         const { error } = await admin.auth.admin.deleteUser(userId);
         if (error) {
           summary.errors.push(`supabase auth.users: ${error.message}`);
@@ -277,6 +290,7 @@ router.delete('/me', requireAuth, async (req, res, next) => {
         }
       } catch (e) {
         summary.errors.push(`supabase admin: ${e.message}`);
+        console.warn('[delete /me] supabase admin init failed:', e.message);
       }
     }
 
@@ -285,7 +299,11 @@ router.delete('/me', requireAuth, async (req, res, next) => {
       deletedTables: summary.tables,
       supabaseAuthDeleted: supabaseDeleted,
       warnings: summary.errors.length ? summary.errors : undefined,
-      ...(!supabaseDeleted ? { note: 'Supabase auth.users 는 자동 삭제 안 됨 — SUPABASE_SERVICE_ROLE_KEY 환경변수 추가 후 가능.' } : {}),
+      ...(!supabaseDeleted ? {
+        note: (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_URL)
+          ? 'Supabase auth.users 자동 삭제 실패 — warnings 메시지 확인.'
+          : 'Supabase auth.users 는 자동 삭제 안 됨 — SUPABASE_SERVICE_ROLE_KEY 환경변수 추가 후 가능.',
+      } : {}),
     });
   } catch (err) {
     console.error('[auth/me DELETE] failed:', err);
