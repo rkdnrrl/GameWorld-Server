@@ -124,7 +124,8 @@ router.post('/admin', requireAuth, async (req, res, next) => {
             return res.status(400).json({ error: { message: 'FBX / GLB / GLTF 만 허용됩니다.' } });
           }
           const charId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-          const r2Key = `official-characters/${charId}${ext}`;
+          // 'assets/' 접두사 — Cloudflare Worker 가 이 prefix 만 서빙. official-characters 폴더로 분리.
+          const r2Key = `assets/official-characters/${charId}${ext}`;
           await r2.putObject(r2Key, file.buffer, {
             contentType: file.mimetype || r2.contentType(r2Key),
           });
