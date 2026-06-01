@@ -138,7 +138,7 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
 ───────────────────────────────────────── */
 router.post('/script', requireAuth, async (req, res, next) => {
   try {
-    const { name, code, propsSchema, icon, folder } = req.body || {};
+    const { name, code, propsSchema, icon, description, folder } = req.body || {};
     if (typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: { message: '이름이 필요합니다.' } });
     }
@@ -161,10 +161,80 @@ router.post('/script', requireAuth, async (req, res, next) => {
           code,
           propsSchema: Array.isArray(propsSchema) ? propsSchema.slice(0, 40) : [],
           icon:        typeof icon === 'string' ? icon.slice(0, 8) : '📜',
+          description: typeof description === 'string' ? description.slice(0, 300) : '',
         },
       },
     });
     res.json({ asset: serializeAsset(asset) });
+  } catch (err) { next(err); }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/assets/map  — 맵 스냅샷 asset 생성 (파일 X, JSON 데이터만)
+   본문: { name, data: { objects, env, ... }, icon?, description?, folder? }
+───────────────────────────────────────── */
+router.post('/map', requireAuth, async (req, res, next) => {
+  try {
+    const { name, data, icon, description, folder } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: { message: '이름이 필요합니다.' } });
+    }
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ error: { message: '맵 데이터가 필요합니다.' } });
+    }
+    const serialized = JSON.stringify(data);
+    const byteSize = Buffer.byteLength(serialized, 'utf8');
+    if (byteSize > 2 * 1024 * 1024) {
+      return res.status(413).json({ error: { message: '맵 데이터 크기 2MB 초과.' } });
+    }
+    const asset = await prisma.asset.create({
+      data: {
+        creatorId: req.user.id,
+        name:      name.trim().slice(0, 80),
+        modelUrl:  '',                              // 맵은 파일 없음
+        kind:      'map',
+        fileSize:  BigInt(byteSize),
+        folder:    typeof folder === 'string' ? folder.slice(0, 200) : null,
+        isPublic:  false,
+        metadata:  {
+          data,                                      // { objects, env, terrain, ... }
+          icon:        typeof icon === 'string' ? icon.slice(0, 8) : '🗺',
+          description: typeof description === 'string' ? description.slice(0, 300) : '',
+          objectCount: Array.isArray(data.objects) ? data.objects.length : 0,
+          version:     1,
+        },
+      },
+    });
+    res.json({ asset: serializeAsset(asset) });
+  } catch (err) { next(err); }
+});
+
+/* PATCH /api/assets/:id/map — 맵 데이터/메타 업데이트 (본인만) */
+router.patch('/:id/map', requireAuth, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const asset = await prisma.asset.findUnique({ where: { id } });
+    if (!asset) return res.status(404).json({ error: { message: '에셋을 찾을 수 없습니다.' } });
+    if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
+    if (asset.kind !== 'map') return res.status(400).json({ error: { message: 'map 에셋이 아닙니다.' } });
+
+    const { name, data, icon, description } = req.body || {};
+    const update = {};
+    const meta = { ...(asset.metadata || {}) };
+    if (typeof name === 'string' && name.trim()) update.name = name.trim().slice(0, 80);
+    if (data && typeof data === 'object') {
+      const serialized = JSON.stringify(data);
+      const byteSize = Buffer.byteLength(serialized, 'utf8');
+      if (byteSize > 2 * 1024 * 1024) return res.status(413).json({ error: { message: '맵 데이터 크기 2MB 초과.' } });
+      meta.data = data;
+      meta.objectCount = Array.isArray(data.objects) ? data.objects.length : 0;
+      update.fileSize = BigInt(byteSize);
+    }
+    if (typeof icon === 'string') meta.icon = icon.slice(0, 8);
+    if (typeof description === 'string') meta.description = description.slice(0, 300);
+    update.metadata = meta;
+    const updated = await prisma.asset.update({ where: { id }, data: update });
+    res.json({ asset: serializeAsset(updated) });
   } catch (err) { next(err); }
 });
 
@@ -177,7 +247,7 @@ router.patch('/:id/script', requireAuth, async (req, res, next) => {
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
     if (asset.kind !== 'script') return res.status(400).json({ error: { message: 'script 에셋이 아닙니다.' } });
 
-    const { name, code, propsSchema, icon } = req.body || {};
+    const { name, code, propsSchema, icon, description } = req.body || {};
     const update = {};
     const meta = { ...(asset.metadata || {}) };
     if (typeof name === 'string' && name.trim()) update.name = name.trim().slice(0, 80);
@@ -188,6 +258,7 @@ router.patch('/:id/script', requireAuth, async (req, res, next) => {
     }
     if (Array.isArray(propsSchema)) meta.propsSchema = propsSchema.slice(0, 40);
     if (typeof icon === 'string') meta.icon = icon.slice(0, 8);
+    if (typeof description === 'string') meta.description = description.slice(0, 300);
     update.metadata = meta;
     const updated = await prisma.asset.update({ where: { id }, data: update });
     res.json({ asset: serializeAsset(updated) });
