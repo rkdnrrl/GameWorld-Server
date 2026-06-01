@@ -330,6 +330,13 @@ router.delete('/me', requireAuth, async (req, res, next) => {
       }).catch(() => ({ count: 0 }));
       if (worldDel?.count) summary.tables['worlds(private-only)'] = worldDel.count;
 
+      // 공식 등록되지 않은 캐릭터만 명시 삭제 — isOfficial=true 캐릭터는
+      // FK SetNull 로 자동 보존 (userId → NULL, 본체 서버 귀속).
+      const charDel = await tx.character.deleteMany({
+        where: { userId, isOfficial: false },
+      }).catch(() => ({ count: 0 }));
+      if (charDel?.count) summary.tables['characters(non-official)'] = charDel.count;
+
       // User row 삭제 (있으면)
       await tx.user.delete({ where: { id: userId } }).catch(() => {});
 

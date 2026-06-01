@@ -90,19 +90,23 @@ model UserFollow {
 /// 캐릭터 외형 (유저당 1개)
 model Character {
   id         String   @id @default(cuid())
-  userId     String
-  user       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// isOfficial=true 캐릭터는 owner 탈퇴 시 NULL 처리되어 서버 귀속 보존.
+  userId     String?
+  user       Profile? @relation(fields: [userId], references: [id], onDelete: SetNull)
   name       String   @db.VarChar(30)
   /// { bodyColor, skinColor, hairColor, eyeColor, hairStyle }
   appearance Json     @default("{}")
   isActive   Boolean  @default(false) @map("is_active")
   isPublic   Boolean  @default(false) @map("is_public")
+  /// 운영자가 공식 캐릭터로 등록한 것. 모든 유저가 선택/import 가능.
+  isOfficial Boolean  @default(false) @map("is_official")
   shareSlug  String?  @unique @map("share_slug")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([userId, isActive])
   @@index([isPublic, updatedAt])
+  @@index([isOfficial])
   @@map("characters")
 }
 

@@ -85,6 +85,42 @@ router.get('/me', requireAuth, async (req, res, next) => {
 });
 
 // GET /api/characters/public : public shared characters
+/**
+ * GET /api/characters/official — 공식 캐릭터 목록 (공개, 인증 불필요).
+ * 모든 유저가 캐릭터 선택 화면에서 후보로 사용.
+ * ⚠️ /:id 보다 앞에 정의해야 함 (Express 라우팅 순서).
+ */
+router.get('/official', async (_req, res, next) => {
+  try {
+    const characters = await prisma.character.findMany({
+      where: { isOfficial: true },
+      include: { user: { select: { username: true } } },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 200,
+    });
+    res.json({ characters });
+  } catch (err) { next(err); }
+});
+
+/**
+ * PATCH /api/characters/:id/official — 공식 토글 (운영자 전용).
+ * body: { isOfficial: bool }
+ * 공식 등록 시 자동으로 isPublic 도 true 로 만듬 (공유 가능 상태로).
+ */
+const { requireOperator } = require('../middleware/operatorAuth');
+router.patch('/:id/official', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const character = await prisma.character.findUnique({ where: { id: req.params.id } });
+    if (!character) return res.status(404).json({ error: { message: '캐릭터 없음' } });
+    const isOfficial = !!req.body?.isOfficial;
+    const updated = await prisma.character.update({
+      where: { id: req.params.id },
+      data: { isOfficial, ...(isOfficial ? { isPublic: true } : {}) },
+    });
+    res.json({ character: updated });
+  } catch (err) { next(err); }
+});
+
 router.get('/public', requireAuth, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').trim();
@@ -158,10 +194,11 @@ router.post('/', requireAuth, async (req, res, next) => {
 router.post('/import/:id', requireAuth, async (req, res, next) => {
   try {
     const sourceId = String(req.params.id || '');
+    // 공개(isPublic) 또는 공식(isOfficial) 캐릭터 모두 import 가능
     const source = await prisma.character.findFirst({
-      where: { id: sourceId, isPublic: true },
+      where: { id: sourceId, OR: [{ isPublic: true }, { isOfficial: true }] },
     });
-    if (!source) return res.status(404).json({ error: { message: '공유 캐릭터를 찾을 수 없습니다.' } });
+    if (!source) return res.status(404).json({ error: { message: '공유 또는 공식 캐릭터를 찾을 수 없습니다.' } });
 
     const baseName = trimmedName(source.name) || 'Character';
     const myChars = await prisma.character.findMany({
