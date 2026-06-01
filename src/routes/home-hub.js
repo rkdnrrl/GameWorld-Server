@@ -38,10 +38,10 @@ router.put('/', requireAuth, requireOperator, async (req, res, next) => {
       await prisma.appConfig.deleteMany({ where: { key: 'homeHubWorldId' } });
       return res.json({ worldId: null });
     }
-    // 공개 월드만 허용 — 비공개면 다른 유저가 접근 불가
+    // 한 번이라도 공개된 월드만 허용 (wasPublic) — 서버 귀속 상태라 안전.
     const world = await prisma.world.findUnique({ where: { id: worldId } });
     if (!world) return res.status(404).json({ error: { message: '월드를 찾을 수 없습니다.' } });
-    if (!world.isPublic) return res.status(400).json({ error: { message: '공개 월드만 홈허브로 지정 가능합니다.' } });
+    if (!world.wasPublic) return res.status(400).json({ error: { message: '한 번이라도 공개됐던 월드만 홈허브로 지정 가능합니다.' } });
     await prisma.appConfig.upsert({
       where:  { key: 'homeHubWorldId' },
       update: { value: worldId },
