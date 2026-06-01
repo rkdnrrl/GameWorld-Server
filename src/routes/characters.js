@@ -439,14 +439,30 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 
 // DELETE /api/characters/admin/:id : 진짜 row 삭제 (운영자 전용)
 // userId 매칭 없이 어떤 캐릭터든 삭제 가능. 공식 캐릭터 관리/정리용.
+// import 한 클론(appearance.refCharacterId === id 또는 importedFrom.characterId === id) 도 함께 삭제.
 router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
     const existing = await prisma.character.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
 
+    // 이 캐릭터를 import 한 모든 클론 찾기 — appearance JSON 의 두 경로 중 하나라도 매칭
+    const clones = await prisma.character.findMany({
+      where: {
+        OR: [
+          { appearance: { path: ['refCharacterId'], equals: id } },
+          { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
+        ],
+      },
+      select: { id: true },
+    });
+    const clonedCount = clones.length;
+    if (clonedCount) {
+      await prisma.character.deleteMany({ where: { id: { in: clones.map(c => c.id) } } });
+    }
+
     await prisma.character.delete({ where: { id } });
-    res.json({ ok: true });
+    res.json({ ok: true, clonedDeleted: clonedCount });
   } catch (err) { next(err); }
 });
 
