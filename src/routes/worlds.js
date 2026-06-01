@@ -89,6 +89,21 @@ router.get('/home-hub', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * GET /api/worlds/server-owned — 서버 귀속 월드 목록 (wasPublic=true).
+ * ⚠️ /:id 보다 위에 와야 함 — Express 가 '/server-owned' 를 :id 로 잡지 않게.
+ */
+router.get('/server-owned', async (_req, res, next) => {
+  try {
+    const worlds = await prisma.world.findMany({
+      where: { wasPublic: true },
+      orderBy: [{ playCount: 'desc' }, { updatedAt: 'desc' }],
+      take: 100,
+    });
+    res.json({ worlds });
+  } catch (err) { next(err); }
+});
+
 /** GET /api/worlds/:id — 월드 상세 */
 router.get('/:id', async (req, res, next) => {
   try {
@@ -196,15 +211,4 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
  * GET /api/worlds/server-owned — 서버 귀속(wasPublic=true) 월드 목록.
  * creator 탈퇴해도 살아남는 월드들. 홈허브 후보·운영자 관리 화면용.
  */
-router.get('/server-owned', async (_req, res, next) => {
-  try {
-    const worlds = await prisma.world.findMany({
-      where: { wasPublic: true },
-      orderBy: [{ playCount: 'desc' }, { updatedAt: 'desc' }],
-      take: 100,
-    });
-    res.json({ worlds });
-  } catch (err) { next(err); }
-});
-
 module.exports = router;
