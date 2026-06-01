@@ -47,11 +47,19 @@ async function resolveUserFromToken(token) {
 
   if (!userId) return null;
 
-  // 묘비 체크 — DELETE /me 로 탈퇴한 계정이면 즉시 거부 (auto-upsert 부활 차단).
-  // 운영자가 deleted_profiles 에서 row 지우면 재가입 가능.
+  // 묘비 체크 — DELETE /me 로 탈퇴한 직후 5분간만 거부 (zombie JWT 부활 차단).
+  // 그 후엔 자동 해제 → 재가입·재로그인 정상 동작. 5분 = 옛 JWT 가 캐시될 수 있는 최소 시간.
+  // (재로그인 시 발급되는 새 JWT 의 iat 가 묘비 후라면 통과 — 더 정확하지만 OAuth flow 에선 iat 검증 어려워서 시간 기반.)
   try {
     const tombstone = await prisma.deletedProfile.findUnique({ where: { id: userId } });
-    if (tombstone) return { _deleted: true, id: userId };
+    if (tombstone) {
+      const ageMs = Date.now() - new Date(tombstone.deletedAt).getTime();
+      if (ageMs < 5 * 60 * 1000) {
+        return { _deleted: true, id: userId };
+      }
+      // 5분 지남 → 묘비 자동 청소하고 통과 (재가입 흐름).
+      await prisma.deletedProfile.delete({ where: { id: userId } }).catch(() => {});
+    }
   } catch { /* 마이그레이션 전엔 테이블 없음 — skip */ }
 
   // Keep auth flow alive even when profile sync fails.
