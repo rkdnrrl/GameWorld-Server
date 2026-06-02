@@ -410,7 +410,10 @@ router.get('/profile', requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.profile.findUnique({
       where: { id: req.user.id },
-      select: { username: true, bio: true, profileImageUrl: true, websiteUrl: true },
+      select: {
+        username: true, bio: true, profileImageUrl: true, websiteUrl: true,
+        bannerUrl: true, iconEmoji: true, themeColor: true,
+      },
     });
     res.json({
       profile: user
@@ -419,6 +422,9 @@ router.get('/profile', requireAuth, async (req, res, next) => {
             bio: user.bio,
             profileImageUrl: user.profileImageUrl,
             websiteUrl: user.websiteUrl,
+            bannerUrl: user.bannerUrl,
+            iconEmoji: user.iconEmoji,
+            themeColor: user.themeColor,
           }
         : null,
     });
@@ -427,14 +433,23 @@ router.get('/profile', requireAuth, async (req, res, next) => {
 
 router.patch('/profile', requireAuth, async (req, res, next) => {
   try {
-    const { bio, websiteUrl } = req.body;
+    const { bio, websiteUrl, iconEmoji, themeColor, bannerUrl } = req.body;
     const data = {};
     if (typeof bio        === 'string') data.bio        = bio.trim().slice(0, 300);
     if (typeof websiteUrl === 'string') data.websiteUrl = websiteUrl.trim().slice(0, 200);
+    if (typeof iconEmoji  === 'string') data.iconEmoji  = iconEmoji.trim().slice(0, 8) || null;
+    if (typeof themeColor === 'string') {
+      // hex 형식 검증
+      data.themeColor = /^#[0-9a-f]{6}$/i.test(themeColor.trim()) ? themeColor.trim() : null;
+    }
+    if (typeof bannerUrl  === 'string') data.bannerUrl  = bannerUrl.trim().slice(0, 400) || null;
     const updated = await prisma.profile.update({
       where: { id: req.user.id },
       data,
-      select: { username: true, bio: true, profileImageUrl: true, websiteUrl: true },
+      select: {
+        username: true, bio: true, profileImageUrl: true, websiteUrl: true,
+        bannerUrl: true, iconEmoji: true, themeColor: true,
+      },
     });
     res.json({
       profile: {
@@ -442,6 +457,9 @@ router.patch('/profile', requireAuth, async (req, res, next) => {
         bio: updated.bio,
         profileImageUrl: updated.profileImageUrl,
         websiteUrl: updated.websiteUrl,
+        bannerUrl: updated.bannerUrl,
+        iconEmoji: updated.iconEmoji,
+        themeColor: updated.themeColor,
       },
     });
   } catch (err) { next(err); }

@@ -14,6 +14,7 @@ const { Router } = require('express');
 const { prisma } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
+const { createActivity } = require('./activity');
 
 const router = Router();
 
@@ -83,6 +84,10 @@ router.post('/:id/accept', requireAuth, async (req, res, next) => {
     });
 
     createNotification(fr.requesterId, 'friend_accepted', { friendshipId: fr.id, receiverId: me });
+
+    // 활동 피드: 양쪽 모두 "친구 추가" 이벤트 (visibility: friends)
+    createActivity(me, 'friend_accepted', { targetId: fr.requesterId, visibility: 'friends', payload: { with: fr.requesterId } });
+    createActivity(fr.requesterId, 'friend_accepted', { targetId: me, visibility: 'friends', payload: { with: me } });
 
     res.json({ friendship: updated });
   } catch (err) { next(err); }

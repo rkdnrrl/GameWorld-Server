@@ -15,6 +15,10 @@ model Profile {
   bio        String?   @db.VarChar(300)
   profileImageUrl String? @db.VarChar(400)
   websiteUrl String?   @db.VarChar(200)
+  /// 프로필 꾸미기 (Phase 17)
+  bannerUrl  String?   @db.VarChar(400)
+  iconEmoji  String?   @db.VarChar(8)
+  themeColor String?   @db.VarChar(20)
   /// 팔로워/팔로잉/친구 카운터 (denormalized)
   followerCount  Int   @default(0)
   followingCount Int   @default(0)
@@ -33,6 +37,55 @@ model Profile {
   receivedFriendRequests Friendship[] @relation("FriendReceiver")
 
   @@map("profiles")
+}
+
+/// DM 1:1 대화방 (Phase 19). 두 유저 사이의 대화. userAId < userBId 로 정렬.
+model DmConversation {
+  id               String   @id @default(cuid())
+  userAId          String
+  userBId          String
+  lastMessageAt    DateTime?
+  lastMessageText  String?  @db.Text
+  lastSenderId     String?
+  createdAt        DateTime @default(now())
+  messages         DmMessage[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId, lastMessageAt(sort: Desc)])
+  @@index([userBId, lastMessageAt(sort: Desc)])
+  @@map("dm_conversations")
+}
+
+/// DM 메시지.
+model DmMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   DmConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  body           String   @db.Text
+  createdAt      DateTime @default(now())
+  readAt         DateTime?
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@map("dm_messages")
+}
+
+/// 활동 이벤트 (Phase 18) — 친구·팔로워 피드에 노출되는 사용자 활동.
+/// type: asset_published / world_created / friend_accepted / user_followed / post_created 등
+/// visibility: public(전체) / friends(친구만) / followers(팔로워만)
+model ActivityEvent {
+  id         String   @id @default(cuid())
+  actorId    String
+  type       String
+  targetId   String?
+  payload    Json     @default("{}")
+  visibility String   @default("public")
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([type])
+  @@map("activity_events")
 }
 
 /// 친구 관계 (양방향). 한 쌍의 user 에 대해 1개 row 만 존재.

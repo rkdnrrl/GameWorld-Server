@@ -22,7 +22,12 @@ router.get('/:username/profile', optionalAuth, async (req, res, next) => {
     const username = req.params.username;
     const profile = await prisma.profile.findUnique({
       where: { username },
-      select: { id: true, username: true, createdAt: true, followerCount: true, followingCount: true },
+      select: {
+        id: true, username: true, createdAt: true,
+        bio: true, profileImageUrl: true, websiteUrl: true,
+        followerCount: true, followingCount: true, friendCount: true,
+        bannerUrl: true, iconEmoji: true, themeColor: true,
+      },
     });
     if (!profile) return res.status(404).json({ error: { message: '유저 없음' } });
 
@@ -48,6 +53,10 @@ router.get('/:username/profile', optionalAuth, async (req, res, next) => {
         joinedAt:       profile.createdAt,
         bio:            profile.bio,
         profileImageUrl: profile.profileImageUrl,
+        websiteUrl:     profile.websiteUrl,
+        bannerUrl:      profile.bannerUrl,
+        iconEmoji:      profile.iconEmoji,
+        themeColor:     profile.themeColor,
         publicCount:    aggregate._count.id || 0,
         likesTotal:     aggregate._sum.likeCount || 0,
         importsTotal:   aggregate._sum.importCount || 0,
@@ -95,6 +104,11 @@ router.post('/:username/follow', requireAuth, async (req, res, next) => {
     if (isNew) {
       require('./notifications').createNotification(target.id, 'user_followed', {
         actorName: req.user.nickname,
+      });
+      // 활동 피드 (Phase 18) — public visibility
+      require('./activity').createActivity(req.user.id, 'user_followed', {
+        targetId: target.id, visibility: 'public',
+        payload: { targetUsername: req.params.username },
       });
     }
     res.json(result);
