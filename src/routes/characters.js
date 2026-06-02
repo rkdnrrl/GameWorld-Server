@@ -416,14 +416,15 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 
     // 운영자 + 공식 캐릭터 → cascade 삭제 (admin 엔드포인트 로직과 동일)
     if (existing.isOfficial && req.user.isOperator) {
-      // 1) 캐릭터 클론 (다른 유저가 import 한 것들) 삭제
+      // 1) 캐릭터 클론 — refCharacterId / importedFrom + 같은 modelUrl 매칭
+      const modelUrl = existing.appearance?.modelUrl;
+      const cloneOr = [
+        { appearance: { path: ['refCharacterId'],              equals: id } },
+        { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
+      ];
+      if (modelUrl) cloneOr.push({ appearance: { path: ['modelUrl'], equals: modelUrl } });
       const charClones = await prisma.character.findMany({
-        where: {
-          OR: [
-            { appearance: { path: ['refCharacterId'],            equals: id } },
-            { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
-          ],
-        },
+        where: { id: { not: id }, OR: cloneOr },
         select: { id: true },
       });
       if (charClones.length) {
@@ -431,7 +432,6 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
       }
 
       // 2) 마켓플레이스 Asset row 와 그 import 클론들 삭제
-      const modelUrl = existing.appearance?.modelUrl;
       let assetClonesDeleted = 0, assetRowsDeleted = 0;
       if (modelUrl) {
         const assets = await prisma.asset.findMany({ where: { modelUrl }, select: { id: true } });
@@ -508,14 +508,16 @@ router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next)
     const existing = await prisma.character.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
 
-    // 1) 캐릭터 클론 삭제
+    // 1) 캐릭터 클론 삭제 — refCharacterId / importedFrom 매칭 + 같은 modelUrl 매칭
+    //    (운영자가 본인 라이브러리에 등록한 사본은 refCharacterId 가 안 박혀 있어서 modelUrl 로도 잡아야 함)
+    const modelUrl = existing.appearance?.modelUrl;
+    const cloneOr = [
+      { appearance: { path: ['refCharacterId'],              equals: id } },
+      { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
+    ];
+    if (modelUrl) cloneOr.push({ appearance: { path: ['modelUrl'], equals: modelUrl } });
     const charClones = await prisma.character.findMany({
-      where: {
-        OR: [
-          { appearance: { path: ['refCharacterId'], equals: id } },
-          { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
-        ],
-      },
+      where: { id: { not: id }, OR: cloneOr },
       select: { id: true },
     });
     if (charClones.length) {
@@ -523,7 +525,6 @@ router.delete('/admin/:id', requireAuth, requireOperator, async (req, res, next)
     }
 
     // 2) 마켓플레이스 Asset row(들) 찾기 — 같은 modelUrl
-    const modelUrl = existing.appearance?.modelUrl;
     let assetClonesDeleted = 0;
     let assetRowsDeleted = 0;
     if (modelUrl) {
