@@ -100,6 +100,7 @@ router.get('/server-owned', async (_req, res, next) => {
       where: { wasPublic: true },
       orderBy: [{ playCount: 'desc' }, { updatedAt: 'desc' }],
       take: 100,
+      include: { creator: { select: { username: true } } },
     });
     res.json({ worlds });
   } catch (err) { next(err); }
