@@ -46,6 +46,36 @@ async function hydrateCharacter(character) {
   };
 }
 
+/**
+ * library 엔트리 → 프론트가 쓰던 character shape 로 변환.
+ * - id 는 character.id (delete/select 호출에 그대로 사용)
+ * - appearance 에 custom 값 (modelScale/fbxOffsetY/fbxRotX) 덮어쓰기
+ * - isActive 는 library 의 값
+ */
+function hydrateLibraryEntry(entry) {
+  if (!entry || !entry.character) return null;
+  const c = entry.character;
+  const appearance = { ...(c.appearance || {}) };
+  if (entry.customScale != null)   appearance.modelScale  = entry.customScale;
+  if (entry.customYOffset != null) appearance.fbxOffsetY  = entry.customYOffset;
+  if (entry.customRotX != null)    appearance.fbxRotX     = entry.customRotX;
+  return {
+    id:          c.id,
+    userId:      entry.userId,
+    name:        c.name,
+    appearance,
+    isActive:    entry.isActive,
+    isPublic:    c.isPublic,
+    isOfficial:  c.isOfficial,
+    shareSlug:   c.shareSlug,
+    createdAt:   entry.addedAt,
+    updatedAt:   c.updatedAt,
+    creatorId:   c.userId,
+    creatorName: c.user?.username || null,
+    libraryEntryId: entry.id,
+  };
+}
+
 let sharingSchemaReady = null;
 function ensureSharingSchema() {
   if (!sharingSchemaReady) {
@@ -71,27 +101,29 @@ router.use(async (_req, _res, next) => {
   }
 });
 
-// GET /api/characters : my characters + active character
+// GET /api/characters : 내 라이브러리 (UserCharacterLibrary 기반) + 활성 캐릭터
 router.get('/', requireAuth, async (req, res, next) => {
   try {
-    const characters = await prisma.character.findMany({
+    const entries = await prisma.userCharacterLibrary.findMany({
       where: { userId: req.user.id },
-      orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
+      include: { character: { include: { user: { select: { username: true } } } } },
+      orderBy: [{ isActive: 'desc' }, { addedAt: 'desc' }],
     });
-    const hydrated = await Promise.all(characters.map(hydrateCharacter));
-    const activeCharacter = hydrated.find((c) => c.isActive) || null;
-    res.json({ characters: hydrated, activeCharacter });
+    const characters = entries.map(hydrateLibraryEntry).filter(Boolean);
+    const activeCharacter = characters.find((c) => c.isActive) || null;
+    res.json({ characters, activeCharacter });
   } catch (err) { next(err); }
 });
 
-// GET /api/characters/me : active character only
+// GET /api/characters/me : 활성 캐릭터만
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const char = await prisma.character.findFirst({
+    const entry = await prisma.userCharacterLibrary.findFirst({
       where: { userId: req.user.id, isActive: true },
-      orderBy: { updatedAt: 'desc' },
+      include: { character: { include: { user: { select: { username: true } } } } },
+      orderBy: { addedAt: 'desc' },
     });
-    res.json({ character: await hydrateCharacter(char || null) });
+    res.json({ character: entry ? hydrateLibraryEntry(entry) : null });
   } catch (err) { next(err); }
 });
 
@@ -143,6 +175,13 @@ router.post('/admin', requireAuth, async (req, res, next) => {
             isOfficial: true,
           },
         });
+
+        // 운영자 본인의 library 에도 등록 (자기 캐릭터 페이지에서 사용 가능)
+        try {
+          await prisma.userCharacterLibrary.create({
+            data: { userId: req.user.id, characterId: character.id, isActive: false },
+          });
+        } catch (e) { /* unique 충돌 무시 */ }
 
         // FBX 가 있으면 같은 모델을 Asset 으로도 등록 → 에셋 마켓플레이스에 노출
         if (file && appearance.modelUrl) {
@@ -245,7 +284,7 @@ router.get('/public', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/characters : create and set active
+// POST /api/characters : 새 캐릭터 생성 (Character + library 엔트리, 활성으로)
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const { name, appearance } = req.body || {};
@@ -258,70 +297,52 @@ router.post('/', requireAuth, async (req, res, next) => {
       update: {},
     });
 
-    const created = await prisma.$transaction(async (tx) => {
-      await tx.character.updateMany({
+    const entry = await prisma.$transaction(async (tx) => {
+      // 본인의 다른 라이브러리 항목 비활성
+      await tx.userCharacterLibrary.updateMany({
         where: { userId: req.user.id, isActive: true },
         data: { isActive: false },
       });
-      return tx.character.create({
-        data: {
-          userId: req.user.id,
-          name: nm,
-          appearance: appearance || {},
-          isActive: true,
-        },
+      // Character row 생성 (creator = 본인)
+      const char = await tx.character.create({
+        data: { userId: req.user.id, name: nm, appearance: appearance || {}, isActive: false },
+      });
+      // library 엔트리 (custom 값은 NULL — 본인이 만든 거니까 원본 그대로)
+      return tx.userCharacterLibrary.create({
+        data: { userId: req.user.id, characterId: char.id, isActive: true },
+        include: { character: { include: { user: { select: { username: true } } } } },
       });
     });
 
-    res.json({ character: created });
+    res.json({ character: hydrateLibraryEntry(entry) });
   } catch (err) { next(err); }
 });
 
-// POST /api/characters/import/:id : clone a public character into my account
+// POST /api/characters/import/:id : 공개/공식 캐릭터를 내 라이브러리에 추가 (reference, 복사 안 함)
 router.post('/import/:id', requireAuth, async (req, res, next) => {
   try {
     const sourceId = String(req.params.id || '');
-    // 공개(isPublic) 또는 공식(isOfficial) 캐릭터 모두 import 가능
     const source = await prisma.character.findFirst({
       where: { id: sourceId, OR: [{ isPublic: true }, { isOfficial: true }] },
+      include: { user: { select: { username: true } } },
     });
     if (!source) return res.status(404).json({ error: { message: '공유 또는 공식 캐릭터를 찾을 수 없습니다.' } });
 
-    const baseName = trimmedName(source.name) || 'Character';
-    const myChars = await prisma.character.findMany({
-      where: { userId: req.user.id },
-      select: { id: true, name: true, appearance: true, isActive: true, isPublic: true, shareSlug: true, createdAt: true, updatedAt: true, userId: true },
-    });
-    const existingRef = myChars.find((c) => {
-      const appearance = c.appearance || {};
-      return appearance.refCharacterId === source.id || appearance.importedFrom?.characterId === source.id;
-    });
-    if (existingRef) {
-      return res.json({ character: await hydrateCharacter(existingRef) });
-    }
-
-    const usedNames = new Set(myChars.map((c) => c.name));
-    let nextName = baseName;
-    let i = 2;
-    while (usedNames.has(nextName)) {
-      nextName = `${baseName} (${i})`.slice(0, 30);
-      i += 1;
-    }
-
-    const character = await prisma.character.create({
-      data: {
-        userId: req.user.id,
-        name: nextName,
-        appearance: {
-          refOnly: true,
-          refCharacterId: source.id,
-          importedFrom: { characterId: source.id },
-        },
-        isActive: false,
-      },
+    await prisma.profile.upsert({
+      where:  { id: req.user.id },
+      create: { id: req.user.id, username: req.user.nickname || `user_${req.user.id.slice(0, 6)}` },
+      update: {},
     });
 
-    res.json({ character: await hydrateCharacter(character) });
+    // upsert: 이미 라이브러리에 있으면 그 row 반환, 없으면 새로 생성
+    const entry = await prisma.userCharacterLibrary.upsert({
+      where: { userId_characterId: { userId: req.user.id, characterId: sourceId } },
+      create: { userId: req.user.id, characterId: sourceId, isActive: false },
+      update: {},
+      include: { character: { include: { user: { select: { username: true } } } } },
+    });
+
+    res.json({ character: hydrateLibraryEntry(entry) });
   } catch (err) { next(err); }
 });
 
@@ -354,125 +375,115 @@ router.post('/:id/share', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/characters/:id/select : set selected character active
+// POST /api/characters/:id/select : library 의 (userId, characterId) row 를 활성으로 설정
 router.post('/:id/select', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
-    const target = await prisma.character.findFirst({
-      where: { id, userId: req.user.id },
+    const target = await prisma.userCharacterLibrary.findUnique({
+      where: { userId_characterId: { userId: req.user.id, characterId: id } },
     });
-    if (!target) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
+    if (!target) return res.status(404).json({ error: { message: '내 라이브러리에 없는 캐릭터입니다.' } });
 
     const selected = await prisma.$transaction(async (tx) => {
-      await tx.character.updateMany({
+      await tx.userCharacterLibrary.updateMany({
         where: { userId: req.user.id, isActive: true },
         data: { isActive: false },
       });
-      return tx.character.update({
-        where: { id },
+      return tx.userCharacterLibrary.update({
+        where: { id: target.id },
         data: { isActive: true },
+        include: { character: { include: { user: { select: { username: true } } } } },
       });
     });
 
-    res.json({ character: await hydrateCharacter(selected) });
+    res.json({ character: hydrateLibraryEntry(selected) });
   } catch (err) { next(err); }
 });
 
-// PATCH /api/characters/:id : update character
+// PATCH /api/characters/:id : 본인 라이브러리 + (creator 라면) Character 본체도 업데이트
+//   - 본인이 creator: name + appearance 전체 수정 가능 + library custom 도 같이
+//   - 본인이 아님: library 의 custom 필드만 (modelScale/fbxOffsetY/fbxRotX) 적용
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
-    const existing = await prisma.character.findFirst({
-      where: { id, userId: req.user.id },
+    const libEntry = await prisma.userCharacterLibrary.findUnique({
+      where: { userId_characterId: { userId: req.user.id, characterId: id } },
+      include: { character: true },
     });
-    if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
+    if (!libEntry) return res.status(404).json({ error: { message: '내 라이브러리에 없는 캐릭터입니다.' } });
 
     const { name, appearance } = req.body || {};
-    const data = {};
-    if (name !== undefined) data.name = trimmedName(name);
-    if (appearance !== undefined) data.appearance = appearance || {};
-    if (data.name === '') return res.status(400).json({ error: { message: '이름을 입력해주세요.' } });
+    const isCreator = libEntry.character.userId === req.user.id;
 
-    const char = await prisma.character.update({
-      where: { id },
-      data,
+    // library 의 custom 추출 — appearance 안의 modelScale/fbxOffsetY/fbxRotX 만
+    const libData = {};
+    if (appearance && typeof appearance === 'object') {
+      if (appearance.modelScale !== undefined) libData.customScale   = appearance.modelScale;
+      if (appearance.fbxOffsetY !== undefined) libData.customYOffset = appearance.fbxOffsetY;
+      if (appearance.fbxRotX    !== undefined) libData.customRotX    = appearance.fbxRotX;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (Object.keys(libData).length) {
+        await tx.userCharacterLibrary.update({ where: { id: libEntry.id }, data: libData });
+      }
+      if (isCreator) {
+        const charData = {};
+        if (name !== undefined) {
+          const nm = trimmedName(name);
+          if (!nm) throw new Error('이름을 입력해주세요.');
+          charData.name = nm;
+        }
+        if (appearance !== undefined) charData.appearance = appearance || {};
+        if (Object.keys(charData).length) {
+          await tx.character.update({ where: { id }, data: charData });
+        }
+      }
     });
-    res.json({ character: await hydrateCharacter(char) });
+
+    const refreshed = await prisma.userCharacterLibrary.findUnique({
+      where: { id: libEntry.id },
+      include: { character: { include: { user: { select: { username: true } } } } },
+    });
+    res.json({ character: hydrateLibraryEntry(refreshed) });
   } catch (err) { next(err); }
 });
 
-// DELETE /api/characters/:id : 내 라이브러리에서 분리 (orphan).
-// 새 구조: 등록된 캐릭터 row 는 서버 자산. 유저는 row 를 진짜로 지우지 않고 자기 소유 링크만 끊는다.
-// 누구나 가져오기(import) 로 다시 자기 라이브러리에 추가 가능.
-// ⚡ 예외: 운영자가 본인의 공식 캐릭터를 지울 땐 admin cascade 와 동일하게 row + 클론 + R2 전부 삭제 →
-//   다른 유저들 라이브러리에서도 진짜 사라짐. (공식 캐릭터는 한 번 지우면 모두에게서 사라져야 정상)
+// DELETE /api/characters/:id : 내 라이브러리에서 분리 (orphan only).
+// 정책: 어떤 경우에도 cascade 안 함 — 내 라이브러리 정리 동작. 다른 유저들 사용 그대로.
+// 마켓플레이스에서 진짜 삭제하려면 admin/:id 사용 (운영자 전용).
+//
+// reference 모델 마이그레이션 완료 후: UserCharacterLibrary row 만 삭제 (Character 무관).
+// 마이그레이션 전 호환: 옛 copy row 의 userId 만 null 처리 (옛 동작 그대로).
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
+
+    // [reference 모델 우선] UserCharacterLibrary 에 (userId, characterId) 매칭이 있으면 그 row 만 삭제.
+    const lib = await prisma.userCharacterLibrary.findUnique({
+      where: { userId_characterId: { userId: req.user.id, characterId: id } },
+    }).catch(() => null); // 테이블 없으면 (마이그레이션 전) skip
+    if (lib) {
+      await prisma.$transaction(async (tx) => {
+        await tx.userCharacterLibrary.delete({ where: { id: lib.id } });
+        // 활성 캐릭터였으면 fallback 활성화
+        if (lib.isActive) {
+          const fallback = await tx.userCharacterLibrary.findFirst({
+            where: { userId: req.user.id },
+            orderBy: { addedAt: 'desc' },
+          });
+          if (fallback) await tx.userCharacterLibrary.update({ where: { id: fallback.id }, data: { isActive: true } });
+        }
+      });
+      return res.json({ ok: true });
+    }
+
+    // [legacy copy 모델 호환] Character.userId 가 본인이면 orphan
     const existing = await prisma.character.findFirst({
       where: { id, userId: req.user.id },
     });
     if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
 
-    // 운영자 + 공식 캐릭터 → cascade 삭제 (admin 엔드포인트 로직과 동일)
-    if (existing.isOfficial && req.user.isOperator) {
-      // 1) 캐릭터 클론 — refCharacterId / importedFrom + 같은 modelUrl 매칭
-      const modelUrl = existing.appearance?.modelUrl;
-      const cloneOr = [
-        { appearance: { path: ['refCharacterId'],              equals: id } },
-        { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
-      ];
-      if (modelUrl) cloneOr.push({ appearance: { path: ['modelUrl'], equals: modelUrl } });
-      const charClones = await prisma.character.findMany({
-        where: { id: { not: id }, OR: cloneOr },
-        select: { id: true },
-      });
-      if (charClones.length) {
-        await prisma.character.deleteMany({ where: { id: { in: charClones.map(c => c.id) } } });
-      }
-
-      // 2) 마켓플레이스 Asset row 와 그 import 클론들 삭제
-      let assetClonesDeleted = 0, assetRowsDeleted = 0;
-      if (modelUrl) {
-        const assets = await prisma.asset.findMany({ where: { modelUrl }, select: { id: true } });
-        if (assets.length) {
-          const assetIds = assets.map(a => a.id);
-          const assetClones = await prisma.asset.findMany({
-            where: {
-              OR: assetIds.map(aid => ({
-                metadata: { path: ['importedFrom', 'assetId'], equals: aid },
-              })),
-            },
-            select: { id: true },
-          });
-          if (assetClones.length) {
-            await prisma.asset.deleteMany({ where: { id: { in: assetClones.map(c => c.id) } } });
-            assetClonesDeleted = assetClones.length;
-          }
-          const del = await prisma.asset.deleteMany({ where: { id: { in: assetIds } } });
-          assetRowsDeleted = del.count;
-        }
-        // 3) R2 파일 삭제
-        const CDN_BASE = 'https://play.airliveplay.com';
-        const r2KeyFromUrl = (url) => (!url || !url.startsWith(`${CDN_BASE}/`)) ? null : url.replace(`${CDN_BASE}/`, '');
-        try {
-          const key = r2KeyFromUrl(modelUrl);
-          if (key) await r2.deleteKeys([key]);
-        } catch {}
-      }
-
-      // 4) 본 캐릭터 row 삭제
-      await prisma.character.delete({ where: { id } });
-      return res.json({
-        ok: true,
-        cascaded: true,
-        clonedDeleted: charClones.length,
-        assetsDeleted: assetRowsDeleted,
-        assetClonesDeleted,
-      });
-    }
-
-    // 일반 (orphan only) — 비공식 캐릭터 또는 비운영자
     await prisma.$transaction(async (tx) => {
       await tx.character.update({
         where: { id },
