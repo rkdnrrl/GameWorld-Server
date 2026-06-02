@@ -21,6 +21,7 @@ router.use('/notifications',         require('./notifications'));
 router.use('/friends',               require('./friends'));
 router.use('/activity',              require('./activity'));
 router.use('/dm',                    require('./dm'));
+router.use('/voice',                 require('./voice'));
 const supportersRoutes = require('./supporters');
 router.use('/supporters',                supportersRoutes);
 router.use('/operator/supporters',       supportersRoutes.operatorRouter);
