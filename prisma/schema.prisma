@@ -15,9 +15,10 @@ model Profile {
   bio        String?   @db.VarChar(300)
   profileImageUrl String? @db.VarChar(400)
   websiteUrl String?   @db.VarChar(200)
-  /// 팔로워/팔로잉 카운터 (denormalized)
+  /// 팔로워/팔로잉/친구 카운터 (denormalized)
   followerCount  Int   @default(0)
   followingCount Int   @default(0)
+  friendCount    Int   @default(0)
   createdAt  DateTime  @default(now())
 
   characters       Character[]
@@ -28,8 +29,29 @@ model Profile {
   scriptComponents ScriptComponent[]
   followers  UserFollow[] @relation("Followee")  // 나를 팔로우하는 사람들
   following  UserFollow[] @relation("Follower")  // 내가 팔로우하는 사람들
+  sentFriendRequests     Friendship[] @relation("FriendRequester")
+  receivedFriendRequests Friendship[] @relation("FriendReceiver")
 
   @@map("profiles")
+}
+
+/// 친구 관계 (양방향). 한 쌍의 user 에 대해 1개 row 만 존재.
+/// status: pending (신청 대기) / accepted (수락) / blocked (차단)
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  receiverId  String
+  requester   Profile  @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    Profile  @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  respondedAt DateTime?
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("friendships")
 }
 
 /// 탈퇴한 계정의 묘비 (tombstone).

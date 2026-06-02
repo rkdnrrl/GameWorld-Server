@@ -18,6 +18,7 @@ router.use('/assets',                require('./assets'));
 router.use('/asset-kinds',           require('./asset-kinds'));
 router.use('/users',                 require('./users'));
 router.use('/notifications',         require('./notifications'));
+router.use('/friends',               require('./friends'));
 router.use('/packs',                 require('./packs'));
 router.use('/prefabs',               require('./prefabs'));
 const scriptComponentsRoutes = require('./script-components');

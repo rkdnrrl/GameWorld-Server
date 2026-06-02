@@ -43,13 +43,17 @@ router.get('/:username/profile', optionalAuth, async (req, res, next) => {
 
     res.json({
       profile: {
+        id:             profile.id,
         username:       profile.username,
         joinedAt:       profile.createdAt,
+        bio:            profile.bio,
+        profileImageUrl: profile.profileImageUrl,
         publicCount:    aggregate._count.id || 0,
         likesTotal:     aggregate._sum.likeCount || 0,
         importsTotal:   aggregate._sum.importCount || 0,
         followerCount:  profile.followerCount,
         followingCount: profile.followingCount,
+        friendCount:    profile.friendCount,
         isFollowing,
         isMe,
       },
