@@ -144,8 +144,8 @@ router.get('/', requireAuth, async (req, res, next) => {
         OR: [{ requesterId: me }, { receiverId: me }],
       },
       include: {
-        requester: { select: { id: true, username: true, profileImageUrl: true, bio: true } },
-        receiver:  { select: { id: true, username: true, profileImageUrl: true, bio: true } },
+        requester: { select: { id: true, username: true, profileImageUrl: true, bio: true, supporterTier: true } },
+        receiver:  { select: { id: true, username: true, profileImageUrl: true, bio: true, supporterTier: true } },
       },
       orderBy: { respondedAt: 'desc' },
     });
@@ -164,7 +164,7 @@ router.get('/pending', requireAuth, async (req, res, next) => {
     const me = req.user.id;
     const rows = await prisma.friendship.findMany({
       where: { status: 'pending', receiverId: me },
-      include: { requester: { select: { id: true, username: true, profileImageUrl: true, bio: true } } },
+      include: { requester: { select: { id: true, username: true, profileImageUrl: true, bio: true, supporterTier: true } } },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ requests: rows.map(r => ({ friendshipId: r.id, createdAt: r.createdAt, from: r.requester })) });
@@ -177,7 +177,7 @@ router.get('/sent', requireAuth, async (req, res, next) => {
     const me = req.user.id;
     const rows = await prisma.friendship.findMany({
       where: { status: 'pending', requesterId: me },
-      include: { receiver: { select: { id: true, username: true, profileImageUrl: true, bio: true } } },
+      include: { receiver: { select: { id: true, username: true, profileImageUrl: true, bio: true, supporterTier: true } } },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ requests: rows.map(r => ({ friendshipId: r.id, createdAt: r.createdAt, to: r.receiver })) });

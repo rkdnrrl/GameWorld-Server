@@ -84,7 +84,7 @@ router.get('/feed', requireAuth, async (req, res, next) => {
     const actorIds = [...new Set(rows.map(r => r.actorId))];
     const actors = await prisma.profile.findMany({
       where: { id: { in: actorIds } },
-      select: { id: true, username: true, profileImageUrl: true, iconEmoji: true },
+      select: { id: true, username: true, profileImageUrl: true, iconEmoji: true, supporterTier: true },
     });
     const actorMap = new Map(actors.map(a => [a.id, a]));
 

@@ -19,6 +19,10 @@ model Profile {
   bannerUrl  String?   @db.VarChar(400)
   iconEmoji  String?   @db.VarChar(8)
   themeColor String?   @db.VarChar(20)
+  /// 후원자 등급 (Phase 20). none/bronze/silver/gold/legend. 머그컵·토스 인증된 후원자에게 운영자가 부여.
+  supporterTier  String    @default("none") @db.VarChar(20)
+  supporterSince DateTime?
+  supporterNote  String?   @db.VarChar(200)
   /// 팔로워/팔로잉/친구 카운터 (denormalized)
   followerCount  Int   @default(0)
   followingCount Int   @default(0)

@@ -54,7 +54,7 @@ router.get('/conversations', requireAuth, async (req, res, next) => {
     const otherIds = convs.map(c => otherUserId(c, me));
     const profiles = await prisma.profile.findMany({
       where: { id: { in: otherIds } },
-      select: { id: true, username: true, profileImageUrl: true, iconEmoji: true, themeColor: true },
+      select: { id: true, username: true, profileImageUrl: true, iconEmoji: true, themeColor: true, supporterTier: true },
     });
     const pmap = new Map(profiles.map(p => [p.id, p]));
 

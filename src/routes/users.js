@@ -27,6 +27,7 @@ router.get('/:username/profile', optionalAuth, async (req, res, next) => {
         bio: true, profileImageUrl: true, websiteUrl: true,
         followerCount: true, followingCount: true, friendCount: true,
         bannerUrl: true, iconEmoji: true, themeColor: true,
+        supporterTier: true, supporterSince: true,
       },
     });
     if (!profile) return res.status(404).json({ error: { message: '유저 없음' } });
@@ -63,6 +64,8 @@ router.get('/:username/profile', optionalAuth, async (req, res, next) => {
         followerCount:  profile.followerCount,
         followingCount: profile.followingCount,
         friendCount:    profile.friendCount,
+        supporterTier:  profile.supporterTier,
+        supporterSince: profile.supporterSince,
         isFollowing,
         isMe,
       },
