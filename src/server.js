@@ -1,3 +1,5 @@
+require('./sentry');               // ⚠️ 반드시 다른 require 보다 먼저
+const Sentry = require('@sentry/node');
 const app = require('./app');
 const config = require('./config');
 const { disconnect } = require('./db');
@@ -35,6 +37,7 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('unhandledRejection', (err) => {
   console.error('[unhandledRejection]', err);
+  Sentry.captureException(err);
 });
 
 start();

@@ -1,3 +1,4 @@
+const Sentry = require('@sentry/node');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -35,6 +36,10 @@ app.get('/health', (req, res) => {
 });
 
 app.use(notFound);
+
+// Sentry Express 에러 핸들러 — 커스텀 errorHandler 직전에 등록 (v8+ 패턴)
+Sentry.setupExpressErrorHandler(app);
+
 app.use(errorHandler);
 
 module.exports = app;
