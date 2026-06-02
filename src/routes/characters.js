@@ -403,7 +403,9 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
 
 // DELETE /api/characters/:id : 내 라이브러리에서 분리 (orphan).
 // 새 구조: 등록된 캐릭터 row 는 서버 자산. 유저는 row 를 진짜로 지우지 않고 자기 소유 링크만 끊는다.
-// 누구나 가져오기(import) 로 다시 자기 라이브러리에 추가 가능. 진짜 row 삭제는 운영자 admin 엔드포인트.
+// 누구나 가져오기(import) 로 다시 자기 라이브러리에 추가 가능.
+// ⚡ 예외: 운영자가 본인의 공식 캐릭터를 지울 땐 admin cascade 와 동일하게 row + 클론 + R2 전부 삭제 →
+//   다른 유저들 라이브러리에서도 진짜 사라짐. (공식 캐릭터는 한 번 지우면 모두에게서 사라져야 정상)
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const id = String(req.params.id || '');
@@ -412,13 +414,70 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     });
     if (!existing) return res.status(404).json({ error: { message: '캐릭터를 찾을 수 없습니다.' } });
 
+    // 운영자 + 공식 캐릭터 → cascade 삭제 (admin 엔드포인트 로직과 동일)
+    if (existing.isOfficial && req.user.isOperator) {
+      // 1) 캐릭터 클론 (다른 유저가 import 한 것들) 삭제
+      const charClones = await prisma.character.findMany({
+        where: {
+          OR: [
+            { appearance: { path: ['refCharacterId'],            equals: id } },
+            { appearance: { path: ['importedFrom', 'characterId'], equals: id } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (charClones.length) {
+        await prisma.character.deleteMany({ where: { id: { in: charClones.map(c => c.id) } } });
+      }
+
+      // 2) 마켓플레이스 Asset row 와 그 import 클론들 삭제
+      const modelUrl = existing.appearance?.modelUrl;
+      let assetClonesDeleted = 0, assetRowsDeleted = 0;
+      if (modelUrl) {
+        const assets = await prisma.asset.findMany({ where: { modelUrl }, select: { id: true } });
+        if (assets.length) {
+          const assetIds = assets.map(a => a.id);
+          const assetClones = await prisma.asset.findMany({
+            where: {
+              OR: assetIds.map(aid => ({
+                metadata: { path: ['importedFrom', 'assetId'], equals: aid },
+              })),
+            },
+            select: { id: true },
+          });
+          if (assetClones.length) {
+            await prisma.asset.deleteMany({ where: { id: { in: assetClones.map(c => c.id) } } });
+            assetClonesDeleted = assetClones.length;
+          }
+          const del = await prisma.asset.deleteMany({ where: { id: { in: assetIds } } });
+          assetRowsDeleted = del.count;
+        }
+        // 3) R2 파일 삭제
+        const CDN_BASE = 'https://play.airliveplay.com';
+        const r2KeyFromUrl = (url) => (!url || !url.startsWith(`${CDN_BASE}/`)) ? null : url.replace(`${CDN_BASE}/`, '');
+        try {
+          const key = r2KeyFromUrl(modelUrl);
+          if (key) await r2.deleteKeys([key]);
+        } catch {}
+      }
+
+      // 4) 본 캐릭터 row 삭제
+      await prisma.character.delete({ where: { id } });
+      return res.json({
+        ok: true,
+        cascaded: true,
+        clonedDeleted: charClones.length,
+        assetsDeleted: assetRowsDeleted,
+        assetClonesDeleted,
+      });
+    }
+
+    // 일반 (orphan only) — 비공식 캐릭터 또는 비운영자
     await prisma.$transaction(async (tx) => {
-      // 공식이든 일반이든 동일: 내 소유 분리
       await tx.character.update({
         where: { id },
         data: { userId: null, isActive: false },
       });
-
       if (existing.isActive) {
         const fallback = await tx.character.findFirst({
           where: { userId: req.user.id },
