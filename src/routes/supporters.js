@@ -7,7 +7,8 @@
  */
 const { Router } = require('express');
 const { prisma } = require('../db');
-const { requireAuth, requireOperator } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
+const { requireOperator } = require('../middleware/operatorAuth');
 
 const router = Router();
 const operatorRouter = Router();
