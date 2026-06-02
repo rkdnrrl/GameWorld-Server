@@ -76,6 +76,7 @@ router.get('/my', requireAuth, async (req, res, next) => {
       where: { creatorId: req.user.id },
       orderBy: { updatedAt: 'desc' },
       take: 30,
+      include: { creator: { select: { username: true } } },
     });
     res.json({ worlds });
   } catch (err) { next(err); }
