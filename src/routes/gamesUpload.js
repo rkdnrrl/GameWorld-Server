@@ -108,7 +108,7 @@ async function applyPendingMedia(g) {
     const lk = stagingToLiveKey(sk);
     const data = await r2.getObject(sk);
     await r2.putObject(lk, data);
-    try { await r2.deleteKeys([sk]); } catch {}
+    try { await r2.deleteKeys([sk]); } catch (err) { console.warn('[gamesUpload] staging delete after move failed:', sk, err?.message || err); }
     liveData[liveField] = `${CDN_BASE}/${lk}`;
   }
   await moveFile(g.pendingThumbnailUrl, 'thumbnailUrl');
@@ -120,7 +120,7 @@ async function applyPendingMedia(g) {
       const lk = stagingToLiveKey(sk);
       const data = await r2.getObject(sk);
       await r2.putObject(lk, data);
-      try { await r2.deleteKeys([sk]); } catch {}
+      try { await r2.deleteKeys([sk]); } catch (err) { console.warn('[gamesUpload] screenshot staging delete after move failed:', sk, err?.message || err); }
       urls.push(`${CDN_BASE}/${lk}`);
     }
     liveData.screenshots = urls;

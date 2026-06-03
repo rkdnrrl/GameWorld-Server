@@ -10,7 +10,8 @@ if (supabaseUrl && supabaseKey) {
   try {
     const ws = require('ws');
     supabase = createClient(supabaseUrl, supabaseKey, { realtime: { transport: ws } });
-  } catch {
+  } catch (err) {
+    console.warn('[auth] ws transport unavailable, falling back to default:', err?.message || err);
     supabase = createClient(supabaseUrl, supabaseKey);
   }
 }
@@ -40,7 +41,8 @@ async function resolveUserFromToken(token) {
         u.user_metadata?.name ||
         (u.email ? u.email.split('@')[0] : null) ||
         `user_${String(userId).slice(0, 6)}`;
-    } catch {
+    } catch (err) {
+      console.warn('[auth] supabase getUser failed:', err?.message || err);
       return null;
     }
   }
@@ -58,9 +60,16 @@ async function resolveUserFromToken(token) {
         return { _deleted: true, id: userId };
       }
       // 5분 지남 → 묘비 자동 청소하고 통과 (재가입 흐름).
-      await prisma.deletedProfile.delete({ where: { id: userId } }).catch(() => {});
+      await prisma.deletedProfile.delete({ where: { id: userId } }).catch((err) => {
+        console.warn('[auth] tombstone cleanup failed:', err?.message || err);
+      });
     }
-  } catch { /* 마이그레이션 전엔 테이블 없음 — skip */ }
+  } catch (err) {
+    // 마이그레이션 전엔 deletedProfile 테이블 없음 → 무시 OK. 그 외 에러는 가시화.
+    if (err?.code !== 'P2021' /* table does not exist */) {
+      console.warn('[auth] tombstone check failed:', err?.message || err);
+    }
+  }
 
   // Keep auth flow alive even when profile sync fails.
   try {
@@ -127,7 +136,8 @@ async function optionalAuth(req, _res, next) {
     const u = await resolveUserFromToken(token);
     req.user = (u && u._deleted) ? null : u;
     next();
-  } catch {
+  } catch (err) {
+    console.warn('[optionalAuth] resolve failed:', err?.message || err);
     req.user = null;
     next();
   }
