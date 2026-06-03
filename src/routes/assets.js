@@ -732,9 +732,18 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
+    // 참조/임포트된 에셋(다른 사람 원본을 가리킴)은 본인 소유여도 공개 토글 금지 —
+    // 원작자 모르게 마켓에 같은 파일이 도배되는 걸 막음. 옛 데이터 호환 위해 importedFrom 도 체크.
+    const isImportedReference = !!(asset.metadata?.referenceOnly || asset.metadata?.importedFrom);
+
     const data = {};
     if (req.body.name           !== undefined) data.name     = String(req.body.name).slice(0, 100);
-    if (req.body.isPublic       !== undefined) data.isPublic = Boolean(req.body.isPublic);
+    if (req.body.isPublic       !== undefined) {
+      if (isImportedReference) {
+        return res.status(403).json({ error: { message: '참조/임포트된 에셋은 공개여부 변경 불가 — 원본 작가의 에셋입니다.' } });
+      }
+      data.isPublic = Boolean(req.body.isPublic);
+    }
     if (req.body.tags           !== undefined && Array.isArray(req.body.tags)) {
       data.tags = req.body.tags.map(t => String(t).slice(0, 50)).slice(0, 30);
     }
@@ -803,11 +812,24 @@ router.post('/batch', requireAuth, async (req, res, next) => {
       result = { updated: r.count, folder };
     } else if (action === 'setPublic') {
       const isPublic = Boolean(value);
-      const r = await prisma.asset.updateMany({
+      // 참조/임포트된 에셋 제외 — 원작자 권리 보호
+      const safeIds = [];
+      const skipped = [];
+      const rows = await prisma.asset.findMany({
         where: { id: { in: ownedIds } },
-        data:  { isPublic },
+        select: { id: true, metadata: true },
       });
-      result = { updated: r.count, isPublic };
+      for (const r of rows) {
+        if (r.metadata?.referenceOnly || r.metadata?.importedFrom) skipped.push(r.id);
+        else safeIds.push(r.id);
+      }
+      const r = safeIds.length > 0
+        ? await prisma.asset.updateMany({
+            where: { id: { in: safeIds } },
+            data:  { isPublic },
+          })
+        : { count: 0 };
+      result = { updated: r.count, isPublic, skipped };
     } else if (action === 'addTags' || action === 'removeTags') {
       // PG 배열 연산은 updateMany 로 안되니 row 단위 처리 (트랜잭션)
       if (!Array.isArray(value) || value.length === 0) {
