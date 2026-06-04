@@ -51,10 +51,11 @@ function normalizeSlot(input) {
   return /^[a-z][a-z0-9_-]{0,49}$/.test(slot) ? slot : null;
 }
 
+// FBX / VRMA / GLB / GLTF 모두 허용 — 통합 humanoid 시스템 (VRChat 식)
 function isValidFbxUrl(input) {
   const url = String(input || '').trim();
   if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) return false;
-  return /\.fbx(?:[?#].*)?$/i.test(url);
+  return /\.(fbx|vrma|glb|gltf)(?:[?#].*)?$/i.test(url);
 }
 
 async function listSlots(includeDisabled = false) {
@@ -165,13 +166,14 @@ operatorRouter.post('/:slot/upload', requireAuth, requireOperator, upload.single
     const file = req.file;
     if (!file) return res.status(400).json({ error: { message: 'FBX file is required.' } });
 
+    // FBX / VRMA / GLB / GLTF 허용 — 통합 humanoid 시스템
     const ext = path.extname(file.originalname || '').toLowerCase();
-    if (ext !== '.fbx') {
-      return res.status(400).json({ error: { message: 'Only FBX files are allowed.' } });
+    if (!['.fbx', '.vrma', '.glb', '.gltf'].includes(ext)) {
+      return res.status(400).json({ error: { message: 'Allowed: .fbx, .vrma, .glb, .gltf' } });
     }
 
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const r2Key = `character-animations/${slot}/${id}.fbx`;
+    const r2Key = `character-animations/${slot}/${id}${ext}`;
     await r2.putObject(r2Key, file.buffer, {
       contentType: file.mimetype || 'application/octet-stream',
     });
