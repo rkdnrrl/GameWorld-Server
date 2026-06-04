@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_owner_created ON assets("creatorId", "crea
 -- 5) 시드 데이터 — 기본 2종 (Phase 1)
 INSERT INTO asset_kinds (id, label, icon, extensions, "mimeTypes", "maxSizeMb", "sortOrder", enabled)
 VALUES
-  ('model', '3D 모델', '🎲', ARRAY['fbx','glb','obj','gltf'], ARRAY['model/','application/octet-stream'], 100, 10, true),
+  ('model', '3D 모델', '🎲', ARRAY['fbx','glb','obj','gltf','vrm'], ARRAY['model/','application/octet-stream'], 100, 10, true),
   ('image', '이미지',  '🖼️', ARRAY['png','jpg','jpeg','webp'], ARRAY['image/'],                              5, 20, true)
 ON CONFLICT (id) DO NOTHING;
 
