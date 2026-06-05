@@ -51,6 +51,39 @@ async function getKindsCached() {
 }
 function invalidateKindsCache() { kindsCache = { data: null, at: 0 }; }
 
+/* ── Storage quota — supporter tier 별 차등 ──
+ * none    : 1 GB  (무료)
+ * bronze  : 5 GB  (소액 후원·머그컵 1개)
+ * silver  : 10 GB (정기 멤버십 입문)
+ * gold    : 30 GB (정기 멤버십 상위)
+ * legend  : 100 GB (대형 후원자·운영자 부여)
+ */
+const GB = 1024 * 1024 * 1024;
+const STORAGE_QUOTA_BY_TIER = {
+  none:    1   * GB,
+  bronze:  5   * GB,
+  silver:  10  * GB,
+  gold:    30  * GB,
+  legend:  100 * GB,
+};
+
+async function getUserQuota(userId) {
+  const profile = await prisma.profile.findUnique({
+    where:  { id: userId },
+    select: { supporterTier: true },
+  });
+  const tier = profile?.supporterTier || 'none';
+  return { tier, bytes: STORAGE_QUOTA_BY_TIER[tier] ?? STORAGE_QUOTA_BY_TIER.none };
+}
+
+async function getUserUsage(userId) {
+  const rows = await prisma.asset.findMany({
+    where:  { creatorId: userId },
+    select: { fileSize: true },
+  });
+  return rows.reduce((sum, r) => sum + Number(r.fileSize || 0n), 0);
+}
+
 /** 프로필 upsert 헬퍼 */
 async function ensureProfile(user) {
   await prisma.profile.upsert({
@@ -85,9 +118,26 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
       return res.status(400).json({ error: { message: `지원하지 않는 형식입니다. 허용: ${allowed}` } });
     }
 
-    // 3) 크기 검증
+    // 3) 크기 검증 (kind 별 단일 파일 cap)
     if (file.size > kind.maxSizeMb * 1024 * 1024) {
       return res.status(413).json({ error: { message: `${kind.label} 최대 크기 ${kind.maxSizeMb}MB 초과` } });
+    }
+
+    // 3-1) 유저 저장소 quota 체크
+    const quota = await getUserQuota(req.user.id);
+    const usage = await getUserUsage(req.user.id);
+    if (usage + file.size > quota.bytes) {
+      const usedMb  = (usage / (1024 * 1024)).toFixed(1);
+      const quotaGb = (quota.bytes / (1024 * 1024 * 1024)).toFixed(0);
+      return res.status(413).json({
+        error: {
+          code: 'QUOTA_EXCEEDED',
+          tier: quota.tier,
+          quotaBytes: quota.bytes,
+          usageBytes: usage,
+          message: `저장 공간 부족 (사용 ${usedMb}MB / ${quotaGb}GB). 후원·멤버십으로 더 늘릴 수 있습니다.`,
+        },
+      });
     }
 
     // 4) MIME 검증 (선택 — kind 에 mimeTypes 설정돼 있을 때만)
@@ -341,6 +391,21 @@ router.post('/:id/thumbnail', requireAuth, uploadThumb.single('thumbnail'), asyn
     });
 
     res.json({ asset: serializeAsset(updated) });
+  } catch (err) { next(err); }
+});
+
+/* GET /api/assets/usage — 내 저장소 사용량 + quota (tier 별) */
+router.get('/usage', requireAuth, async (req, res, next) => {
+  try {
+    const quota = await getUserQuota(req.user.id);
+    const usage = await getUserUsage(req.user.id);
+    res.json({
+      tier: quota.tier,
+      quotaBytes: quota.bytes,
+      usageBytes: usage,
+      remainingBytes: Math.max(0, quota.bytes - usage),
+      percent: quota.bytes > 0 ? Math.min(100, Math.round((usage / quota.bytes) * 100)) : 0,
+    });
   } catch (err) { next(err); }
 });
 
