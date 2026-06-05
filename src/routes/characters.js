@@ -9,10 +9,10 @@ const r2 = require('../lib/r2');
 const router = Router();
 const CDN_BASE = 'https://play.airliveplay.com';
 
-// 공식 캐릭터 FBX 업로드 — 최대 30MB
+// 공식 캐릭터 FBX / GLB / GLTF / VRM 업로드 — 최대 60MB (VRM 은 보통 20~50MB)
 const uploadFbx = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 30 * 1024 * 1024 },
+  limits: { fileSize: 60 * 1024 * 1024 },
 });
 
 function trimmedName(raw) {
@@ -149,12 +149,12 @@ router.post('/admin', requireAuth, async (req, res, next) => {
           if (!appearance || typeof appearance !== 'object') appearance = {};
         } catch { return res.status(400).json({ error: { message: 'appearance JSON 파싱 실패' } }); }
 
-        // FBX 업로드 시 R2 에 저장
+        // 모델 업로드 시 R2 에 저장 (.fbx / .glb / .gltf / .vrm)
         const file = req.file;
         if (file) {
           const ext = path.extname(file.originalname).toLowerCase();
-          if (ext !== '.fbx' && ext !== '.glb' && ext !== '.gltf') {
-            return res.status(400).json({ error: { message: 'FBX / GLB / GLTF 만 허용됩니다.' } });
+          if (ext !== '.fbx' && ext !== '.glb' && ext !== '.gltf' && ext !== '.vrm') {
+            return res.status(400).json({ error: { message: 'FBX / GLB / GLTF / VRM 만 허용됩니다.' } });
           }
           const charId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
           // 'assets/' 접두사 — Cloudflare Worker 가 이 prefix 만 서빙. official-characters 폴더로 분리.
