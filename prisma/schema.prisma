@@ -574,3 +574,23 @@ model RedemptionCode {
   @@index([usedByUserId])
   @@map("redemption_codes")
 }
+
+/// 유저 개인 외부 API 키 (OpenAI, Anthropic 등) — 서버 측 암호화 저장.
+/// AES-256-GCM (env API_KEY_ENCRYPTION_SECRET, 64자 hex = 32바이트).
+/// 다른 디바이스 sync 용. 본인만 조회/수정 가능.
+model UserApiKey {
+  id           String   @id @default(cuid())
+  userId       String
+  /// 'openai', 'anthropic' 등
+  service      String   @db.VarChar(40)
+  /// base64(ciphertext || authTag) — 16바이트 tag 끝에 붙음
+  encryptedKey String
+  /// base64(iv) — 12바이트
+  iv           String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, service])
+  @@index([userId])
+  @@map("user_api_keys")
+}
