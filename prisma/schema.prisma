@@ -549,3 +549,28 @@ model Announcement {
   @@index([pinned, createdAt])
   @@map("announcements")
 }
+
+/// 후원자 보상 코드 — 텀블벅 등 외부 결제 후원자에게 발급. 1회용.
+/// 운영자가 일괄 생성 → 텀블벅 리워드로 발송 → 후원자가 ALP /redeem 에서 입력 → tier 부여.
+model RedemptionCode {
+  id          String    @id @default(cuid())
+  /// 8~12자 영숫자 코드 (대문자, 0/O/I/1 제외 가독성). UNIQUE.
+  code        String    @unique @db.VarChar(20)
+  /// 부여할 supporter tier — bronze/silver/gold/legend
+  tier        String    @db.VarChar(20)
+  /// 발급 라벨 (예: "텀블벅 1차 펀딩 Bronze 100개"). 운영자 메모.
+  batchLabel  String?   @db.VarChar(100)
+  /// 사용 여부 + 누가 + 언제
+  usedByUserId String?
+  usedAt       DateTime?
+  /// 만료일 (null = 영구)
+  expiresAt   DateTime?
+  /// 무효화 (운영자 강제 비활성)
+  revoked     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@index([code])
+  @@index([batchLabel])
+  @@index([usedByUserId])
+  @@map("redemption_codes")
+}
