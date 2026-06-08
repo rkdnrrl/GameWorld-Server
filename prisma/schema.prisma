@@ -9,50 +9,50 @@ datasource db {
 
 /// 유저 프로필 (Supabase auth.users.id 와 연결)
 model Profile {
-  id         String    @id          // = Supabase auth.users.id
-  username   String    @unique @db.VarChar(30)
-  isOperator Boolean   @default(false)
-  bio        String?   @db.VarChar(300)
-  profileImageUrl String? @db.VarChar(400)
-  websiteUrl String?   @db.VarChar(200)
+  id              String    @id // = Supabase auth.users.id
+  username        String    @unique @db.VarChar(30)
+  isOperator      Boolean   @default(false)
+  bio             String?   @db.VarChar(300)
+  profileImageUrl String?   @db.VarChar(400)
+  websiteUrl      String?   @db.VarChar(200)
   /// 프로필 꾸미기 (Phase 17)
-  bannerUrl  String?   @db.VarChar(400)
-  iconEmoji  String?   @db.VarChar(8)
-  themeColor String?   @db.VarChar(20)
+  bannerUrl       String?   @db.VarChar(400)
+  iconEmoji       String?   @db.VarChar(8)
+  themeColor      String?   @db.VarChar(20)
   /// 후원자 등급 (Phase 20). none/bronze/silver/gold/legend. 머그컵·토스 인증된 후원자에게 운영자가 부여.
-  supporterTier  String    @default("none") @db.VarChar(20)
-  supporterSince DateTime?
-  supporterNote  String?   @db.VarChar(200)
+  supporterTier   String    @default("none") @db.VarChar(20)
+  supporterSince  DateTime?
+  supporterNote   String?   @db.VarChar(200)
   /// 팔로워/팔로잉/친구 카운터 (denormalized)
-  followerCount  Int   @default(0)
-  followingCount Int   @default(0)
-  friendCount    Int   @default(0)
-  createdAt  DateTime  @default(now())
+  followerCount   Int       @default(0)
+  followingCount  Int       @default(0)
+  friendCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
 
-  characters       Character[]
-  characterLibrary UserCharacterLibrary[]
-  worlds     World[]
-  assets     Asset[]
-  prefabs    Prefab[]
-  scriptComponents ScriptComponent[]
-  followers  UserFollow[] @relation("Followee")  // 나를 팔로우하는 사람들
-  following  UserFollow[] @relation("Follower")  // 내가 팔로우하는 사람들
-  sentFriendRequests     Friendship[] @relation("FriendRequester")
-  receivedFriendRequests Friendship[] @relation("FriendReceiver")
+  characters             Character[]
+  characterLibrary       UserCharacterLibrary[]
+  worlds                 World[]
+  assets                 Asset[]
+  prefabs                Prefab[]
+  scriptComponents       ScriptComponent[]
+  followers              UserFollow[]           @relation("Followee") // 나를 팔로우하는 사람들
+  following              UserFollow[]           @relation("Follower") // 내가 팔로우하는 사람들
+  sentFriendRequests     Friendship[]           @relation("FriendRequester")
+  receivedFriendRequests Friendship[]           @relation("FriendReceiver")
 
   @@map("profiles")
 }
 
 /// DM 1:1 대화방 (Phase 19). 두 유저 사이의 대화. userAId < userBId 로 정렬.
 model DmConversation {
-  id               String   @id @default(cuid())
-  userAId          String
-  userBId          String
-  lastMessageAt    DateTime?
-  lastMessageText  String?  @db.Text
-  lastSenderId     String?
-  createdAt        DateTime @default(now())
-  messages         DmMessage[]
+  id              String      @id @default(cuid())
+  userAId         String
+  userBId         String
+  lastMessageAt   DateTime?
+  lastMessageText String?     @db.Text
+  lastSenderId    String?
+  createdAt       DateTime    @default(now())
+  messages        DmMessage[]
 
   @@unique([userAId, userBId])
   @@index([userAId, lastMessageAt(sort: Desc)])
@@ -62,12 +62,12 @@ model DmConversation {
 
 /// DM 메시지.
 model DmMessage {
-  id             String   @id @default(cuid())
+  id             String         @id @default(cuid())
   conversationId String
   conversation   DmConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
-  body           String   @db.Text
-  createdAt      DateTime @default(now())
+  body           String         @db.Text
+  createdAt      DateTime       @default(now())
   readAt         DateTime?
 
   @@index([conversationId, createdAt(sort: Desc)])
@@ -95,13 +95,13 @@ model ActivityEvent {
 /// 친구 관계 (양방향). 한 쌍의 user 에 대해 1개 row 만 존재.
 /// status: pending (신청 대기) / accepted (수락) / blocked (차단)
 model Friendship {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   requesterId String
   receiverId  String
-  requester   Profile  @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  receiver    Profile  @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  status      String   @default("pending")
-  createdAt   DateTime @default(now())
+  requester   Profile   @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    Profile   @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
   respondedAt DateTime?
 
   @@unique([requesterId, receiverId])
@@ -127,8 +127,8 @@ model DeletedProfile {
 /// 알림
 model Notification {
   id        String    @id @default(cuid())
-  userId    String                                                // 받는 사람
-  type      String                                                // 'asset_liked','user_followed','asset_imported','report_resolved','asset_auto_hidden'
+  userId    String // 받는 사람
+  type      String // 'asset_liked','user_followed','asset_imported','report_resolved','asset_auto_hidden'
   payload   Json      @default("{}")
   readAt    DateTime?
   createdAt DateTime  @default(now())
@@ -139,15 +139,15 @@ model Notification {
 
 /// 폴더 팩 — 폴더를 발행 단위로 묶음
 model FolderPack {
-  id            String   @id @default(cuid())
-  creatorId     String
-  path          String                                     // "/캐릭터/주인공"
-  isPublic      Boolean  @default(false)
-  description   String?  @db.VarChar(500)
-  coverAssetId  String?
-  importCount   Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  creatorId    String
+  path         String // "/캐릭터/주인공"
+  isPublic     Boolean  @default(false)
+  description  String?  @db.VarChar(500)
+  coverAssetId String?
+  importCount  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@unique([creatorId, path])
   @@map("folder_packs")
@@ -199,20 +199,20 @@ model Character {
 /// 유저가 "내 라이브러리에서 삭제" = 이 row 만 제거. Character 원본은 무관.
 /// 운영자가 "마켓플레이스에서 삭제" = Character row 삭제 → 이 테이블 cascade.
 model UserCharacterLibrary {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   userId        String
-  user          Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
   characterId   String
   character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   /// 그 유저의 현재 활성 캐릭터인지 (유저당 최대 1개 true 권장 — app 레벨 enforce).
-  isActive      Boolean  @default(false) @map("is_active")
+  isActive      Boolean   @default(false) @map("is_active")
   /// 원본 크기에 곱하는 배수. NULL 이면 원본 그대로.
-  customScale   Float?   @map("custom_scale")
+  customScale   Float?    @map("custom_scale")
   /// 원본 Y 에 더하는 오프셋 (발 높이 미세조정).
-  customYOffset Float?   @map("custom_y_offset")
+  customYOffset Float?    @map("custom_y_offset")
   /// 원본 X 회전에 더하는 라디안 값 (눕혀질 때 조정).
-  customRotX    Float?   @map("custom_rot_x")
-  addedAt       DateTime @default(now()) @map("added_at")
+  customRotX    Float?    @map("custom_rot_x")
+  addedAt       DateTime  @default(now()) @map("added_at")
 
   @@unique([userId, characterId])
   @@index([userId, isActive])
@@ -222,28 +222,31 @@ model UserCharacterLibrary {
 
 /// 유저가 만든 3D 맵/월드
 model World {
-  id           String   @id @default(cuid())
+  id            String   @id @default(cuid())
   /// 한 번이라도 공개(wasPublic=true)된 월드는 creator 탈퇴 시 보존 (creatorId → NULL).
   /// 비공개로만 유지된 월드는 DELETE /me 에서 같이 삭제.
-  creatorId    String?
-  creator      Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
-  name         String   @db.VarChar(100)
-  description  String?  @db.VarChar(500)
-  thumbnailUrl String?  @db.VarChar(400)
+  creatorId     String?
+  creator       Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  name          String   @db.VarChar(100)
+  description   String?  @db.VarChar(500)
+  thumbnailUrl  String?  @db.VarChar(400)
   /// { objects: [{ assetId, x, y, z, rx, ry, rz, sx, sy, sz }], terrain: {} }
-  mapData      Json     @default("{\"objects\":[]}")
+  mapData       Json     @default("{\"objects\":[]}")
   /// 현재 공개 상태. 토글 가능.
-  isPublic     Boolean  @default(false)
+  isPublic      Boolean  @default(false)
   /// 한 번이라도 isPublic=true 였는지. 한 번 true 되면 다시 false 안 됨 (서버 트리거).
   /// 이 플래그가 true 면 creator 탈퇴 시에도 월드 보존.
-  wasPublic    Boolean  @default(false)
-  playCount    Int      @default(0)
+  wasPublic     Boolean  @default(false)
+  playCount     Int      @default(0)
   /// 'personal' = 각자 자기 DO 인스턴스 (홈허브용). 'multi' = 공개 세션 매칭.
-  kind         String   @default("multi") @db.VarChar(20)
+  kind          String   @default("multi") @db.VarChar(20)
   /// 세션당 최대 인원. 호스트가 새 세션 만들 때 cap 으로 사용.
-  maxPlayers   Int      @default(50)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  maxPlayers    Int      @default(50)
+  /// 제작자가 지정한 "게임 캐릭터" appearance 스냅샷(JSON). null = 플레이어 본인 캐릭터 사용.
+  /// 지정 시 이 월드에 입장한 모든 플레이어가 본인 아바타 대신 이 캐릭터로 플레이.
+  gameCharacter Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([isPublic, playCount(sort: Desc)])
   @@index([creatorId])
@@ -256,7 +259,7 @@ model World {
 model WorldData {
   id        String   @id @default(cuid())
   mapId     String   @db.VarChar(40)
-  userId    String?  @db.VarChar(40)   // NULL = 맵 전역. 있으면 플레이어 개인
+  userId    String?  @db.VarChar(40) // NULL = 맵 전역. 있으면 플레이어 개인
   key       String   @db.VarChar(120)
   value     Json
   updatedAt DateTime @updatedAt
@@ -273,7 +276,7 @@ model ScriptComponent {
   creatorId   String
   creator     Profile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   name        String   @db.VarChar(60)
-  icon        String?  @db.VarChar(8)  // 이모지 (선택)
+  icon        String?  @db.VarChar(8) // 이모지 (선택)
   description String?  @db.VarChar(300)
   /// onStart/onUpdate/onGrab/onRelease/onNetEvent 등 정의. props.<key> 접근 가능.
   code        String   @db.Text
@@ -315,40 +318,40 @@ model Prefab {
 
 /// 3D 에셋 (Meshy AI 생성 또는 시스템 기본 에셋)
 model Asset {
-  id           String   @id @default(cuid())
-  creatorId    String?                         // null = 시스템 에셋
-  creator      Profile? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
-  name         String   @db.VarChar(100)
-  prompt       String?  @db.VarChar(500)       // Meshy AI 프롬프트
-  modelUrl     String   @db.VarChar(400)       // R2 URL
-  thumbnailUrl String?  @db.VarChar(400)
-  meshyTaskId  String?  @db.VarChar(100)
-  polyCount    Int?
-  isPublic     Boolean  @default(false)
+  id             String         @id @default(cuid())
+  creatorId      String? // null = 시스템 에셋
+  creator        Profile?       @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  name           String         @db.VarChar(100)
+  prompt         String?        @db.VarChar(500) // Meshy AI 프롬프트
+  modelUrl       String         @db.VarChar(400) // R2 URL
+  thumbnailUrl   String?        @db.VarChar(400)
+  meshyTaskId    String?        @db.VarChar(100)
+  polyCount      Int?
+  isPublic       Boolean        @default(false)
   /// 머티리얼/텍스처 설정 — DEPRECATED: metadata.materialConfig 로 이전됨
   materialConfig Json?
   /// 타입(asset_kinds.id) — 'model','image','audio','video',...
-  kind         String?
-  kindRef      AssetKind? @relation(fields: [kind], references: [id], onDelete: SetNull)
+  kind           String?
+  kindRef        AssetKind?     @relation(fields: [kind], references: [id], onDelete: SetNull)
   /// 타입별 메타데이터 (3D=materialConfig, image=width/height, audio=duration ...)
-  metadata     Json?    @default("{}")
+  metadata       Json?          @default("{}")
   /// 사용자 태그
-  tags         String[] @default([])
+  tags           String[]       @default([])
   /// 가상 폴더 경로 (예: "/캐릭터/주인공")
-  folder       String?
-  fileSize     BigInt?
+  folder         String?
+  fileSize       BigInt?
   /// 마켓플레이스 — 좋아요 수
-  likeCount    Int      @default(0)
+  likeCount      Int            @default(0)
   /// 마켓플레이스 — 다른 유저가 내 라이브러리로 가져간 횟수
-  importCount  Int      @default(0)
+  importCount    Int            @default(0)
   /// 누적 신고수 (자동 hide 임계 판단)
-  reportCount  Int      @default(0)
+  reportCount    Int            @default(0)
   /// 현재 버전 번호 (asset_versions 의 최신)
-  currentVersion Int    @default(1)
-  likes        AssetLike[]
-  reports      AssetReport[]
-  versions     AssetVersion[]
-  createdAt    DateTime @default(now())
+  currentVersion Int            @default(1)
+  likes          AssetLike[]
+  reports        AssetReport[]
+  versions       AssetVersion[]
+  createdAt      DateTime       @default(now())
 
   @@index([creatorId])
   @@index([isPublic])
@@ -376,7 +379,7 @@ model AssetVersion {
   id           String   @id @default(cuid())
   assetId      String
   asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  version      Int                                 // 1부터, 순차
+  version      Int // 1부터, 순차
   modelUrl     String
   thumbnailUrl String?
   fileSize     BigInt?
@@ -390,17 +393,17 @@ model AssetVersion {
 
 /// 에셋 신고 (모더레이션)
 model AssetReport {
-  id          String   @id @default(cuid())
-  assetId     String
-  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  reporterId  String                                              // 신고한 유저
-  reason      String                                              // 'inappropriate','copyright','spam','malware','other'
-  comment     String?  @db.VarChar(500)
-  status      String   @default("pending")                        // 'pending','dismissed','resolved'
-  resolvedBy  String?                                             // 운영자 userId
-  resolvedAt  DateTime?
-  resolution  String?                                             // 'dismiss','hide','delete'
-  createdAt   DateTime @default(now())
+  id         String    @id @default(cuid())
+  assetId    String
+  asset      Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  reporterId String // 신고한 유저
+  reason     String // 'inappropriate','copyright','spam','malware','other'
+  comment    String?   @db.VarChar(500)
+  status     String    @default("pending") // 'pending','dismissed','resolved'
+  resolvedBy String? // 운영자 userId
+  resolvedAt DateTime?
+  resolution String? // 'dismiss','hide','delete'
+  createdAt  DateTime  @default(now())
 
   @@unique([reporterId, assetId])
   @@index([status, createdAt])
@@ -418,16 +421,16 @@ model AppConfig {
 
 /// 에셋 타입 정의 — 운영자가 동적으로 추가/관리
 model AssetKind {
-  id          String   @id                       // 'model','image','audio'
-  label       String
-  icon        String?
-  extensions  String[]                            // ['fbx','glb']
-  mimeTypes   String[] @default([])               // 검증용 prefix
-  maxSizeMb   Int      @default(50)
-  sortOrder   Int      @default(0)
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  assets      Asset[]
+  id         String   @id // 'model','image','audio'
+  label      String
+  icon       String?
+  extensions String[] // ['fbx','glb']
+  mimeTypes  String[] @default([]) // 검증용 prefix
+  maxSizeMb  Int      @default(50)
+  sortOrder  Int      @default(0)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  assets     Asset[]
 
   @@map("asset_kinds")
 }
@@ -553,21 +556,21 @@ model Announcement {
 /// 후원자 보상 코드 — 텀블벅 등 외부 결제 후원자에게 발급. 1회용.
 /// 운영자가 일괄 생성 → 텀블벅 리워드로 발송 → 후원자가 ALP /redeem 에서 입력 → tier 부여.
 model RedemptionCode {
-  id          String    @id @default(cuid())
+  id           String    @id @default(cuid())
   /// 8~12자 영숫자 코드 (대문자, 0/O/I/1 제외 가독성). UNIQUE.
-  code        String    @unique @db.VarChar(20)
+  code         String    @unique @db.VarChar(20)
   /// 부여할 supporter tier — bronze/silver/gold/legend
-  tier        String    @db.VarChar(20)
+  tier         String    @db.VarChar(20)
   /// 발급 라벨 (예: "텀블벅 1차 펀딩 Bronze 100개"). 운영자 메모.
-  batchLabel  String?   @db.VarChar(100)
+  batchLabel   String?   @db.VarChar(100)
   /// 사용 여부 + 누가 + 언제
   usedByUserId String?
   usedAt       DateTime?
   /// 만료일 (null = 영구)
-  expiresAt   DateTime?
+  expiresAt    DateTime?
   /// 무효화 (운영자 강제 비활성)
-  revoked     Boolean   @default(false)
-  createdAt   DateTime  @default(now())
+  revoked      Boolean   @default(false)
+  createdAt    DateTime  @default(now())
 
   @@index([code])
   @@index([batchLabel])

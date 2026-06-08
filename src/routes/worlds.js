@@ -154,13 +154,15 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (!world) return res.status(404).json({ error: { message: '월드 없음' } });
     if (world.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
-    const { name, description, mapData, isPublic, thumbnailUrl } = req.body;
+    const { name, description, mapData, isPublic, thumbnailUrl, gameCharacter } = req.body;
     const data = {};
     if (name !== undefined)         data.name        = String(name).trim().slice(0, 100);
     if (description !== undefined)  data.description = String(description).trim().slice(0, 500);
     if (mapData !== undefined)      data.mapData     = mapData;
     if (isPublic !== undefined)     data.isPublic    = Boolean(isPublic);
     if (thumbnailUrl !== undefined) data.thumbnailUrl = thumbnailUrl;
+    // 제작자 지정 게임 캐릭터 — appearance JSON 객체이거나 null(본인 캐릭터)
+    if (gameCharacter !== undefined) data.gameCharacter = (gameCharacter && typeof gameCharacter === 'object') ? gameCharacter : null;
 
     const updated = await prisma.world.update({ where: { id: req.params.id }, data });
     res.json({ world: updated });
