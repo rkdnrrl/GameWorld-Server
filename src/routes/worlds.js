@@ -27,6 +27,7 @@ router.get('/public', async (req, res, next) => {
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
 
     const where = { isPublic: true };
+    if (String(req.query.onlyGames || '') === '1') where.isGame = true;   // 게임만 필터
     const AND = [];
     if (q) {
       AND.push({
@@ -58,7 +59,7 @@ router.get('/public', async (req, res, next) => {
         where, orderBy, take: limit, skip: offset,
         select: {
           id: true, name: true, description: true, thumbnailUrl: true,
-          playCount: true, createdAt: true, updatedAt: true,
+          playCount: true, isGame: true, createdAt: true, updatedAt: true,
           creator: { select: { username: true } },
         },
       }),
@@ -154,8 +155,9 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (!world) return res.status(404).json({ error: { message: '월드 없음' } });
     if (world.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
-    const { name, description, mapData, isPublic, thumbnailUrl, gameCharacter } = req.body;
+    const { name, description, mapData, isPublic, thumbnailUrl, gameCharacter, isGame } = req.body;
     const data = {};
+    if (isGame !== undefined) data.isGame = Boolean(isGame);
     if (name !== undefined)         data.name        = String(name).trim().slice(0, 100);
     if (description !== undefined)  data.description = String(description).trim().slice(0, 500);
     if (mapData !== undefined)      data.mapData     = mapData;

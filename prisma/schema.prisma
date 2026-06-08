@@ -245,6 +245,8 @@ model World {
   /// 제작자가 지정한 "게임 캐릭터" appearance 스냅샷(JSON). null = 플레이어 본인 캐릭터 사용.
   /// 지정 시 이 월드에 입장한 모든 플레이어가 본인 아바타 대신 이 캐릭터로 플레이.
   gameCharacter Json?
+  /// 이 월드가 "게임"인지 — 목록에서 🎮 배지·필터로 노출. description 이 게임 설명/조작법.
+  isGame        Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
