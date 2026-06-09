@@ -582,6 +582,20 @@ model RedemptionCode {
   @@map("redemption_codes")
 }
 
+/// 인-월드 플레이어 신고 (안전). 운영자 검토용.
+model UserReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  reportedId String
+  reason     String   @db.VarChar(500)
+  status     String   @default("pending") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  @@index([reportedId])
+  @@index([status])
+  @@map("user_reports")
+}
+
 /// 유저 개인 외부 API 키 (OpenAI, Anthropic 등) — 서버 측 암호화 저장.
 /// AES-256-GCM (env API_KEY_ENCRYPTION_SECRET, 64자 hex = 32바이트).
 /// 다른 디바이스 sync 용. 본인만 조회/수정 가능.

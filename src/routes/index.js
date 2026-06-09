@@ -35,6 +35,7 @@ const scriptComponentsRoutes = require('./script-components');
 router.use('/script-components',          scriptComponentsRoutes.router);
 router.use('/operator/script-components', scriptComponentsRoutes.operatorRouter);
 router.use('/operator/asset-reports', require('./asset-reports'));
+router.use('/reports',                require('./reports'));
 router.use('/operator/home-hub',     require('./home-hub'));
 const siteConfigRoutes = require('./site-config');
 router.use('/site-config',           siteConfigRoutes);
