@@ -164,7 +164,7 @@ router.get('/me', requireAuth, async (req, res) => {
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: req.user.id },
-      select: { id: true, username: true, createdAt: true, isOperator: true, alphaApproved: true },
+      select: { id: true, username: true, createdAt: true, isOperator: true, alphaApproved: true, coins: true },
     });
     if (!profile) {
       return res.status(404).json({ error: { message: '사용자 정보를 찾을 수 없습니다.' } });
@@ -174,7 +174,7 @@ router.get('/me', requireAuth, async (req, res) => {
         id: profile.id,
         email: req.user.email || '',
         nickname: profile.username,
-        coins: 0,
+        coins: profile.coins ?? 0,
         createdAt: profile.createdAt,
         isOperator: !!profile.isOperator,
         operatorAccess: userIsOperator(profile),
@@ -223,14 +223,14 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     const updated = await prisma.profile.update({
       where: { id: req.user.id },
       data: { username: nickname },
-      select: { id: true, username: true, createdAt: true, isOperator: true },
+      select: { id: true, username: true, createdAt: true, isOperator: true, coins: true },
     });
     res.json({
       user: {
         id: updated.id,
         email: req.user.email || '',
         nickname: updated.username,
-        coins: 0,
+        coins: updated.coins ?? 0,
         createdAt: updated.createdAt,
         isOperator: !!updated.isOperator,
         operatorAccess: userIsOperator(updated),

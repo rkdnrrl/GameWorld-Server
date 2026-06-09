@@ -25,6 +25,8 @@ model Profile {
   supporterNote   String?   @db.VarChar(200)
   /// 오픈 알파 접속 승인 (알파 접속 코드 redeem 시 true). false = 게이트에서 차단.
   alphaApproved   Boolean   @default(false)
+  /// ALP 코인 잔액. 출석 보상 등으로 적립. (기존엔 me 가 0 하드코딩이었음 — 이 필드로 실제화)
+  coins           Int       @default(0)
   /// 팔로워/팔로잉/친구 카운터 (denormalized)
   followerCount   Int       @default(0)
   followingCount  Int       @default(0)
@@ -594,6 +596,19 @@ model UserReport {
   @@index([reportedId])
   @@index([status])
   @@map("user_reports")
+}
+
+/// 데일리 출석 보상 — 매일 1회 코인 지급 + 연속 출석(streak) 추적.
+model DailyAttendance {
+  userId       String
+  date         DateTime @db.Date     // KST 기준 YYYY-MM-DD
+  streak       Int      @default(1)  // 연속 출석 일수
+  coinsGranted Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@id([userId, date])
+  @@index([userId])
+  @@map("daily_attendance")
 }
 
 /// 인-앱 피드백 / 버그 신고 (오픈 알파 학습 루프). 운영자 검토용.
