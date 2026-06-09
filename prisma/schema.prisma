@@ -596,6 +596,20 @@ model UserReport {
   @@map("user_reports")
 }
 
+/// 인-앱 피드백 / 버그 신고 (오픈 알파 학습 루프). 운영자 검토용.
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  kind      String   @default("other") @db.VarChar(20)   // bug | idea | other
+  message   String   @db.VarChar(2000)
+  context   String?  @db.VarChar(500)                     // 현재 경로 / userAgent 등
+  status    String   @default("new") @db.VarChar(20)      // new | reviewed
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@map("feedback")
+}
+
 /// 유저 개인 외부 API 키 (OpenAI, Anthropic 등) — 서버 측 암호화 저장.
 /// AES-256-GCM (env API_KEY_ENCRYPTION_SECRET, 64자 hex = 32바이트).
 /// 다른 디바이스 sync 용. 본인만 조회/수정 가능.
