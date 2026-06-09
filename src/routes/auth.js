@@ -164,7 +164,7 @@ router.get('/me', requireAuth, async (req, res) => {
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: req.user.id },
-      select: { id: true, username: true, createdAt: true, isOperator: true },
+      select: { id: true, username: true, createdAt: true, isOperator: true, alphaApproved: true },
     });
     if (!profile) {
       return res.status(404).json({ error: { message: '사용자 정보를 찾을 수 없습니다.' } });
@@ -178,6 +178,7 @@ router.get('/me', requireAuth, async (req, res) => {
         createdAt: profile.createdAt,
         isOperator: !!profile.isOperator,
         operatorAccess: userIsOperator(profile),
+        alphaApproved: !!profile.alphaApproved,
         isSubscribed: false,
         subscriptionUntil: null,
       },

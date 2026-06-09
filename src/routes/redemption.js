@@ -17,7 +17,8 @@ const { requireOperator } = require('../middleware/operatorAuth');
 const router = Router();
 const operatorRouter = Router();
 
-const VALID_TIERS = ['bronze', 'silver', 'gold', 'legend'];
+// 'alpha' = 오픈 알파 접속 코드 (supporter tier 아님 → redeem 시 profile.alphaApproved=true).
+const VALID_TIERS = ['bronze', 'silver', 'gold', 'legend', 'alpha'];
 const TIER_ORDER = { legend: 4, gold: 3, silver: 2, bronze: 1, none: 0 };
 
 /** 가독성 좋은 8자 코드 — 헷갈리는 문자 (0/O/1/I/L) 제외 */
@@ -51,11 +52,13 @@ router.post('/redeem', requireAuth, async (req, res, next) => {
     const profile = await prisma.profile.findUnique({ where: { id: req.user.id } });
     if (!profile) return res.status(404).json({ error: { code: 'NO_PROFILE', message: '프로필이 없습니다.' } });
 
+    // 'alpha' 코드 = 오픈 알파 접속 승인 (supporter tier 아님). 그 외 = supporter tier 업그레이드.
+    const isAlpha = code.tier === 'alpha';
     const currentRank = TIER_ORDER[profile.supporterTier] || 0;
     const newRank     = TIER_ORDER[code.tier] || 0;
-    const shouldUpgrade = newRank > currentRank;
+    const shouldUpgrade = !isAlpha && newRank > currentRank;
 
-    // 트랜잭션 — 코드 사용 마킹 + (필요 시) profile tier 업데이트
+    // 트랜잭션 — 코드 사용 마킹 + (필요 시) profile 업데이트
     const result = await prisma.$transaction(async (tx) => {
       // 코드 사용 처리 — race condition 방지 위해 unused 상태일 때만 update
       const upd = await tx.redemptionCode.updateMany({
@@ -67,7 +70,13 @@ router.post('/redeem', requireAuth, async (req, res, next) => {
         throw Object.assign(new Error('race'), { httpCode: 409, errCode: 'ALREADY_USED' });
       }
       let updatedProfile = profile;
-      if (shouldUpgrade) {
+      if (isAlpha) {
+        updatedProfile = await tx.profile.update({
+          where: { id: req.user.id },
+          data: { alphaApproved: true },
+          select: { id: true, username: true, alphaApproved: true },
+        });
+      } else if (shouldUpgrade) {
         updatedProfile = await tx.profile.update({
           where: { id: req.user.id },
           data: {
@@ -77,7 +86,7 @@ router.post('/redeem', requireAuth, async (req, res, next) => {
           select: { id: true, username: true, supporterTier: true, supporterSince: true },
         });
       }
-      return { tier: code.tier, upgraded: shouldUpgrade, profile: updatedProfile };
+      return { tier: code.tier, alpha: isAlpha, upgraded: shouldUpgrade || isAlpha, profile: updatedProfile };
     });
 
     res.json(result);

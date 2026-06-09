@@ -23,6 +23,8 @@ model Profile {
   supporterTier   String    @default("none") @db.VarChar(20)
   supporterSince  DateTime?
   supporterNote   String?   @db.VarChar(200)
+  /// 오픈 알파 접속 승인 (알파 접속 코드 redeem 시 true). false = 게이트에서 차단.
+  alphaApproved   Boolean   @default(false)
   /// 팔로워/팔로잉/친구 카운터 (denormalized)
   followerCount   Int       @default(0)
   followingCount  Int       @default(0)
