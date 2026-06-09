@@ -7,6 +7,7 @@
  *
  * 키 목록:
  *   - heroVideoYouTubeId   : 랜딩 Hero 배경 YouTube 영상 ID (11자, /[A-Za-z0-9_-]/)
+ *   - plazaWorldId         : 공용 광장으로 쓸 published multi 월드 ID (모두 같은 세션으로 입장)
  */
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
@@ -51,6 +52,35 @@ operatorRouter.put('/hero-video', requireAuth, requireOperator, async (req, res,
       create: { key: 'heroVideoYouTubeId', value: youtubeId },
     });
     res.json({ youtubeId });
+  } catch (err) { next(err); }
+});
+
+/* ── 공용 광장 ─────────────────────────────────────── */
+
+// GET /api/site-config/plaza  →  { worldId: string | null, sessionId: 'plaza' }
+router.get('/plaza', async (req, res, next) => {
+  try {
+    const cfg = await prisma.appConfig.findUnique({ where: { key: 'plazaWorldId' } });
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=30');
+    res.json({ worldId: cfg?.value || null, sessionId: 'plaza' });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/operator/site-config/plaza  body: { worldId: string | null }
+operatorRouter.put('/plaza', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const raw = req.body?.worldId;
+    const worldId = raw ? String(raw).trim() : null;
+    if (!worldId) {
+      await prisma.appConfig.deleteMany({ where: { key: 'plazaWorldId' } });
+      return res.json({ worldId: null });
+    }
+    await prisma.appConfig.upsert({
+      where:  { key: 'plazaWorldId' },
+      update: { value: worldId },
+      create: { key: 'plazaWorldId', value: worldId },
+    });
+    res.json({ worldId });
   } catch (err) { next(err); }
 });
 
