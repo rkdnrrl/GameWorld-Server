@@ -42,6 +42,7 @@ const feedbackRoutes = require('./feedback');
 router.use('/feedback',               feedbackRoutes);
 router.use('/operator/feedback',      feedbackRoutes.operatorRouter);
 router.use('/attendance',             require('./attendance'));
+router.use('/shop',                   require('./shop'));
 router.use('/operator/home-hub',     require('./home-hub'));
 const siteConfigRoutes = require('./site-config');
 router.use('/site-config',           siteConfigRoutes);
