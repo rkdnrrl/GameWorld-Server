@@ -13,7 +13,7 @@
 const { Router } = require('express');
 const { prisma } = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const { createNotification } = require('./notifications');
+const { pushHubMessage } = require('./notifications');
 
 const router = Router();
 const PAGE = 50;
@@ -158,9 +158,24 @@ router.post('/conversations/:id/messages', requireAuth, async (req, res, next) =
       return msg;
     });
 
-    // 상대에게 알림
+    // 상대에게 실시간 DM 신호 (알림벨 아님 — DM 배지/토스트용).
+    // 오프라인이어도 dmMessage 가 persist 되어 unread 로 복원되므로 알림 row 불필요(고볼륨 낭비 제거).
     const recipientId = otherUserId(conv, me);
-    createNotification(recipientId, 'dm_received', { conversationId: conv.id, fromUserId: me, preview: trimmed.slice(0, 80) });
+    const sender = await prisma.profile.findUnique({
+      where: { id: me }, select: { username: true, profileImageUrl: true },
+    });
+    pushHubMessage(recipientId, {
+      type: 'dm',
+      dm: {
+        conversationId: conv.id,
+        messageId: result.id,
+        fromUserId: me,
+        fromUsername: sender?.username || '?',
+        fromAvatar: sender?.profileImageUrl || null,
+        preview: trimmed.slice(0, 80),
+        createdAt: result.createdAt,
+      },
+    });
 
     res.json({
       message: {

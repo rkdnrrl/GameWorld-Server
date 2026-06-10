@@ -21,17 +21,22 @@ const PAGE_SIZE = 30;
 const NOTIFY_ROUTER_URL  = process.env.NOTIFY_ROUTER_URL || 'https://play.airliveplay.com';
 const NOTIFY_PUSH_SECRET = process.env.NOTIFY_PUSH_SECRET || '';
 
-/** 생성된 알림을 워커로 실시간 push (best-effort — 실패해도 무시, 폴링이 백업) */
-function pushRealtime(userId, n) {
-  if (!NOTIFY_PUSH_SECRET) return; // 시크릿 미설정 = 실시간 비활성
+/** 워커 NotifyHub 로 임의 메시지 push (best-effort). message = 클라가 받을 객체 그대로. */
+function pushHubMessage(userId, message) {
+  if (!NOTIFY_PUSH_SECRET || !userId || !message) return; // 시크릿 미설정 = 실시간 비활성
   fetch(`${NOTIFY_ROUTER_URL}/_alp/notify-push`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-alp-secret': NOTIFY_PUSH_SECRET },
-    body: JSON.stringify({
-      userId,
-      notification: { id: n.id, type: n.type, payload: n.payload, readAt: n.readAt, createdAt: n.createdAt },
-    }),
+    body: JSON.stringify({ userId, message }),
   }).catch(() => {});
+}
+
+/** 생성된 알림을 워커로 실시간 push (벨 즉시 갱신) */
+function pushRealtime(userId, n) {
+  pushHubMessage(userId, {
+    type: 'notification',
+    notification: { id: n.id, type: n.type, payload: n.payload, readAt: n.readAt, createdAt: n.createdAt },
+  });
 }
 
 /** 알림 생성 (실패해도 throw 안함 — best-effort) */
@@ -105,3 +110,4 @@ router.post('/read-all', requireAuth, async (req, res, next) => {
 
 module.exports = router;
 module.exports.createNotification = createNotification;
+module.exports.pushHubMessage = pushHubMessage;
