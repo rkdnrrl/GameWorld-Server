@@ -20,6 +20,7 @@ router.use('/users',                 require('./users'));
 router.use('/notifications',         require('./notifications'));
 router.use('/friends',               require('./friends'));
 router.use('/presence',              require('./presence'));
+router.use('/favorite-worlds',       require('./favoriteWorlds'));
 router.use('/activity',              require('./activity'));
 router.use('/dm',                    require('./dm'));
 router.use('/voice',                 require('./voice'));

@@ -436,6 +436,19 @@ model UserPresence {
   @@map("user_presence")
 }
 
+/// 월드 즐겨찾기 — 유저별 ★ 누른 월드. 디바이스 간 동기화.
+model FavoriteWorld {
+  userId       String   @map("user_id")
+  worldId      String   @map("world_id")
+  name         String   @db.VarChar(120)
+  thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(400)
+  addedAt      DateTime @default(now()) @map("added_at")
+
+  @@id([userId, worldId])
+  @@index([userId, addedAt(sort: Desc)])
+  @@map("favorite_worlds")
+}
+
 /// 에셋 타입 정의 — 운영자가 동적으로 추가/관리
 model AssetKind {
   id         String   @id // 'model','image','audio'

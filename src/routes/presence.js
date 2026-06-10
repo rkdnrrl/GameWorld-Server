@@ -62,22 +62,33 @@ router.get('/friends', requireAuth, async (req, res, next) => {
     });
     if (presences.length === 0) return res.json({ locations: [] });
 
-    // 친구 프로필 (username, profileImageUrl) 함께 반환
-    const profiles = await prisma.profile.findMany({
-      where: { id: { in: presences.map(p => p.userId) } },
-      select: { id: true, username: true, profileImageUrl: true },
-    });
-    const byId = new Map(profiles.map(p => [p.id, p]));
+    // 친구 프로필 + 월드 이름 같이 반환 (UI 표시·"따라가기" 클릭용)
+    const [profiles, worlds] = await Promise.all([
+      prisma.profile.findMany({
+        where: { id: { in: presences.map(p => p.userId) } },
+        select: { id: true, username: true, profileImageUrl: true },
+      }),
+      prisma.world.findMany({
+        where: { id: { in: Array.from(new Set(presences.map(p => p.worldId))) } },
+        select: { id: true, name: true, isPublic: true },
+      }),
+    ]);
+    const byUserId  = new Map(profiles.map(p => [p.id, p]));
+    const byWorldId = new Map(worlds.map(w => [w.id, w]));
 
     const locations = presences
       .map(p => {
-        const prof = byId.get(p.userId);
+        const prof = byUserId.get(p.userId);
         if (!prof) return null;
+        const w = byWorldId.get(p.worldId);
+        // 비공개 월드는 이름 숨김 (월드 ID 만 반환 — 자동 따라가기 차단)
         return {
           userId:           p.userId,
           username:         prof.username,
           profileImageUrl:  prof.profileImageUrl,
           worldId:          p.worldId,
+          worldName:        w && w.isPublic ? w.name : null,
+          worldIsPublic:    !!(w && w.isPublic),
           updatedAt:        p.updatedAt.toISOString(),
         };
       })
