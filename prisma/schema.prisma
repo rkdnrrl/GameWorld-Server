@@ -449,6 +449,19 @@ model FavoriteWorld {
   @@map("favorite_worlds")
 }
 
+/// 최근 방문 월드 (LRU) — 유저별 방문 기록. 디바이스 간 동기화.
+model RecentWorld {
+  userId       String   @map("user_id")
+  worldId      String   @map("world_id")
+  name         String   @db.VarChar(120)
+  thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(400)
+  visitedAt    DateTime @default(now()) @map("visited_at")
+
+  @@id([userId, worldId])
+  @@index([userId, visitedAt(sort: Desc)])
+  @@map("recent_worlds")
+}
+
 /// 에셋 타입 정의 — 운영자가 동적으로 추가/관리
 model AssetKind {
   id         String   @id // 'model','image','audio'
