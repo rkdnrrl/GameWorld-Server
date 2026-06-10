@@ -425,6 +425,17 @@ model AppConfig {
   @@map("app_config")
 }
 
+/// 유저 접속 위치 (presence) — 친구 위치 표시용. 30초마다 heartbeat upsert. 90초 넘으면 offline.
+model UserPresence {
+  userId    String   @id @map("user_id")
+  worldId   String   @map("world_id")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([worldId])
+  @@index([updatedAt])
+  @@map("user_presence")
+}
+
 /// 에셋 타입 정의 — 운영자가 동적으로 추가/관리
 model AssetKind {
   id         String   @id // 'model','image','audio'
