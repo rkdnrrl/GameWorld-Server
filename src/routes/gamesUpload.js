@@ -790,35 +790,24 @@ operatorRouter.post('/:slug/approve-update', requireAuth, requireOperator, async
     // 4) 함께 대기 중인 미디어가 있으면 live로 이동
     const liveMedia = await applyPendingMedia(g).catch(() => ({}));
 
-    // 5) DB 반영 (복사 완료 후에만) — game.version 갱신 + history INSERT (병렬 transaction)
-    const nextVersion = g.pendingVersion ?? g.version + 1;
-    const [updated] = await prisma.$transaction([
-      prisma.game.update({
-        where: { slug },
-        data: {
-          version: nextVersion,
-          pendingStoragePath: null,
-          pendingVersion: null,
-          pendingUploadedAt: null,
-          pendingRejectReason: null,
-          pendingThumbnailUrl: null,
-          pendingDemoVideoUrl: null,
-          pendingScreenshots: null,
-          pendingMediaAt: null,
-          pendingMediaRejectReason: null,
-          ...liveMedia,
-          updatedAt: new Date(),
-        },
-      }),
-      prisma.gameVersion.create({
-        data: {
-          gameSlug: slug,
-          version: nextVersion,
-          storagePath: g.storagePath,
-          approvedById: req.user.id,
-        },
-      }),
-    ]);
+    // 5) DB 반영 (복사 완료 후에만)
+    const updated = await prisma.game.update({
+      where: { slug },
+      data: {
+        version: g.pendingVersion ?? g.version + 1,
+        pendingStoragePath: null,
+        pendingVersion: null,
+        pendingUploadedAt: null,
+        pendingRejectReason: null,
+        pendingThumbnailUrl: null,
+        pendingDemoVideoUrl: null,
+        pendingScreenshots: null,
+        pendingMediaAt: null,
+        pendingMediaRejectReason: null,
+        ...liveMedia,
+        updatedAt: new Date(),
+      },
+    });
 
     // 6) staging 정리 (cleanup — 실패해도 무방)
     try { await r2.deletePrefix(g.pendingStoragePath); } catch (e) { console.error('r2 stage clear:', e.message); }

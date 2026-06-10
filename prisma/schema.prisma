@@ -489,21 +489,6 @@ model Game {
   @@map("games")
 }
 
-/// 게임 버전 히스토리 — 운영자 승인 시 자동 INSERT. 변경 이력 추적용.
-model GameVersion {
-  id           String   @id @default(cuid())
-  gameSlug     String
-  version      Int
-  storagePath  String   // 그 버전의 R2 경로 (archive prefix)
-  approvedById String?
-  note         String?  @db.VarChar(300)
-  createdAt    DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([gameSlug, version])
-  @@index([gameSlug, createdAt])
-  @@map("game_versions")
-}
-
 /// 게임 장르 (운영자 관리)
 model GameGenre {
   slug      String   @id
