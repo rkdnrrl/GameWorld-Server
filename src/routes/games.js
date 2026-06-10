@@ -359,4 +359,49 @@ router.get('/:slug', async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/games/:slug/versions — 게임 버전 히스토리 (공개).
+ * 운영자 승인 시점에 INSERT 된 game_versions 행을 최신순으로 반환.
+ */
+router.get('/:slug/versions', async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const game = await prisma.game.findUnique({ where: { slug }, select: { slug: true, version: true } });
+    if (!game) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+
+    const versions = await prisma.gameVersion.findMany({
+      where: { gameSlug: slug },
+      orderBy: { version: 'desc' },
+      take: 50,
+      select: {
+        id: true, version: true, note: true, createdAt: true, approvedById: true,
+      },
+    });
+
+    // approvedBy nickname 조회 (별도 — User 테이블)
+    const approverIds = [...new Set(versions.map(v => v.approvedById).filter(Boolean))];
+    let approverMap = {};
+    if (approverIds.length > 0) {
+      const approvers = await prisma.profile.findMany({
+        where: { id: { in: approverIds } },
+        select: { id: true, username: true },
+      });
+      approverMap = Object.fromEntries(approvers.map(p => [p.id, p.username]));
+    }
+
+    res.json({
+      currentVersion: game.version,
+      versions: versions.map(v => ({
+        id: v.id,
+        version: v.version,
+        note: v.note,
+        createdAt: v.createdAt,
+        approvedBy: v.approvedById ? approverMap[v.approvedById] || null : null,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
