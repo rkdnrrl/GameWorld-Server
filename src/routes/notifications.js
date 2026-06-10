@@ -17,11 +17,29 @@ const { requireAuth } = require('../middleware/auth');
 const router = Router();
 const PAGE_SIZE = 30;
 
+// 실시간 push 대상 — alp-games-router 워커의 NotifyHub DO. 미설정 시 push 스킵(폴링이 백업).
+const NOTIFY_ROUTER_URL  = process.env.NOTIFY_ROUTER_URL || 'https://play.airliveplay.com';
+const NOTIFY_PUSH_SECRET = process.env.NOTIFY_PUSH_SECRET || '';
+
+/** 생성된 알림을 워커로 실시간 push (best-effort — 실패해도 무시, 폴링이 백업) */
+function pushRealtime(userId, n) {
+  if (!NOTIFY_PUSH_SECRET) return; // 시크릿 미설정 = 실시간 비활성
+  fetch(`${NOTIFY_ROUTER_URL}/_alp/notify-push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-alp-secret': NOTIFY_PUSH_SECRET },
+    body: JSON.stringify({
+      userId,
+      notification: { id: n.id, type: n.type, payload: n.payload, readAt: n.readAt, createdAt: n.createdAt },
+    }),
+  }).catch(() => {});
+}
+
 /** 알림 생성 (실패해도 throw 안함 — best-effort) */
 async function createNotification(userId, type, payload = {}) {
   if (!userId) return;
   try {
-    await prisma.notification.create({ data: { userId, type, payload } });
+    const n = await prisma.notification.create({ data: { userId, type, payload } });
+    pushRealtime(userId, n); // 실시간 알림 (벨 즉시 갱신)
   } catch (err) {
     // 알림 실패가 본 작업을 중단시키지 않도록 swallow
     console.error('[notification] create failed:', err.message);

@@ -404,6 +404,15 @@ router.delete('/me', requireAuth, async (req, res, next) => {
 });
 
 /**
+ * GET /api/auth/whoami — 토큰 → userId 만 반환 (경량).
+ * alp-games-router 워커가 알림 WS 구독 시 토큰 검증을 이 라우트에 위임한다
+ * (워커는 ALP/Supabase 두 토큰 형식을 직접 못 까므로). req.user 는 requireAuth 가 채움.
+ */
+router.get('/whoami', requireAuth, (req, res) => {
+  res.json({ userId: req.user.id });
+});
+
+/**
  * GET /api/auth/profile — 내 프로필 조회
  * PATCH /api/auth/profile — bio / websiteUrl 수정
  */
