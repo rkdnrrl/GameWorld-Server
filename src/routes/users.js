@@ -11,6 +11,24 @@ const router = Router();
 const PAGE_SIZE_DEFAULT = 40;
 const PAGE_SIZE_MAX     = 100;
 
+/* GET /api/users/search?q=... — 사용자 이름 검색 (친구 추가 자동완성). 본인 제외, 최대 10명. */
+router.get('/search', requireAuth, async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.json({ users: [] });
+    const users = await prisma.profile.findMany({
+      where: {
+        username: { contains: q, mode: 'insensitive' },
+        id: { not: req.user.id },
+      },
+      select: { id: true, username: true, profileImageUrl: true },
+      orderBy: { username: 'asc' },
+      take: 10,
+    });
+    res.json({ users });
+  } catch (err) { next(err); }
+});
+
 function serializeAsset(a) {
   if (!a) return a;
   return { ...a, fileSize: a.fileSize != null ? a.fileSize.toString() : null };
