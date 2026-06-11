@@ -939,6 +939,19 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// 운영자 전용: 미사용(고아) 에셋 목록 — 어떤 유저 라이브러리에도 없는 것(creatorId=null).
+router.get('/admin/orphaned', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const assets = await prisma.asset.findMany({
+      where: { creatorId: null },
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
+      select: { id: true, name: true, kind: true, fileSize: true, createdAt: true, isPublic: true },
+    });
+    res.json({ assets: assets.map(a => ({ ...a, fileSize: a.fileSize != null ? a.fileSize.toString() : null })) });
+  } catch (err) { next(err); }
+});
+
 // 운영자 전용: 진짜 row + R2 파일 삭제. creatorId 매칭 무시.
 // clone 은 referenceOnly (같은 R2 파일을 가리킴) 이므로 R2 파일 삭제 시 자동으로 못쓰게 되지만,
 // DB 정리를 위해 metadata.importedFrom.assetId 가 이 id 인 모든 clone row 도 함께 삭제.
