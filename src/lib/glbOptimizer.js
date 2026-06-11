@@ -12,10 +12,15 @@
  * ⚠️ @gltf-transform v4 는 ESM 이라 CommonJS 에서 require() 불가 → 동적 import() 사용.
  */
 
+const path = require('path');
+const { Worker } = require('worker_threads');
+
 const SKIP_THRESHOLD = 50_000;   // 이하 삼각형이면 단순화 안 함
 const MID_TARGET     = 30_000;
 const HIGH_TARGET    = 50_000;
 const MAX_TEXTURE    = 2048;     // 텍스처 한 변 최대 px
+const OPTIMIZE_MAX_BYTES = 60 * 1024 * 1024;  // 이보다 크면 최적화 스킵(메모리/CPU 폭주 방지)
+const OPTIMIZE_TIMEOUT_MS = 30_000;           // 워커 30초 넘으면 포기하고 원본 사용
 
 function countTriangles(doc) {
   let n = 0;
@@ -124,4 +129,47 @@ async function optimizeGLB(buffer) {
   };
 }
 
-module.exports = { optimizeGLB };
+/**
+ * optimizeGLB 를 **워커 스레드**에서 실행 — CPU 작업이 API 이벤트 루프를 막지 않게.
+ * - 용량 상한 초과 / 워커 실패 / 타임아웃 시 원본을 그대로 반환(업로드는 절대 안 막음).
+ * @param {Buffer} buffer
+ * @returns {Promise<{ buffer: Buffer, reduced: boolean, ... }>}
+ */
+function optimizeGLBOffThread(buffer) {
+  // 너무 큰 파일은 최적화 스킵 (워커 메모리/CPU 폭주 방지)
+  if (!buffer || buffer.length > OPTIMIZE_MAX_BYTES) {
+    return Promise.resolve({ buffer, reduced: false, skipped: 'too-large' });
+  }
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+
+    let worker;
+    try {
+      worker = new Worker(path.join(__dirname, 'glbOptimizer.worker.js'), { workerData: { buffer } });
+    } catch (e) {
+      return finish({ buffer, reduced: false, error: e.message });
+    }
+
+    const timer = setTimeout(() => {
+      worker.terminate();
+      finish({ buffer, reduced: false, error: 'timeout' });
+    }, OPTIMIZE_TIMEOUT_MS);
+
+    worker.once('message', (msg) => {
+      clearTimeout(timer);
+      worker.terminate();
+      if (!msg || msg.error || !msg.reduced || !msg.bytes) {
+        return finish({ buffer, reduced: false, error: msg && msg.error, originalTris: msg && msg.originalTris, tex: msg && msg.tex });
+      }
+      finish({ ...msg, buffer: Buffer.from(msg.bytes) });
+    });
+    worker.once('error', (err) => {
+      clearTimeout(timer);
+      worker.terminate();
+      finish({ buffer, reduced: false, error: err.message });
+    });
+  });
+}
+
+module.exports = { optimizeGLB, optimizeGLBOffThread };

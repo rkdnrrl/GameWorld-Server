@@ -218,13 +218,13 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
     let uploadSize   = file.size;
     if (ext === '.glb') {
       try {
-        const { optimizeGLB } = require('../lib/glbOptimizer');
-        const r = await optimizeGLB(file.buffer);
+        const { optimizeGLBOffThread } = require('../lib/glbOptimizer');
+        const r = await optimizeGLBOffThread(file.buffer);
         if (r.reduced && r.buffer.length < file.size) {
           uploadBuffer = r.buffer;
           uploadSize   = r.buffer.length;
         }
-        console.log(`[upload] GLB optimize "${assetName}": tris ${r.originalTris ?? '?'}→${r.finalTris ?? '?'}, bytes ${file.size}→${uploadSize}, tex ${JSON.stringify(r.tex || {})}`);
+        console.log(`[upload] GLB optimize "${assetName}": tris ${r.originalTris ?? '?'}→${r.finalTris ?? '?'}, bytes ${file.size}→${uploadSize}, tex ${JSON.stringify(r.tex || {})}${r.skipped ? ' (skipped:'+r.skipped+')' : ''}`);
       } catch (e) {
         console.warn('[upload] GLB optimize 오류 — 원본 업로드:', e.message);
       }
@@ -630,8 +630,8 @@ router.post('/:id/versions', requireAuth, uploadModel.single('model'), async (re
     let uploadSize   = file.size;
     if (ext === '.glb') {
       try {
-        const { optimizeGLB } = require('../lib/glbOptimizer');
-        const r = await optimizeGLB(file.buffer);
+        const { optimizeGLBOffThread } = require('../lib/glbOptimizer');
+        const r = await optimizeGLBOffThread(file.buffer);
         if (r.reduced && r.buffer.length < file.size) {
           uploadBuffer = r.buffer;
           uploadSize   = r.buffer.length;
