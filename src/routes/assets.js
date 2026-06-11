@@ -212,7 +212,25 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
     const assetId   = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const r2Key     = `assets/${req.user.id}/${assetId}${ext}`;
 
-    await r2.putObject(r2Key, file.buffer, {
+    // GLB 자동 최적화 — 폴리/텍스처를 줄여 클라 로딩을 가볍게 (유니티 빌드 최적화의 웹 버전).
+    // 실패하면 원본을 그대로 올린다(업로드는 절대 막지 않음).
+    let uploadBuffer = file.buffer;
+    let uploadSize   = file.size;
+    if (ext === '.glb') {
+      try {
+        const { optimizeGLB } = require('../lib/glbOptimizer');
+        const r = await optimizeGLB(file.buffer);
+        if (r.reduced && r.buffer.length < file.size) {
+          uploadBuffer = r.buffer;
+          uploadSize   = r.buffer.length;
+        }
+        console.log(`[upload] GLB optimize "${assetName}": tris ${r.originalTris ?? '?'}→${r.finalTris ?? '?'}, bytes ${file.size}→${uploadSize}, tex ${JSON.stringify(r.tex || {})}`);
+      } catch (e) {
+        console.warn('[upload] GLB optimize 오류 — 원본 업로드:', e.message);
+      }
+    }
+
+    await r2.putObject(r2Key, uploadBuffer, {
       contentType: file.mimetype || r2.contentType(r2Key),
     });
 
@@ -224,7 +242,7 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
         name:      assetName,
         modelUrl,
         kind:      kind.id,
-        fileSize:  BigInt(file.size),
+        fileSize:  BigInt(uploadSize),
         folder,
         isPublic:  false,
       },
@@ -607,7 +625,24 @@ router.post('/:id/versions', requireAuth, uploadModel.single('model'), async (re
     const nextVersion = asset.currentVersion + 1;
     const r2Key = `assets/${req.user.id}/${asset.id}_v${nextVersion}${ext}`;
 
-    await r2.putObject(r2Key, file.buffer, { contentType: file.mimetype || r2.contentType(r2Key) });
+    // GLB 자동 최적화 (업로드 라우트와 동일) — 실패 시 원본 업로드
+    let uploadBuffer = file.buffer;
+    let uploadSize   = file.size;
+    if (ext === '.glb') {
+      try {
+        const { optimizeGLB } = require('../lib/glbOptimizer');
+        const r = await optimizeGLB(file.buffer);
+        if (r.reduced && r.buffer.length < file.size) {
+          uploadBuffer = r.buffer;
+          uploadSize   = r.buffer.length;
+        }
+        console.log(`[upload v] GLB optimize "${asset.name}": tris ${r.originalTris ?? '?'}→${r.finalTris ?? '?'}, bytes ${file.size}→${uploadSize}`);
+      } catch (e) {
+        console.warn('[upload v] GLB optimize 오류 — 원본 업로드:', e.message);
+      }
+    }
+
+    await r2.putObject(r2Key, uploadBuffer, { contentType: file.mimetype || r2.contentType(r2Key) });
     const modelUrl = `${CDN_BASE}/${r2Key}`;
 
     const note = req.body?.note ? String(req.body.note).slice(0, 300) : null;
@@ -619,7 +654,7 @@ router.post('/:id/versions', requireAuth, uploadModel.single('model'), async (re
           version:      nextVersion,
           modelUrl,
           thumbnailUrl: null,
-          fileSize:     BigInt(file.size),
+          fileSize:     BigInt(uploadSize),
           note,
         },
       }),
