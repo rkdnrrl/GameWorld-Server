@@ -178,7 +178,9 @@ router.post('/thumbnail', requireAuth, upload.single('file'), async (req, res, n
     const file = req.file;
     if (!file) return res.status(400).json({ error: { message: '파일 없음' } });
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const key = `world-thumbnails/${req.user.id}/${id}.webp`;
+    // media/ prefix 로 저장 — Worker 의 /media/* 라우트가 R2 에서 직접 서빙(CORS·캐시 포함).
+    // (/{slug}/* 라우트는 games/ 로 재작성하므로 world-thumbnails/ 키는 404 가 남.)
+    const key = `media/world-thumbnails/${req.user.id}/${id}.webp`;
     await r2.putObject(key, file.buffer, { contentType: 'image/webp' });
     const url = `https://play.airliveplay.com/${key}`;
     res.json({ url });
