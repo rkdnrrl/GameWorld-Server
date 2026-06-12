@@ -65,6 +65,14 @@ async function ensureCoreSchema() {
     )
   `);
 
+  // 시스템 기본 'file' kind — 화이트리스트에 없는 확장자의 폴백(블랙리스트 업로드용).
+  // extensions 비움 → 특정 확장자에 자동 매칭되지 않고, 미등록 파일의 kind 로만 쓰임. 운영자 목록에도 노출.
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO "asset_kinds" (id, label, icon, extensions, "mimeTypes", "maxSizeMb", "sortOrder", enabled)
+    VALUES ('file', '기타 파일', 'file', '{}', '{}', 200, 999, true)
+    ON CONFLICT (id) DO NOTHING
+  `);
+
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "assets" (
       id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

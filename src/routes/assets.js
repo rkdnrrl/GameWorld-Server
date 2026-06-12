@@ -27,6 +27,9 @@ const DANGEROUS_EXTS = new Set([
   '.html', '.htm', '.svg',  // XSS 위험
 ]);
 
+// 화이트리스트(asset_kinds)에 없는 확장자라도 위험 목록만 아니면 '기타 파일'로 허용(블랙리스트 방식).
+const GENERIC_KIND = { id: 'file', label: '기타 파일', maxSizeMb: 200, mimeTypes: [] };
+
 const HARD_MAX_BYTES = 500 * 1024 * 1024;   // 운영자가 maxSizeMb 잘못 설정해도 절대 500MB 못넘김
 const MAX_THUMB_BYTES = 5 * 1024 * 1024;
 
@@ -110,13 +113,9 @@ router.post('/upload', requireAuth, uploadModel.single('model'), async (req, res
       return res.status(400).json({ error: { message: '허용되지 않는 파일 형식입니다.' } });
     }
 
-    // 2) DB 에서 매칭되는 활성 kind 찾기
+    // 2) DB 에서 매칭되는 활성 kind 찾기 — 없으면 '기타 파일'(GENERIC)로 허용(위험 확장자는 위에서 이미 차단).
     const kinds = await getKindsCached();
-    const kind  = kinds.find(k => k.extensions.includes(extNoDot));
-    if (!kind) {
-      const allowed = kinds.flatMap(k => k.extensions).join(', ');
-      return res.status(400).json({ error: { message: `지원하지 않는 형식입니다. 허용: ${allowed}` } });
-    }
+    const kind  = kinds.find(k => k.extensions.includes(extNoDot)) || GENERIC_KIND;
 
     // 3) 크기 검증 (kind 별 단일 파일 cap)
     if (file.size > kind.maxSizeMb * 1024 * 1024) {
@@ -593,8 +592,7 @@ router.post('/:id/versions', requireAuth, uploadModel.single('model'), async (re
       return res.status(400).json({ error: { message: '허용되지 않는 파일 형식' } });
     }
     const kinds = await getKindsCached();
-    const kind  = kinds.find(k => k.extensions.includes(extNoDot));
-    if (!kind) return res.status(400).json({ error: { message: '지원하지 않는 형식' } });
+    const kind  = kinds.find(k => k.extensions.includes(extNoDot)) || GENERIC_KIND;
     // 동일 kind 유지 — 다른 kind 로 바꾸려면 새 에셋 만드는 게 안전
     if (asset.kind && asset.kind !== kind.id) {
       return res.status(400).json({
