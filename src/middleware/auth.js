@@ -84,6 +84,11 @@ async function resolveUserFromToken(token) {
       });
     }
 
+    // 운영자 차단 체크 — bannedAt 있고 (banUntil 없거나 미래) 면 거부. 이미 로드된 profile 사용(추가 쿼리 X).
+    if (profile.bannedAt && (!profile.banUntil || new Date(profile.banUntil).getTime() > Date.now())) {
+      return { _banned: true, id: userId, reason: profile.banReason || null, until: profile.banUntil || null };
+    }
+
     return {
       id: profile.id,
       nickname: profile.username,
@@ -116,6 +121,15 @@ async function requireAuth(req, res, next) {
     if (user._deleted) {
       return res.status(401).json({ error: { message: '탈퇴한 계정입니다.', code: 'ACCOUNT_DELETED' } });
     }
+    if (user._banned) {
+      return res.status(403).json({
+        error: {
+          message: user.reason ? `이용이 제한된 계정입니다: ${user.reason}` : '이용이 제한된 계정입니다.',
+          code: 'ACCOUNT_BANNED',
+          until: user.until || null,
+        },
+      });
+    }
 
     req.user = user;
     next();
@@ -134,7 +148,7 @@ async function optionalAuth(req, _res, next) {
     }
 
     const u = await resolveUserFromToken(token);
-    req.user = (u && u._deleted) ? null : u;
+    req.user = (u && (u._deleted || u._banned)) ? null : u;
     next();
   } catch (err) {
     console.warn('[optionalAuth] resolve failed:', err?.message || err);
