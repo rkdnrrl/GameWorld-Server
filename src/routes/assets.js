@@ -920,20 +920,40 @@ router.post('/batch', requireAuth, async (req, res, next) => {
 });
 
 /* DELETE /api/assets/:id */
-// 새 구조: 에셋 등록 시 즉시 서버 자산. 유저는 자기 라이브러리에서만 분리(orphan).
-// 진짜 row + R2 파일 삭제는 운영자 admin 엔드포인트에서만.
+// 유저가 자기 라이브러리에서 삭제:
+//  - 마켓 공개(isPublic) 또는 남이 임포트(클론)한 게 있으면 → 원본 보존 위해 orphan(creatorId=null).
+//    (남이 계속 쓰므로 row+R2 파일 보존. 내 quota 는 creatorId 분리로 즉시 회수.)
+//  - 공유 안 된 내 전용 에셋 → R2 파일(모델·썸네일·버전) + row 즉시 삭제 → 저장공간 바로 회수(운영자 정리 불필요).
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const asset = await prisma.asset.findUnique({ where: { id: req.params.id } });
     if (!asset) return res.status(404).json({ error: { message: '에셋 없음' } });
     if (asset.creatorId !== req.user.id) return res.status(403).json({ error: { message: '권한 없음' } });
 
-    // creatorId 만 NULL 처리 → 내 라이브러리에서 사라지지만 row + R2 파일은 보존, 마켓에서 계속 사용 가능
-    await prisma.asset.update({
-      where: { id: req.params.id },
-      data: { creatorId: null },
+    // 남이 임포트(클론)한 원본이면 보존 필요 — 클론은 metadata.importedFrom.assetId 로 이 에셋을 참조.
+    const cloneCount = await prisma.asset.count({
+      where: { metadata: { path: ['importedFrom', 'assetId'], equals: req.params.id } },
     });
-    res.json({ ok: true });
+    if (asset.isPublic || cloneCount > 0) {
+      // 공유 중 → 내 라이브러리에서만 분리(quota 즉시 회수), row + 파일 보존.
+      await prisma.asset.update({ where: { id: req.params.id }, data: { creatorId: null } });
+      return res.json({ ok: true, freed: false });
+    }
+
+    // 미공유 → R2 파일 + row 즉시 삭제. 버전 파일도 함께 정리(별도 R2 파일이라 안 지우면 누수).
+    // ownedR2Key 는 assets/{내UserId}/ 네임스페이스만 반환 → 임포트한 남의 원본 파일은 건드리지 않음.
+    try {
+      const versions = await prisma.assetVersion.findMany({
+        where: { assetId: req.params.id },
+        select: { modelUrl: true, thumbnailUrl: true },
+      });
+      const urls = [asset.modelUrl, asset.thumbnailUrl];
+      for (const v of versions) urls.push(v.modelUrl, v.thumbnailUrl);
+      const keys = urls.map(u => ownedR2Key(u, req.user.id)).filter(Boolean);
+      if (keys.length) await r2.deleteKeys(keys);
+    } catch { /* best-effort — R2 실패해도 row 는 삭제 */ }
+    await prisma.asset.delete({ where: { id: req.params.id } });   // 버전·좋아요·신고는 onDelete Cascade
+    res.json({ ok: true, freed: true });
   } catch (err) { next(err); }
 });
 
