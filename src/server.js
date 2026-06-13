@@ -39,5 +39,12 @@ process.on('unhandledRejection', (err) => {
   console.error('[unhandledRejection]', err);
   Sentry.captureException(err);
 });
+process.on('uncaughtException', (err) => {
+  // 동기 예외 안전망 — 안 잡으면 프로세스가 조용히 죽음. Sentry 보고 후 깨끗이 종료 → pm2 가 새 프로세스로 재시작.
+  // (1회성 예외엔 안전한 복구. 반복되면 Sentry 에 쌓여 원인 추적 가능)
+  console.error('[uncaughtException]', err);
+  Sentry.captureException(err);
+  Sentry.flush(2000).then(() => process.exit(1), () => process.exit(1));
+});
 
 start();
