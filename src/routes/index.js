@@ -24,7 +24,9 @@ router.get('/health/ready', async (req, res) => {
 
 router.use('/auth',       require('./auth'));
 router.use('/characters', require('./characters'));
-router.use('/worlds',     require('./worlds'));
+const worldsRoutes = require('./worlds');
+router.use('/worlds',     worldsRoutes);
+router.use('/operator/worlds', worldsRoutes.operatorRouter);
 router.use('/assets',                require('./assets'));
 router.use('/asset-kinds',           require('./asset-kinds'));
 router.use('/users',                 require('./users'));

@@ -8,6 +8,7 @@ const r2 = require('../lib/r2');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
 const router = Router();
+const operatorRouter = Router();   // /api/operator/worlds — 운영자 월드 모더레이션
 
 /**
  * GET /api/worlds/public — 공개 월드 목록 + 검색/정렬/태그
@@ -26,7 +27,7 @@ router.get('/public', async (req, res, next) => {
     const limit  = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 50));
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
 
-    const where = { isPublic: true };
+    const where = { isPublic: true, hiddenByOp: false };   // 운영자 비공개 처리된 월드는 목록에서 제외
     if (String(req.query.onlyGames || '') === '1') where.isGame = true;   // 게임만 필터
     const AND = [];
     if (q) {
@@ -115,6 +116,9 @@ router.get('/:id', async (req, res, next) => {
       include: { creator: { select: { username: true } } },
     });
     if (!world) return res.status(404).json({ error: { message: '월드를 찾을 수 없습니다.' } });
+    if (world.hiddenByOp) {
+      return res.status(403).json({ error: { message: '운영자에 의해 비공개 처리된 월드입니다.', code: 'WORLD_HIDDEN' } });
+    }
     if (!world.isPublic) {
       // 비공개는 본인만
       const token = req.headers.authorization?.replace('Bearer ', '');
@@ -162,7 +166,8 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     if (name !== undefined)         data.name        = String(name).trim().slice(0, 100);
     if (description !== undefined)  data.description = String(description).trim().slice(0, 500);
     if (mapData !== undefined)      data.mapData     = mapData;
-    if (isPublic !== undefined)     data.isPublic    = Boolean(isPublic);
+    // 운영자 비공개 처리된 월드는 제작자가 다시 공개 못 함(unhide 는 운영자만).
+    if (isPublic !== undefined)     data.isPublic    = world.hiddenByOp ? false : Boolean(isPublic);
     if (thumbnailUrl !== undefined) data.thumbnailUrl = thumbnailUrl;
     // 제작자 지정 게임 캐릭터 — appearance JSON 객체이거나 null(본인 캐릭터)
     if (gameCharacter !== undefined) data.gameCharacter = (gameCharacter && typeof gameCharacter === 'object') ? gameCharacter : null;
@@ -220,4 +225,25 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
  * GET /api/worlds/server-owned — 서버 귀속(wasPublic=true) 월드 목록.
  * creator 탈퇴해도 살아남는 월드들. 홈허브 후보·운영자 관리 화면용.
  */
+/* ── 운영자: 월드 비공개 처리(가역 takedown) / 복구 ── */
+operatorRouter.post('/:id/hide', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const world = await prisma.world.findUnique({ where: { id: req.params.id } });
+    if (!world) return res.status(404).json({ error: { message: '월드 없음' } });
+    // 비공개 처리 + 즉시 목록/입장에서 빠지게 isPublic 도 false.
+    await prisma.world.update({ where: { id: req.params.id }, data: { hiddenByOp: true, isPublic: false } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+operatorRouter.post('/:id/unhide', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const world = await prisma.world.findUnique({ where: { id: req.params.id } });
+    if (!world) return res.status(404).json({ error: { message: '월드 없음' } });
+    // 차단 해제 — 제작자가 다시 공개할 수 있게. (자동 재공개는 안 함)
+    await prisma.world.update({ where: { id: req.params.id }, data: { hiddenByOp: false } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
+module.exports.operatorRouter = operatorRouter;
