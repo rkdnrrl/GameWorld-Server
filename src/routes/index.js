@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
+const { prisma } = require('../db');
 const gamesUploadRoutes = require('./gamesUpload');
 const genreRoutes = require('./genres');
 const categoryRoutes = require('./categories');
@@ -9,6 +10,16 @@ const router = Router();
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
+});
+// 준비 상태(readiness) — DB 까지 닿는지 확인. 외부 업타임 모니터가 /api/health/ready 를 핑하면
+// "프로세스만 살아있고 DB는 죽은" 상태(오늘 같은 장애)도 감지된다.
+router.get('/health/ready', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ status: 'db_unreachable', error: err.message });
+  }
 });
 
 router.use('/auth',       require('./auth'));

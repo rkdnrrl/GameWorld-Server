@@ -10,7 +10,6 @@ const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { createRateLimit } = require('./middleware/rateLimit');
-const { prisma } = require('./db');
 
 const app = express();
 
@@ -41,16 +40,6 @@ app.get('/', (req, res) => {
 });
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
-});
-// 준비 상태(readiness) — DB 까지 닿는지 확인. 외부 업타임 모니터가 이걸 핑하면
-// "프로세스만 살아있고 DB는 죽은" 상태(오늘 같은 장애)도 감지된다. 레이트리밋 밖(/api 아님)이라 자유 핑 가능.
-app.get('/health/ready', async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ready' });
-  } catch (err) {
-    res.status(503).json({ status: 'db_unreachable', error: err.message });
-  }
 });
 
 app.use(notFound);
