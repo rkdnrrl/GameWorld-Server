@@ -159,6 +159,66 @@ router.post('/exchange', requireAuth, (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/auth/change-password — 비밀번호 변경.
+ *   현재 비밀번호를 signInWithPassword 로 검증한 뒤, service-role admin 으로 즉시 변경한다.
+ *   ⚠ 클라이언트 supabase.updateUser 는 (a) 클라에 세션이 없거나 (b) Supabase 'Secure password change'
+ *     설정 시 이메일 확인 보류로, 성공만 뜨고 실제 변경이 안 되는 문제가 있어 서버에서 처리한다.
+ */
+const changePwSchema = z.object({
+  email: z.string().email('이메일이 올바르지 않습니다.'),
+  currentPassword: z.string().min(1, '현재 비밀번호를 입력해주세요.'),
+  newPassword: z.string().min(8, '새 비밀번호는 8자 이상이어야 합니다.'),
+});
+router.post('/change-password', requireAuth, async (req, res, next) => {
+  try {
+    const { email, currentPassword, newPassword } = changePwSchema.parse(req.body);
+    const { createClient } = require('@supabase/supabase-js');
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const ANON = process.env.SUPABASE_ANON_KEY;
+    if (!SUPABASE_URL || !ANON) {
+      return res.status(500).json({ error: { message: '서버 설정이 누락되었습니다.' } });
+    }
+    // Node 20 은 native WebSocket 없음 → ws transport 명시 (services/auth.js·delete /me 와 동일 패턴)
+    const mkClient = (key) => {
+      const opts = { auth: { autoRefreshToken: false, persistSession: false } };
+      try { const ws = require('ws'); return createClient(SUPABASE_URL, key, { ...opts, realtime: { transport: ws } }); }
+      catch { return createClient(SUPABASE_URL, key, opts); }
+    };
+
+    // 1) 현재 비밀번호 검증 — 요청마다 새 anon 클라(세션 격리, 공유 싱글톤 레이스 방지)
+    const anon = mkClient(ANON);
+    const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({ email, password: currentPassword });
+    if (signInErr || !signIn?.user) {
+      return res.status(403).json({ error: { message: '현재 비밀번호가 올바르지 않습니다.' } });
+    }
+    // 인증된 본인 계정인지 확인 (남의 계정 변경 차단)
+    if (signIn.user.id !== req.user.id) {
+      return res.status(403).json({ error: { message: '본인 계정만 변경할 수 있습니다.' } });
+    }
+
+    // 2) 새 비밀번호 적용 — service-role admin(즉시 반영, 이메일 확인 불필요) 우선
+    const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (SVC) {
+      const admin = mkClient(SVC);
+      const { error: updErr } = await admin.auth.admin.updateUserById(req.user.id, { password: newPassword });
+      if (updErr) return res.status(400).json({ error: { message: updErr.message || '비밀번호 변경 실패' } });
+    } else {
+      // service role 없으면 검증에 쓴 anon 세션으로 updateUser (세션 격리됨). 이메일 확인 설정 시 보류될 수 있음.
+      const { error: updErr } = await anon.auth.updateUser({ password: newPassword });
+      if (updErr) return res.status(400).json({ error: { message: updErr.message || '비밀번호 변경 실패' } });
+      console.warn('[change-password] SERVICE_ROLE_KEY 없음 — anon updateUser 사용(확인 설정 시 보류 가능)');
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ error: { message: err.issues?.[0]?.message || '입력값이 올바르지 않습니다.' } });
+    }
+    next(err);
+  }
+});
+
 // 현재 로그인한 사용자 정보. 게임 서버 등이 토큰을 검증할 때도 사용.
 router.get('/me', requireAuth, async (req, res) => {
   try {
