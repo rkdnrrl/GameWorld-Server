@@ -41,6 +41,16 @@ router.delete('/', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── 전체 접속 인원수 (공개 — 인증 불필요) ───
+// worldId='lobby'(월드 밖 사이트 접속) 포함 전체. "지금 N명 접속 중" 배지용.
+router.get('/count', async (req, res, next) => {
+  try {
+    const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
+    const count = await prisma.userPresence.count({ where: { updatedAt: { gt: cutoff } } });
+    res.json({ count });
+  } catch (err) { next(err); }
+});
+
 // ─── 내 친구 중 접속 중인 위치 ───
 router.get('/friends', requireAuth, async (req, res, next) => {
   try {
@@ -57,8 +67,9 @@ router.get('/friends', requireAuth, async (req, res, next) => {
     if (friendIds.length === 0) return res.json({ locations: [] });
 
     const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
+    // 'lobby'(월드 밖 사이트 접속)는 따라갈 월드가 없으므로 친구 위치에서 제외 — 기존 동작 유지.
     const presences = await prisma.userPresence.findMany({
-      where: { userId: { in: friendIds }, updatedAt: { gt: cutoff } },
+      where: { userId: { in: friendIds }, updatedAt: { gt: cutoff }, worldId: { not: 'lobby' } },
     });
     if (presences.length === 0) return res.json({ locations: [] });
 
