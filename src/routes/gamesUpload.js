@@ -24,6 +24,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireOperator } = require('../middleware/operatorAuth');
 const r2 = require('../lib/r2');
 const { logActivity } = require('../lib/activityLog');
+const { scanGameFiles, summarizeScan, TEXT_EXT } = require('../lib/gameSecurityScan');
 
 const router = Router();
 
@@ -280,6 +281,11 @@ router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (re
       await r2.putObject(`${storagePath}${rel}`, data);
     }
 
+    // 보안 정적 스캔 (기록만 — 차단 X). 운영자 검토용 신호.
+    const securitySummary = summarizeScan(
+      scanGameFiles(entries.filter((e) => TEXT_EXT.test(e.name)).map((e) => ({ name: e.name, data: e.raw.getData() }))),
+    );
+
     // 미디어 업로드 (썸네일, 데모영상)
     const media = await saveMedia(slug, req.files).catch(() => ({}));
 
@@ -301,11 +307,12 @@ router.post('/upload', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), async (re
       },
     });
 
-    logActivity(req.user, 'game_upload', { slug: game.slug, title: game.title, kind: game.kind });
+    logActivity(req.user, 'game_upload', { slug: game.slug, title: game.title, kind: game.kind, security: securitySummary });
 
     res.status(201).json({
       ok: true,
       game: { slug: game.slug, status: game.status, storagePath, uploadedBytes },
+      securityScan: securitySummary,
       message: '업로드 완료. 운영자 검토 후 공개됩니다.',
     });
   } catch (err) {
@@ -389,6 +396,11 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
       await r2.putObject(`${stagingPath}${rel}`, data);
     }
 
+    // 보안 정적 스캔 (기록만 — 차단 X). 운영자 검토용 신호.
+    const securitySummary = summarizeScan(
+      scanGameFiles(entries.filter((e) => TEXT_EXT.test(e.name)).map((e) => ({ name: e.name, data: e.raw.getData() }))),
+    );
+
     // 미디어도 staging으로 — zip 승인 시 함께 live 반영
     const media = await saveMediaStaging(slug, req.files).catch(() => ({}));
     const hasMedia = Object.keys(media).length > 0;
@@ -404,7 +416,7 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
       },
     });
 
-    logActivity(req.user, 'game_update', { slug: updated.slug, title: g.title, pendingVersion: updated.pendingVersion });
+    logActivity(req.user, 'game_update', { slug: updated.slug, title: g.title, pendingVersion: updated.pendingVersion, security: securitySummary });
 
     res.status(202).json({
       ok: true,
@@ -415,6 +427,7 @@ router.post('/:slug/files', requireAuth, uploadMulti.fields(UPLOAD_FIELDS), asyn
         pendingVersion: updated.pendingVersion,
         uploadedBytes,
       },
+      securityScan: securitySummary,
       message: '검수 대기 큐에 올렸습니다. 운영자 승인 후 라이브로 반영됩니다.',
     });
   } catch (err) {
@@ -885,6 +898,35 @@ operatorRouter.get('/:slug/download', requireAuth, requireOperator, async (req, 
   } catch (err) {
     next(err);
   }
+});
+
+/**
+ * GET /api/operator/games/:slug/security-scan?which=live|pending
+ *   R2 에 저장된 게임 파일을 즉석에서 정적 스캔해 위험 패턴 리포트 반환.
+ *   DB 저장 없음 — 검토 시점의 실제 파일 그대로 스캔. (정책: 기록만, 차단 X)
+ */
+operatorRouter.get('/:slug/security-scan', requireAuth, requireOperator, async (req, res, next) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const g = await prisma.game.findUnique({ where: { slug } });
+    if (!g) return res.status(404).json({ error: { message: '게임을 찾을 수 없습니다.' } });
+
+    const which = req.query.which === 'pending' ? 'pending' : 'live';
+    const base = which === 'pending' ? g.pendingStoragePath : g.storagePath;
+    if (!base) {
+      return res.status(400).json({ error: { message: which === 'pending' ? '대기 중인 업데이트가 없습니다.' : '게임 파일 경로가 없습니다.' } });
+    }
+
+    const keys = await r2.listObjects(base);
+    const textKeys = keys.filter((k) => TEXT_EXT.test(k));
+    const files = [];
+    for (const key of textKeys) {
+      const data = await r2.getObject(key);
+      files.push({ name: key.slice(base.length), data });
+    }
+    const scan = scanGameFiles(files);
+    res.json({ slug, which, scan });
+  } catch (err) { next(err); }
 });
 
 /**
