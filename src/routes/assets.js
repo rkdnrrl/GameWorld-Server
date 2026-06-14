@@ -799,12 +799,17 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     // 참조/임포트된 에셋(다른 사람 원본을 가리킴)은 본인 소유여도 공개 토글 금지 —
     // 원작자 모르게 마켓에 같은 파일이 도배되는 걸 막음. 옛 데이터 호환 위해 importedFrom 도 체크.
     const isImportedReference = !!(asset.metadata?.referenceOnly || asset.metadata?.importedFrom);
+    // 공식 캐릭터 자동 등록 에셋 — 공식인 동안은 비공개 전환 금지(import 한 유저들이 참조).
+    const isOfficialAsset = Array.isArray(asset.tags) && asset.tags.includes('official-character');
 
     const data = {};
     if (req.body.name           !== undefined) data.name     = String(req.body.name).slice(0, 100);
     if (req.body.isPublic       !== undefined) {
       if (isImportedReference) {
         return res.status(403).json({ error: { message: '참조/임포트된 에셋은 공개여부 변경 불가 — 원본 작가의 에셋입니다.' } });
+      }
+      if (isOfficialAsset && req.body.isPublic === false) {
+        return res.status(403).json({ error: { message: '공식 캐릭터 에셋은 비공개로 전환할 수 없습니다.' } });
       }
       data.isPublic = Boolean(req.body.isPublic);
     }

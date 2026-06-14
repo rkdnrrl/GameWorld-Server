@@ -358,6 +358,12 @@ router.post('/:id/share', requireAuth, async (req, res, next) => {
     const requested = req.body?.isPublic;
     const nextPublic = typeof requested === 'boolean' ? requested : !existing.isPublic;
 
+    // 공식 캐릭터는 비공개 전환 금지 — import 한 유저들의 라이브러리가 이 원본을 참조하므로
+    // 비공개되면 그 유저들의 캐릭터가 깨진다. 먼저 공식 해제(운영자 데스크탑) 후에만 비공개 가능.
+    if (existing.isOfficial && nextPublic === false) {
+      return res.status(403).json({ error: { message: '공식 캐릭터는 비공개로 전환할 수 없습니다. 먼저 공식 등록을 해제하세요.' } });
+    }
+
     let shareSlug = existing.shareSlug;
     if (nextPublic && !shareSlug) {
       shareSlug = makeShareSlug();
